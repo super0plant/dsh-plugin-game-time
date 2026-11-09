@@ -21,6 +21,8 @@
 
 ### 最近改动（2026-11-09，按时间倒序，新条目加在最上面）
 
+- **首包幽灵修复（本次）**：`applyLiveState` 现在只在 `LIVE` 已为 true 时才保留旧页——第一个 live 包直接从 demo 快照切到宿主数据，不会把 demo 里 366–399 天前的会话当成「懒加载旧页」；同时 `older` 和 `ensureHistory` 的响应都按当前 `GAMES` 过滤，删掉游戏的旧页不会再残留成幽灵切片。验证：`render-check` 的「first live payload」「lazy pages」两条 + 四套全跑。**宿主没改，只需刷新页面。**
+
 - **保留全部 + 懒加载（本次，替代上一版日汇总）**：彻底删掉 31 天删除/日汇总，`sessions.json` 保存全部会话；`/state` 默认只回最近 `settings.historyDays`（默认 365 天，设置页「监控 → 历史加载窗口」可选 30–1825 天）的会话，另带 `historyFrom / firstStart / totals / lastPlayed`。`totalsFor(...,'all')` 用宿主算好的全量总数（含当前进行中会话），`lastPlayedAt` 用 `lastPlayed`，`clampAnchor` 用 `firstStart` 允许往回翻；`AllView`/`DetailView` 的 `useEffect` 在窗口越过已加载边界时调 `GET /api/game-time/sessions?from=&to=` 补一页，`ensureHistory()` 按 id 去重、`HISTORY_FROM` 只向前移，30 秒刷新会保留已加载的旧页。**日汇总方案已回退**：它 31 天后只有天级精度、双文件要保一致，且边界日曾丢过 30 分钟；实测一年只省 ~2×。验证：`host-check`（旧会话保留、/state 窗口、全量总计、切片接口、historyDays 钳制）+ `render-check`（窗口、总计、lastPlayed、懒加载补页、刷新保留）+ 四套全跑；宿主改了，**要重启 DSH**。
 
 - **0.2.3 收尾状态（今天到此为止）**：网页版已有桌面外壳（`launcher.ps1` + `start.cmd` + `stop.cmd`），托盘实测能常驻（`Application.Run($form)` + 隐藏宿主窗体），`icon.ico` 16/20/24/32/40/48 换成简化版（紫圆角块 + 白手柄剪影）、64+ 用原插画，构建脚本校验 `launcher.ps1` 必须带 UTF-8 BOM。**卡在分发提示**：双击 `start.cmd` 弹「打开文件 - 安全警告（无法验证发布者 / Windows 命令脚本）」——截图确认是 **Mark-of-the-Web**。结论：属性里勾「解除锁定」只对当次解压有效；微信/QQ 传 zip 通常不带标记，浏览器/邮箱会带；7-Zip 解压不复制 ADS。备选「不要 .cmd」：本地新建快捷方式指向 `powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<绝对路径>\launcher.ps1"`（快捷方式本身无标记）。
@@ -425,6 +427,7 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | 直接改 `GAMES` / `installs` 没走 `touch()` | 红标和查重结果不更新（缓存按 `configVersion + GAMES.length` 失效） | 任何直接改动都要调 `markConfigChanged()`；正常编辑走 `touch()` 已经包含 |
 | 删除游戏会连带删会话 | `handleConfig` 里 `sessions.filter(keep)`，删了就找不回 | 卸载的游戏用**归档**，不要删；删除按钮的文案已写明不可恢复 |
 | 为了省体积引入日汇总（试过，已回退） | 31 天后只有天级精度；双文件要保一致，边界日曾丢 30 分钟；实测一年只省 ~2× | 历史永久保留 + 懒加载；体积真成问题时按年分片/懒加载，不要丢精度 |
+| 首个 live 包把 demo 旧页当懒加载页 | 全部趋势/平台分布出现 demo 幽灵，总计和切片对不上；删游戏后旧页也会残留 | `applyLiveState` 用 `wasLive` 守卫，`older` 与 `ensureHistory` 响应都按当前 `GAMES` 过滤 |
 | `sanitizeConfig` 是白名单 | 新增的 `game.*` / `settings.*` 字段保存后凭空消失 | 加字段必须同步 `src/host/config.js` 的白名单，然后重启 |
 | PowerShell stdout 编码 | 中文路径存进配置后变成 `◆◆◆◆`（或 `�`） | 路径/名称一律通过 UTF-8 JSON 文件回传，不要读 stdout |
 | 拖拽被聊天附件抢走 | 文件拖到面板上却上传到了对话框 | 拖拽容器里 `preventDefault()` **且** `stopPropagation()`，否则 DSH 的 document 级 drop 会接手 |

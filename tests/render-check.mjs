@@ -1086,6 +1086,46 @@ console.log('  slots:', slots.join(', '))
 console.log('  games:', testApi.GAMES.length, 'sessions:', testApi.SESSIONS.length)
 console.log('  totals day/week/all (min):', [dayTotal, weekTotal, allTotal].map((v) => Math.round(v / 60)).join(' / '))
 
+// --- the first live payload must not keep the demo snapshot --------------
+
+const firstLiveNow = Date.now()
+const firstLiveSession = {
+  id: 'first-live',
+  gameId: 'zzz',
+  platformId: 'mihoyo',
+  source: null,
+  start: firstLiveNow - 3600000,
+  end: firstLiveNow - 1800000,
+}
+testApi.applyLiveState({
+  source: 'live',
+  now: firstLiveNow,
+  platforms: { mihoyo: { id: 'mihoyo', name: '米哈游', short: '米', color: '#4f8ff7' } },
+  games: [
+    {
+      id: 'zzz',
+      name: '绝区零',
+      glyph: '绝',
+      color: '#4f8ff7',
+      platforms: ['mihoyo'],
+      disabled: [],
+      installs: [],
+      entries: [],
+    },
+  ],
+  sessions: [firstLiveSession],
+  historyFrom: firstLiveNow - 365 * 86400000,
+  historyDays: 365,
+  firstStart: firstLiveNow - 400 * 86400000,
+  totals: { total: 1800, game: { zzz: 1800 }, platform: { mihoyo: 1800 } },
+  lastPlayed: { zzz: firstLiveSession.end },
+  active: [],
+  settings: { intervalSec: 10, historyDays: 365 },
+})
+assert.equal(testApi.SESSIONS.length, 1, 'the first live payload keeps only the host session')
+assert.equal(testApi.SESSIONS[0].id, 'first-live', 'demo sessions are not kept as lazy pages')
+console.log('  first live payload: demo snapshot cleared, no lazy ghosts')
+
 // --- live payload replaces the demo snapshot -----------------------------
 
 const liveNow = Date.now()
@@ -1305,3 +1345,41 @@ assert.equal(
 )
 assert.equal(testApi.sessionSub({ platformId: platform.id }), platform.name, "no source renders the platform alone")
 console.log("  session subtitle: duplicate source collapsed")
+
+// --- lazy pages follow the current game list -----------------------------
+
+testApi.applyLiveState(basePayload)
+const ghostSession = {
+  id: 'ghost-1',
+  gameId: 'ghost',
+  platformId: 'mihoyo',
+  source: null,
+  start: firstStart,
+  end: firstStart + 600000,
+}
+sandbox.fetch = function () {
+  return Promise.resolve({ ok: true, json: () => Promise.resolve({ sessions: [ghostSession] }) })
+}
+testApi.ensureHistory(firstStart - 3 * 86400000)
+await new Promise((resolve) => setTimeout(resolve, 10))
+assert.equal(
+  testApi.SESSIONS.some((session) => session.id === 'ghost-1'),
+  false,
+  'a slice for a game that is not in the config is ignored'
+)
+
+sandbox.fetch = function () {
+  return Promise.resolve({ ok: true, json: () => Promise.resolve({ sessions: [olderSession] }) })
+}
+testApi.ensureHistory(firstStart - 4 * 86400000)
+await new Promise((resolve) => setTimeout(resolve, 10))
+assert.equal(
+  testApi.SESSIONS.some((session) => session.id === 'old-1'),
+  true,
+  'a slice for a live game is still appended'
+)
+
+testApi.applyLiveState(Object.assign({}, basePayload, { games: [], sessions: [], active: [] }))
+assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
+delete sandbox.fetch
+console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")

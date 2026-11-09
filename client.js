@@ -1046,13 +1046,20 @@ window.__ModuleLoader__.load({
         GAMES.push(game)
       }
 
+      const wasLive = LIVE
+      const liveGames = new Set(
+        GAMES.map(function (game) {
+          return game.id
+        })
+      )
       const historyFrom = Number(payload.historyFrom)
       const hasWindow = Number.isFinite(historyFrom) && historyFrom > 0
-      // Keep what was already lazy-loaded from before the fresh window, so a
-      // 30-second refresh does not throw away pages the user has scrolled to.
-      const older = hasWindow
+      // Only a later refresh may keep already-loaded older pages. The first
+      // live payload starts from the demo snapshot, which must never survive;
+      // a deleted game's cached pages must not survive either.
+      const older = wasLive && hasWindow
         ? SESSIONS.filter(function (session) {
-            return session.end < historyFrom
+            return session.end < historyFrom && liveGames.has(session.gameId)
           })
         : []
 
@@ -1187,12 +1194,18 @@ window.__ModuleLoader__.load({
         })
         .then(function (payload) {
           if (!payload || !Array.isArray(payload.sessions)) return
+          const liveGames = new Set(
+            GAMES.map(function (game) {
+              return game.id
+            })
+          )
           const known = new Set(
             SESSIONS.map(function (session) {
               return session.id
             })
           )
           for (const session of payload.sessions) {
+            if (!liveGames.has(session.gameId)) continue
             if (known.has(session.id)) continue
             known.add(session.id)
             SESSIONS.push(session)
