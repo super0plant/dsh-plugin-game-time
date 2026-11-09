@@ -1,0 +1,43 @@
+{
+  "name": "dsh-plugin-game-time",
+  "version": "0.2.3",
+  "private": true,
+  "type": "module",
+  "description": "Local play-time tracking for games across platforms.",
+  "author": "茄子超人",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "icon.png",
+    "icon.ico",
+    "standalone",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node tests/render-check.mjs && node tests/host-check.mjs && node tests/exit-check.mjs && node tests/restore-check.mjs && node tests/standalone-check.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

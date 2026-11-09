@@ -1,0 +1,17 @@
+# dependencies and build output (build.mjs writes to ../../dist)
+node_modules/
+dist/
+.dist/
+
+# local scratch / debugging leftovers
+*.log
+*.tmp
+ps-out-*.json
+.tmp-*
+
+# Windows / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

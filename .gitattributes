@@ -1,0 +1,8 @@
+# Normalise text diffs, but never touch the Windows launchers: launcher.ps1
+# must keep its UTF-8 BOM (build.mjs checks that) and .cmd should keep CRLF.
+* text=auto
+*.ps1 -text
+*.cmd -text
+*.png binary
+*.ico binary
+*.zip binary

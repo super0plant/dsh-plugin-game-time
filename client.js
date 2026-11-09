@@ -1,0 +1,6440 @@
+window.__ModuleLoader__.load({
+  id: 'dsh-plugin-game-time',
+  factory(require) {
+    const React = require('react')
+    const h = React.createElement
+
+    const NS = 'game-time'
+    const PANEL_ID = 'game-time'
+
+    /* ------------------------------------------------------------------ *
+     * Dictionaries
+     * ------------------------------------------------------------------ */
+
+    const zh = {
+      'panel': '游戏时长',
+      'title': '游戏时长',
+      'tab.today': '今日',
+      'tab.all': '全部',
+      'demo': '演示数据',
+      'live.badge': '实时',
+      'live.on': '监控中',
+      'stat.today': '本日',
+      'stat.week': '本周',
+      'stat.total': '总计',
+      'empty.title': '今天还没有游戏记录',
+      'empty.body': '接入进程监控后，这里会按游戏列出今天的游玩时长。',
+      'today.section': '今天玩过',
+      'today.count': '{n} 款',
+      'today.col.game': '游戏',
+      'today.col.day': '本日',
+      'today.col.week': '本周',
+      'today.col.total': '总计',
+      'search': '搜索游戏…',
+      'sort.total': '总时长',
+      'sort.week': '本周',
+      'sort.recent': '最近游玩',
+      'sort.name': '名称',
+      'all.summary': '共 {n} 款 · 累计 {total}',
+      'all.col.game': '游戏',
+      'all.col.total': '总时长',
+      'all.col.week': '本周',
+      'all.col.recent': '最近游玩',
+      'all.empty': '没有匹配的游戏',
+      'back': '返回',
+      'range.day': '今日',
+      'range.week': '本周',
+      'range.month': '本月',
+      'range.all': '全部',
+      'detail.sessions': '次数',
+      'detail.average': '平均',
+      'detail.platforms': '平台分布',
+      'detail.trend': '时长趋势',
+      'chart.bar': '柱状',
+      'chart.line': '曲线',
+      'chart.avg': '平均',
+      'chart.other': '其他',
+      'chart.unit': '{title}（{unit}）',
+      'chart.reset': '恢复默认',
+      'unit.10m': '10分',
+      'unit.30m': '30分',
+      'unit.1h': '1时',
+      'unit.1d': '1天',
+      'unit.1w': '1周',
+      'unit.1mo': '1月',
+      'chart.empty': '这个范围内还没有记录',
+      'all.analysis': '数据分析',
+      'all.share.games': '游戏分布',
+      'all.sessions': '游玩时段',
+      'all.sessions.summary': '{n} 次 · 共 {total}',
+      'list.segments': '游玩时段',
+      'list.days': '每日明细',
+      'list.months': '每月明细',
+      'list.empty': '暂无记录',
+      'list.count': '{n} 次',
+      'minute': '分',
+      'hour': '时',
+      'noData': '—',
+      'rel.today': '今天',
+      'rel.yesterday': '昨天',
+      'rel.days': '{n} 天前',
+      'rel.never': '—',
+      'settings': '设置',
+      'refresh': '刷新状态',
+      'settings.game': '游戏设置',
+      'settings.monitor': '监控',
+      'settings.interval': '监控间隔',
+      'settings.interval.hint': '轮询进程的时间间隔；间隔越短，起止时间越准，开销略高。',
+      'settings.history': '历史加载窗口',
+      'settings.history.hint': '启动时只加载最近这段记录；往回翻时按需加载更早的，总计不受影响。',
+      'settings.history.months': '{n} 个月',
+      'settings.history.years': '{n} 年',
+      'settings.foreground': '仅在游戏窗口位于前台时计时',
+      'settings.foreground.hint': '防止挂机刷时长；切到桌面时暂停累计。',
+      'settings.startup': '启动',
+      'settings.autostart': '开机自启',
+      'settings.autostart.hint': '登录 Windows 后自动启动，从开机第一局开始计时。',
+      'settings.autostart.unavailable': '独立版入口未安装，暂时无法设置。',
+      'settings.autostart.dsh': 'DSH 里不可选：插件由 DSH 自己启动，这里写系统自启只会变成「让 DSH 随登录启动」，不属于本插件，也和你的 DSH 启动方式冲突。本项只在独立界面中生效。',
+      'settings.autostart.dsh.hint': '在 DSH 中由 DSH 启动，本项不可用。',
+      'settings.autostart.why': '为什么建议开启：只有常驻才能从开机那一刻开始记录；不开机自启时，打开程序之前的游玩不会被计入。',
+      'settings.autostart.off': '关闭后只移除本程序的登录启动项，不影响其他软件，之后随时可以再打开。',
+      'settings.ui': '界面',
+      'settings.density': '界面密度',
+      'settings.density.comfortable': '舒适',
+      'settings.density.compact': '紧凑',
+      'settings.platforms': '启动平台',
+      'settings.platforms.hint': '详情页的平台分布按这里的清单聚合。',
+      'settings.addPlatform': '添加平台',
+      'settings.expand': '详细设置',
+      'settings.collapse': '收起',
+      'settings.dropGame.hint': '把 exe 或快捷方式拖到这里，直接添加游戏',
+      'settings.dropGame.release': '松开即添加',
+      'settings.dropGame.added': '已添加 {n} 个游戏',
+      'settings.dropGame.owned': '「{name}」已经在计时这个 exe，没有重复添加',
+      'settings.data': '数据',
+      'settings.data.retention': '历史永久保留；默认加载最近 1 年，更早的记录按需加载',
+      'settings.data.later': '导入 / 导出 / 清空在接入采集后提供',
+      'settings.note': '本轮为演示状态，改动不会保存；接入采集后这些设置会落盘。',
+      'settings.credit': '作者：茄子超人',
+      'game.platforms': '平台',
+      'game.platforms.hint': '关掉的平台会从徽标、详情统计和总时长里隐藏。',
+      'game.runs': '启动方式',
+      'game.runs.hint': '一个游戏可以有多个启动入口，时长合并到同一个游戏。',
+      'game.run.add': '添加启动方式',
+      'game.run.path': '启动文件或启动器路径',
+      'game.name': '名称',
+      'cancel': '取消',
+      'delete': '删除',
+      'game.manage': '游戏',
+      'game.add': '添加游戏',
+      'game.delete.title': '删除游戏？',
+      'game.delete.body': '「{name}」及其全部历史记录会被删除，无法恢复。',
+      'game.path': '游戏路径',
+      'game.path.placeholder': '游戏本体 exe，例如 D:\\...\\ZenlessZoneZero.exe',
+      'game.path.hint': '填游戏本体：监控进程会从它自动识别，不需要手打。',
+      'game.watch.dir': '限定目录：{dir}',
+      'pick': '选择文件',
+      'reveal': '打开所在位置',
+      'icon.extract': '从软件提取',
+      'status.offline': '离线',
+      'status.active': '正在计时',
+      'status.error': '路径错误',
+      'status.suspended': '挂起（未计时）',
+      'icon.pick': '更换图标',
+      'icon.reset': '移除图标',
+      'game.icon': '图标',      'game.background': '背景图',
+      'game.background.hint': '显示在详情页顶部，底部渐变淡出。',
+      'settings.background': '主界面背景',
+      'settings.background.hint': '铺在面板最底层，半透明，不影响阅读。',
+      'bg.surface': '区块透明度',
+      'settings.headerBackground': '标题背景',
+      'settings.surfaceColor': '模块背景色',
+      'settings.surfaceColor.hint': '所有卡片和面板的底色，默认黑色。',
+      'game.headerBackground': '标题背景',
+      'game.headerBackground.hint': '只在这个游戏的页面生效，留空则用总设置的标题背景。',
+      'settings.headerBackground.hint': '只铺在顶部标题栏，向下淡出。',
+      'settings.headerHeight': '高度 (px)',
+      'settings.headerFade': '渐变起点 (%)',
+      'bg.opacity': '图片透明度',
+      'bg.mask': '蒙版颜色',
+      'bg.maskOpacity': '蒙版浓度',      'crop.zoom': '缩放',
+      'crop.apply': '确定',
+      'crop.hint': '拖动调整位置',
+      'image.choose': '选择图片',
+      'image.remove': '移除',
+      'image.none': '未设置',
+      'image.working': '处理中…',
+      'fit.cover': '铺满',
+      'fit.tile': '平铺',      'game.installs': '安装位置',
+      'game.installs.add': '添加安装位置',
+      'game.installs.hint': '一行 = 一个平台的一份安装。填游戏本体 exe，进程名自动识别，空着就不计时。',
+      'drop.hint': '可以把 exe 或快捷方式拖到这里，自动解析路径和名称',
+      'drop.hintBrowser': '网页版可以直接拖 .url / .lnk；exe 拿不到路径，请点右侧文件夹按钮选择',
+      'drop.release': '松开即可添加',
+      'drop.added': '已添加 {n} 个安装位置',
+      'drop.dup': '{n} 个已存在',
+      'drop.failed': '无法识别：{names}',
+      'drop.unreadable': '读不出路径：浏览器里拖 exe 需要桌面端，请用文件夹按钮',
+      'drop.needExe': '这里只接受 exe 或指向 exe 的快捷方式',
+      'drop.owned': '这个 exe 已经在「{name}」里计时，再加一条不会重复计时',
+      'drop.ownedAddAsk': '「{name}」已经在计时这个 exe，仍然添加？',
+      'drop.ownedAdd': '仍然添加',
+      'game.group': '统计归组',
+      'game.group.placeholder': '留空 = 按平台统计',
+      'game.group.hint': '填了名字后，这个游戏的时长在「平台分布」里记在该名字下，不再占用平台；填平台名（如 Steam）会直接并进该平台。留空保持原来的按平台统计。',
+      'game.group.color': '归组颜色',
+      'game.group.into': '并入 {name}',
+      'game.group.active': '归组：{name}',
+      'game.archive': '归档',
+      'game.archive.toggle': '从游戏列表里收起',
+      'game.archive.exempt': '不放入自动归档',
+      'game.archive.auto': '已按自动归档规则收起，玩一次自动恢复',
+      'game.duplicate': '重复',
+      'game.duplicate.hint': '这个 exe 已经在「{name}」里计时，这里不会再计时',
+      'game.danger': '删除',
+      'game.delete.button': '删除这个游戏',
+      'game.delete.note': '历史记录会一起删除',
+      'settings.autoArchive': '自动归档',
+      'settings.autoArchive.on': '自动收起很久没玩的游戏',
+      'settings.autoArchive.hint': '按最后游玩时间算；玩一次会自动恢复。从未玩过的游戏不会被收起。',
+      'settings.autoArchive.after': '不玩超过',
+      'settings.autoArchive.day': '天',
+      'settings.autoArchive.month': '个月',
+      'game.archive.hint': '只是折叠：从游戏列表里收起来，统计、图表和总计照常计入；历史记录一条不删，取消勾选立即恢复。',
+      'all.archived': '{n} 个 · 共 {total}',
+      'all.archive.uninstalled': '归档已卸载 ({n})',
+      'archived': '已归档',
+      'archived.title': '已归档游戏',
+      'game.install.path': '游戏本体 exe 路径',
+      'game.install.process': '监控进程：{process}',      'game.entries': '启动入口',
+      'game.entries.add': '添加启动入口',
+      'game.entries.hint': '仅用于记录“从哪启动”，不影响计时。不填名称/路径时默认用平台的值。',
+      'game.entry.name': '名称',
+      'game.entry.path': '启动文件路径',
+      'game.entry.args': '启动参数（可选，一般不填）',
+      'platform.name': '平台名称',
+      'platform.color': '颜色',
+      'platform.processes': '附加进程名，逗号分隔（可选）',
+      'platform.drag': '拖动排序',
+      'platform.path': '默认启动文件（可空）',
+      'platform.delete.title': '删除平台？',
+      'platform.delete.body': '「{name}」当前被 {count} 个游戏引用，删除后这些游戏会失去该平台。',
+      'game.watch': '监控进程',
+      'game.watch.hint': '填游戏本体进程名（如 ZenlessZoneZero.exe），不要填启动器。',
+      'game.watch.add': '添加进程',
+      'game.watch.placeholder': '例如 ZenlessZoneZero.exe',
+      'game.meta': '{platforms} 平台 · {entries} 启动入口 · {installs} 安装',
+      'game.edit': '编辑',
+      'game.new': '新游戏',      'game.color': '主题色',
+      'game.banner': '横幅背景',
+      'game.banner.later': '自定义图片与裁剪（后续版本）',
+      'remove': '删除',
+    }
+
+    const en = {
+      'panel': 'Game Time',
+      'title': 'Game Time',
+      'tab.today': 'Today',
+      'tab.all': 'All',
+      'demo': 'Demo data',
+      'live.badge': 'Live',
+      'live.on': 'Monitoring',
+      'stat.today': 'Today',
+      'stat.week': 'This week',
+      'stat.total': 'Total',
+      'empty.title': 'No play time recorded today',
+      'empty.body': 'Once the process monitor is connected, today\u2019s games will show up here.',
+      'today.section': 'Played today',
+      'today.count': '{n} games',
+      'today.col.game': 'Game',
+      'today.col.day': 'Today',
+      'today.col.week': 'Week',
+      'today.col.total': 'Total',
+      'search': 'Search games…',
+      'sort.total': 'Total time',
+      'sort.week': 'This week',
+      'sort.recent': 'Recently played',
+      'sort.name': 'Name',
+      'all.summary': '{n} games · {total} total',
+      'all.col.game': 'Game',
+      'all.col.total': 'Total',
+      'all.col.week': 'Week',
+      'all.col.recent': 'Last played',
+      'all.empty': 'No matching games',
+      'back': 'Back',
+      'range.day': 'Day',
+      'range.week': 'Week',
+      'range.month': 'Month',
+      'range.all': 'All',
+      'detail.sessions': 'Sessions',
+      'detail.average': 'Average',
+      'detail.platforms': 'Platforms',
+      'detail.trend': 'Play time',
+      'chart.bar': 'Bars',
+      'chart.line': 'Line',
+      'chart.avg': 'avg',
+      'chart.other': 'Other',
+      'chart.unit': '{title} ({unit})',
+      'chart.reset': 'Reset',
+      'unit.10m': '10m',
+      'unit.30m': '30m',
+      'unit.1h': '1h',
+      'unit.1d': '1d',
+      'unit.1w': '1w',
+      'unit.1mo': '1mo',
+      'chart.empty': 'Nothing recorded in this range',
+      'all.analysis': 'Breakdown',
+      'all.share.games': 'Games',
+      'all.sessions': 'Play sessions',
+      'all.sessions.summary': '{n} sessions · {total}',
+      'list.segments': 'Sessions',
+      'list.days': 'Daily detail',
+      'list.months': 'Monthly detail',
+      'list.empty': 'No records',
+      'list.count': '{n} sessions',
+      'minute': 'm',
+      'hour': 'h',
+      'noData': '—',
+      'rel.today': 'today',
+      'rel.yesterday': 'yesterday',
+      'rel.days': '{n}d ago',
+      'rel.never': '—',
+      'settings': 'Settings',
+      'refresh': 'Refresh status',
+      'settings.game': 'Game settings',
+      'settings.monitor': 'Monitoring',
+      'settings.interval': 'Polling interval',
+      'settings.interval.hint': 'Shorter intervals track start and stop more precisely at a slightly higher cost.',
+      'settings.history': 'History window',
+      'settings.history.hint': 'Loads only this much history at startup; older records load on demand. Totals stay complete.',
+      'settings.history.months': '{n} months',
+      'settings.history.years': '{n} years',
+      'settings.foreground': 'Only count while the game window is in front',
+      'settings.foreground.hint': 'Stops idle and background time from inflating totals.',
+      'settings.startup': 'Startup',
+      'settings.autostart': 'Start with Windows',
+      'settings.autostart.hint': 'Launches at login so play time is counted from the first game after boot.',
+      'settings.autostart.unavailable': 'The standalone entry is not installed, so this cannot be set yet.',
+      'settings.autostart.dsh': 'Unavailable in DSH: the plugin is started by DSH itself, so a login entry here would only start DSH — that belongs to your DSH install, not this plugin. This option applies to the standalone interface only.',
+      'settings.autostart.dsh.hint': 'DSH starts the plugin itself, so this is not available here.',
+      'settings.autostart.why': 'Why enable it: only a resident tracker can count from boot. Without it, time played before you open the app is not recorded.',
+      'settings.autostart.off': 'Turning it off removes only this app’s login entry; other software is untouched and you can re-enable it anytime.',
+      'settings.ui': 'Interface',
+      'settings.density': 'Density',
+      'settings.density.comfortable': 'Comfortable',
+      'settings.density.compact': 'Compact',
+      'settings.platforms': 'Platforms',
+      'settings.platforms.hint': 'The per-game platform breakdown aggregates over this list.',
+      'settings.addPlatform': 'Add platform',
+      'settings.expand': 'Details',
+      'settings.collapse': 'Collapse',
+      'settings.dropGame.hint': 'Drop an exe or shortcut here to add a game',
+      'settings.dropGame.release': 'Release to add',
+      'settings.dropGame.added': 'Added {n} game(s)',
+      'settings.dropGame.owned': '"{name}" already times this exe; nothing was added',
+      'settings.data': 'Data',
+      'settings.data.retention': 'Sessions kept forever; the last year loads by default, older pages on demand',
+      'settings.data.later': 'Import, export and reset arrive with the collector',
+      'settings.note': 'Demo state — changes are not saved. They persist once the collector is wired.',
+      'settings.credit': 'Created by 茄子超人',
+      'game.platforms': 'Platforms',
+      'game.platforms.hint': 'Disabled platforms disappear from badges, the breakdown and the totals.',
+      'game.runs': 'Launch entries',
+      'game.runs.hint': 'One game may have several launch entry points; play time merges into the game.',
+      'game.run.add': 'Add launch entry',
+      'game.run.path': 'Launcher or game executable path',
+      'game.name': 'Name',
+      'cancel': 'Cancel',
+      'delete': 'Delete',
+      'game.manage': 'Games',
+      'game.add': 'Add game',
+      'game.delete.title': 'Delete this game?',
+      'game.delete.body': '“{name}” and all of its recorded history will be removed. This cannot be undone.',
+      'game.path': 'Game path',
+      'game.path.placeholder': 'Game executable, e.g. D:\\...\\ZenlessZoneZero.exe',
+      'game.path.hint': 'Point at the game itself; the watched process is derived from it.',
+      'game.watch.dir': 'Limited to {dir}',
+      'pick': 'Choose file',
+      'reveal': 'Show in folder',
+      'icon.extract': 'Use app icon',
+      'status.offline': 'Offline',
+      'status.active': 'Timing',
+      'status.error': 'Path missing',
+      'status.suspended': 'Suspended',
+      'icon.pick': 'Change icon',
+      'icon.reset': 'Remove icon',
+      'game.icon': 'Icon',      'game.background': 'Background',
+      'game.background.hint': 'Shown behind the detail header, fading out at the bottom.',
+      'settings.background': 'Panel background',
+      'settings.background.hint': 'Painted behind the panel at low opacity.',
+      'bg.surface': 'Block opacity',
+      'settings.headerBackground': 'Header background',
+      'settings.surfaceColor': 'Block colour',
+      'settings.surfaceColor.hint': 'Base colour of cards and panels; black by default.',
+      'game.headerBackground': 'Header background',
+      'game.headerBackground.hint': 'Only inside this game; empty falls back to the global header image.',
+      'settings.headerBackground.hint': 'Painted behind the top bar only, fading downwards.',
+      'settings.headerHeight': 'Height (px)',
+      'settings.headerFade': 'Fade start (%)',
+      'bg.opacity': 'Image opacity',
+      'bg.mask': 'Mask colour',
+      'bg.maskOpacity': 'Mask strength',      'crop.zoom': 'Zoom',
+      'crop.apply': 'Apply',
+      'crop.hint': 'Drag to reposition',
+      'image.choose': 'Choose image',
+      'image.remove': 'Remove',
+      'image.none': 'Not set',
+      'image.working': 'Working…',
+      'fit.cover': 'Cover',
+      'fit.tile': 'Tile',      'game.installs': 'Installs',
+      'game.installs.add': 'Add install',
+      'game.installs.hint': 'One row per platform install. Point at the game executable; the process is derived. Empty means no timing.',
+      'drop.hint': 'Drop an exe or shortcut here to add it automatically',
+      'drop.hintBrowser': 'The web build reads .url / .lnk drops; for an exe use the folder button',
+      'drop.release': 'Release to add',
+      'drop.added': 'Added {n} install(s)',
+      'drop.dup': '{n} already present',
+      'drop.failed': 'Could not read: {names}',
+      'drop.unreadable': 'No path available; dropping an exe needs the desktop app, use the folder button',
+      'drop.needExe': 'Only an exe or a shortcut to one is accepted here',
+      'drop.owned': 'This exe is already timed under "{name}"; a second row would stay at zero',
+      'drop.ownedAddAsk': '"{name}" already times this exe. Add anyway?',
+      'drop.ownedAdd': 'Add anyway',
+      'game.group': 'Stat group',
+      'game.group.placeholder': 'Empty = by platform',
+      'game.group.hint': 'With a name, this game counts under that name in the platform breakdown instead of its platform. A platform name such as Steam folds into that platform. Empty keeps the platform.',
+      'game.group.color': 'Group colour',
+      'game.group.into': 'Folds into {name}',
+      'game.group.active': 'Grouped as {name}',
+      'game.archive': 'Archive',
+      'game.archive.toggle': 'Fold out of the game list',
+      'game.archive.exempt': 'Never auto-archive',
+      'game.archive.auto': 'Folded by the auto-archive rule; playing it restores it',
+      'game.duplicate': 'Duplicate',
+      'game.duplicate.hint': 'This exe is already timed under "{name}"; this entry will not record time',
+      'game.danger': 'Delete',
+      'game.delete.button': 'Delete this game',
+      'game.delete.note': 'Play history is removed with it',
+      'settings.autoArchive': 'Auto archive',
+      'settings.autoArchive.on': 'Fold games that have not been played for a while',
+      'settings.autoArchive.hint': 'Based on the last play time; playing the game restores it. Games never played are left alone.',
+      'settings.autoArchive.after': 'Not played for',
+      'settings.autoArchive.day': 'days',
+      'settings.autoArchive.month': 'months',
+      'game.archive.hint': 'Fold only: the game leaves the game tables, while totals, charts and sessions keep counting it. Nothing is deleted; uncheck to unfold.',
+      'all.archived': '{n} · {total} total',
+      'all.archive.uninstalled': 'Archive uninstalled ({n})',
+      'archived': 'Archived',
+      'archived.title': 'Archived games',
+      'game.install.path': 'Game executable path',
+      'game.install.process': 'Watching: {process}',      'game.entries': 'Launch entries',
+      'game.entries.add': 'Add launch entry',
+      'game.entries.hint': 'Recorded only; never used for timing. Empty name/path fall back to the platform.',
+      'game.entry.name': 'Name',
+      'game.entry.path': 'Launcher or game path',
+      'game.entry.args': 'Arguments (optional)',
+      'platform.name': 'Platform name',
+      'platform.color': 'Colour',
+      'platform.processes': 'Extra process names, comma separated',
+      'platform.drag': 'Drag to reorder',
+      'platform.path': 'Default launcher (optional)',
+      'platform.delete.title': 'Delete this platform?',
+      'platform.delete.body': '“{name}” is used by {count} game(s); they will lose this platform.',
+      'game.watch': 'Watched processes',
+      'game.watch.hint': 'The game process itself (for example ZenlessZoneZero.exe), never the launcher.',
+      'game.watch.add': 'Add process',
+      'game.watch.placeholder': 'e.g. ZenlessZoneZero.exe',
+      'game.meta': '{platforms} platforms · {entries} entries · {installs} installs',
+      'game.edit': 'Edit',
+      'game.new': 'New game',      'game.color': 'Accent colour',
+      'game.banner': 'Banner',
+      'game.banner.later': 'Custom image with cropping (later version)',
+      'remove': 'Remove',
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Formatting and date helpers
+     * ------------------------------------------------------------------ */
+
+    const MINUTE = 60000
+    const HOUR_MS = 3600000
+    const DAY_MS = 86400000
+
+    function pad2(n) {
+      return n < 10 ? '0' + n : String(n)
+    }
+
+    function startOfDay(value) {
+      const d = new Date(value)
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+
+    function startOfWeek(value) {
+      const d = startOfDay(value)
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+      return d
+    }
+
+    function startOfMonth(value) {
+      const d = startOfDay(value)
+      d.setDate(1)
+      return d
+    }
+
+    function dayKey(value) {
+      const d = new Date(value)
+      return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+    }
+
+    function monthKey(value) {
+      const d = new Date(value)
+      return d.getFullYear() + '-' + pad2(d.getMonth() + 1)
+    }
+
+    function clockOf(value) {
+      const d = new Date(value)
+      return pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+    }
+
+    function shortDate(value) {
+      const d = new Date(value)
+      return pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+    }
+
+    function durationParts(seconds, t) {
+      const total = Math.max(0, Math.round(seconds))
+      if (total < 60) return [{ v: total === 0 ? '0' : '1', u: t('minute') }]
+      let hours = Math.floor(total / 3600)
+      let minutes = Math.round((total % 3600) / 60)
+      if (minutes === 60) {
+        hours += 1
+        minutes = 0
+      }
+      if (hours === 0) return [{ v: String(minutes), u: t('minute') }]
+      if (minutes === 0) return [{ v: String(hours), u: t('hour') }]
+      return [
+        { v: String(hours), u: t('hour') },
+        { v: String(minutes), u: t('minute') },
+      ]
+    }
+
+    function formatDuration(seconds, t) {
+      return durationParts(seconds, t)
+        .map(function (part) {
+          return part.v + part.u
+        })
+        .join('')
+    }
+
+    function formatRelative(ts, t, now) {
+      if (!ts) return t('rel.never')
+      const days = Math.round((startOfDay(now).getTime() - startOfDay(ts).getTime()) / DAY_MS)
+      if (days <= 0) return t('rel.today')
+      if (days === 1) return t('rel.yesterday')
+      return t('rel.days').replace('{n}', String(days))
+    }
+
+    function baseName(path) {
+      const parts = String(path).split(/[\\\\/]/)
+      return parts[parts.length - 1] || ''
+    }
+
+    function dirName(path) {
+      const value = String(path)
+      const cut = Math.max(value.lastIndexOf('\\\\'), value.lastIndexOf('/'))
+      return cut > 0 ? value.slice(0, cut) : ''
+    }
+
+    function rangeBounds(range, anchor) {
+      if (range === 'day') {
+        const from = startOfDay(anchor)
+        return { from: from, to: new Date(from.getTime() + DAY_MS) }
+      }
+      if (range === 'week') {
+        const from = startOfWeek(anchor)
+        return { from: from, to: new Date(from.getTime() + 7 * DAY_MS) }
+      }
+      if (range === 'month') {
+        const from = startOfMonth(anchor)
+        return { from: from, to: new Date(from.getFullYear(), from.getMonth() + 1, 1) }
+      }
+      return { from: null, to: null }
+    }
+
+    /* --- scale grains: the wheel steps between these --------------------- */
+
+    const GRAIN = {
+      m10: { key: '10m', kind: 'minute', ms: 600000 },
+      m30: { key: '30m', kind: 'minute', ms: 1800000 },
+      h1: { key: '1h', kind: 'minute', ms: 3600000 },
+      d1: { key: '1d', kind: 'day', ms: DAY_MS },
+      w1: { key: '1w', kind: 'week', ms: 7 * DAY_MS },
+      mo: { key: '1mo', kind: 'month', ms: 0 },
+    }
+
+    // Coarse to fine. `base` is the level a range opens on; one wheel notch
+    // moves one level, up = finer.
+    const GRAIN_LEVELS = {
+      day: { levels: [GRAIN.h1, GRAIN.m30, GRAIN.m10], base: 0 },
+      week: { levels: [GRAIN.d1], base: 0 },
+      month: { levels: [GRAIN.w1, GRAIN.d1], base: 1 },
+      all: { levels: [GRAIN.mo, GRAIN.w1, GRAIN.d1], base: 0 },
+    }
+
+    function baseGrain(range) {
+      const config = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
+      return config.levels[config.base]
+    }
+
+    function grainOf(range, grain) {
+      return grain || baseGrain(range)
+    }
+
+    /** The exact span a chart draws: every range is a rolling window ending at its anchor. */
+    function windowBounds(range, anchor, grain) {
+      const unit = grainOf(range, grain)
+      const end = clampAnchor(range, anchor, unit)
+      if (range === 'all') {
+        if (unit.kind === 'month') {
+          const start = new Date(end.getFullYear(), end.getMonth() - 11, 1)
+          return { from: start, to: new Date(end.getFullYear(), end.getMonth() + 1, 1) }
+        }
+        return { from: new Date(end.getTime() - 365 * DAY_MS), to: end }
+      }
+      const days = windowLength(range, end)
+      return { from: new Date(end.getTime() - days * DAY_MS), to: end }
+    }
+
+    /** The visible window printed next to a chart's title. */
+    function rangeLabelOf(range, anchor, grain) {
+      const unit = grainOf(range, grain)
+      if (range === 'all') {
+        const end = clampAnchor('all', anchor, unit)
+        if (unit.kind === 'month') {
+          const start = new Date(end.getFullYear(), end.getMonth() - 11, 1)
+          return (
+            start.getFullYear() +
+            '.' +
+            pad2(start.getMonth() + 1) +
+            ' – ' +
+            end.getFullYear() +
+            '.' +
+            pad2(end.getMonth() + 1)
+          )
+        }
+        const start = new Date(end.getTime() - 365 * DAY_MS)
+        const stamp = function (value) {
+          return value.getFullYear() + '.' + pad2(value.getMonth() + 1) + '.' + pad2(value.getDate())
+        }
+        return stamp(start) + ' – ' + stamp(new Date(end.getTime() - DAY_MS))
+      }
+      if (range === 'day') {
+        const end = clampAnchor('day', anchor, unit)
+        const start = new Date(end.getTime() - DAY_MS)
+        const wholeDay = start.getHours() === 0 && end.getHours() === 0
+        if (wholeDay) return shortDate(start)
+        return shortDate(start) + ' ' + clockOf(start) + ' – ' + shortDate(end) + ' ' + clockOf(end)
+      }
+      const end = clampAnchor(range, anchor, unit)
+      const days = windowLength(range, end)
+      const start = new Date(end.getTime() - days * DAY_MS)
+      return shortDate(start) + ' – ' + shortDate(new Date(end.getTime() - DAY_MS))
+    }
+
+    function earliestSessionStart() {
+      let earliest = null
+      for (const session of SESSIONS) {
+        if (earliest === null || session.start < earliest) earliest = session.start
+      }
+      return earliest
+    }
+
+    /** Round up to the next whole hour — a rolling day window ends on an hour. */
+    function ceilHour(value) {
+      const hour = new Date(value)
+      hour.setMinutes(0, 0, 0)
+      if (hour.getTime() < value.getTime()) hour.setHours(hour.getHours() + 1)
+      return hour
+    }
+
+    /** Round up to the next midnight — the day-long windows end on a day. */
+    function ceilDay(value) {
+      const day = startOfDay(value)
+      if (day.getTime() < value.getTime()) day.setDate(day.getDate() + 1)
+      return day
+    }
+
+    /** How many bars one window holds: the full day, week or month. */
+    function windowLength(range, end) {
+      if (range === 'day') return 1
+      if (range === 'week') return 7
+      const last = new Date(end.getTime() - 1)
+      return new Date(last.getFullYear(), last.getMonth() + 1, 0).getDate()
+    }
+
+    /** Every window ends at the end of today / this week / this month. */
+    function defaultAnchor(range) {
+      const day = startOfDay(NOW)
+      if (range === 'day') return new Date(day.getTime() + DAY_MS)
+      if (range === 'week') return new Date(startOfWeek(day).getTime() + 7 * DAY_MS)
+      if (range === 'month') return new Date(day.getFullYear(), day.getMonth() + 1, 1)
+      return new Date(NOW)
+    }
+
+    /** Round up to the grain: a 10-minute mark, an hour, a day or a month. */
+    function alignEnd(value, grain) {
+      if (!grain || grain.kind === 'month') return startOfMonth(value)
+      if (grain.kind === 'minute') {
+        const end = new Date(value)
+        end.setSeconds(0, 0)
+        const step = Math.max(1, Math.round(grain.ms / MINUTE))
+        const rest = end.getMinutes() % step
+        if (rest !== 0) end.setMinutes(end.getMinutes() + (step - rest))
+        return end
+      }
+      return ceilDay(value)
+    }
+
+    /**
+     * Panning stops at real data: never past the end of the current period,
+     * never before the first recorded day. Every range is a rolling window
+     * ending at the anchor, aligned to the current grain.
+     */
+    function clampAnchor(range, anchor, grain) {
+      const unit = grainOf(range, grain)
+      // The true first session comes from the host; the loaded window may start
+      // later, and `ensureHistory()` fills it in when panning reaches the edge.
+      const earliest = FIRST_START !== null ? FIRST_START : earliestSessionStart()
+      const day = startOfDay(NOW)
+      if (unit.kind === 'month') {
+        const month = startOfMonth(anchor)
+        const min = startOfMonth(earliest === null ? NOW : new Date(earliest))
+        const max = startOfMonth(day)
+        if (month.getTime() < min.getTime()) return min
+        if (month.getTime() > max.getTime()) return max
+        return month
+      }
+      const periodEnd =
+        range === 'day'
+          ? new Date(day.getTime() + DAY_MS)
+          : range === 'week'
+            ? new Date(startOfWeek(day).getTime() + 7 * DAY_MS)
+            : range === 'month'
+              ? new Date(day.getFullYear(), day.getMonth() + 1, 1)
+              : new Date(day.getTime() + DAY_MS)
+      const minEnd = earliest === null ? periodEnd : new Date(startOfDay(new Date(earliest)).getTime() + DAY_MS)
+      const end = alignEnd(anchor, unit)
+      if (end.getTime() < minEnd.getTime()) return minEnd
+      if (end.getTime() > periodEnd.getTime()) return periodEnd
+      return end
+    }
+
+    /** One step is one x tick: a grain of the current zoom level. */
+    function panAnchor(range, anchor, delta, grain) {
+      const unit = grainOf(range, grain)
+      const next = new Date(anchor)
+      if (unit.kind === 'month') next.setMonth(next.getMonth() + delta)
+      else next.setTime(next.getTime() + delta * unit.ms)
+      return clampAnchor(range, next, unit)
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Demo data — replaced by a Host query in a later round
+     * ------------------------------------------------------------------ */
+
+    function createRng(seed) {
+      let state = seed >>> 0
+      return function next() {
+        state = (state * 1664525 + 1013904223) >>> 0
+        return state / 4294967296
+      }
+    }
+
+    const NOW = new Date()
+
+    const PLATFORMS = {
+      mihoyo: { id: 'mihoyo', name: '米哈游', short: '米', color: '#4f8ff7' },
+      steam: { id: 'steam', name: 'Steam', short: 'S', color: '#66c0f4' },
+      epic: { id: 'epic', name: 'Epic', short: 'E', color: '#b6b6f2' },
+      tencent: { id: 'tencent', name: '腾讯', short: '腾', color: '#f0a53e' },
+      gog: { id: 'gog', name: 'GOG', short: 'G', color: '#a86bd6' },
+      riot: { id: 'riot', name: 'Riot', short: 'R', color: '#e35c5c' },
+    }
+
+    const GAMES = [
+      {
+        id: 'zzz',
+        name: '绝区零',
+        glyph: '绝',
+        color: '#4f8ff7',
+        platforms: ['mihoyo'],
+        weight: 1,
+        disabled: [],
+        runs: [
+          {
+            id: 'zzz-r1',
+            platformId: 'mihoyo',
+            path: 'D:\\GameFile\\miHoYo Launcher\\launcher.exe',
+            args: '--game=nap_cn',
+          },
+          {
+            id: 'zzz-r2',
+            platformId: 'mihoyo',
+            path: 'D:\\GameFile\\miHoYo Launcher\\games\\ZenlessZoneZero Game\\ZenlessZoneZero.exe',
+            args: '-use-d3d12',
+          },
+          {
+            id: 'zzz-r3',
+            platformId: 'mihoyo',
+            path: 'C:\\Users\\Public\\XXMI Launcher\\XXMI Launcher.exe',
+            args: '--nogui --xxmi ZZMI',
+          },
+        ],
+      },
+      {
+        id: 'genshin',
+        name: '原神',
+        glyph: '原',
+        color: '#5cc9b8',
+        platforms: ['mihoyo'],
+        weight: 0.55,
+        disabled: [],
+        runs: [
+          {
+            id: 'genshin-r1',
+            platformId: 'mihoyo',
+            path: 'D:\\GameFile\\miHoYo Launcher\\launcher.exe',
+            args: '--game=hk4e_cn',
+          },
+        ],
+      },
+      {
+        id: 'hsr',
+        name: '崩坏：星穹铁道',
+        glyph: '星',
+        color: '#8f7af0',
+        platforms: ['mihoyo'],
+        weight: 0.45,
+        disabled: [],
+        runs: [
+          {
+            id: 'hsr-r1',
+            platformId: 'mihoyo',
+            path: 'D:\\GameFile\\miHoYo Launcher\\launcher.exe',
+            args: '--game=hkrpg_cn',
+          },
+        ],
+      },
+      {
+        id: 'lol-cn',
+        name: '英雄联盟（国服）',
+        glyph: 'L',
+        color: '#d7b45a',
+        platforms: ['tencent'],
+        weight: 0.5,
+        disabled: [],
+        runs: [
+          {
+            id: 'lol-cn-r1',
+            platformId: 'tencent',
+            path: 'C:\\Riot Games\\League of Legends\\LeagueClient.exe',
+            args: '',
+          },
+        ],
+      },
+      {
+        id: 'lol-global',
+        name: '英雄联盟（国际服）',
+        glyph: 'L',
+        color: '#e35c5c',
+        platforms: ['riot'],
+        weight: 0.12,
+        disabled: [],
+        runs: [
+          {
+            id: 'lol-global-r1',
+            platformId: 'riot',
+            path: 'C:\\Riot Games\\League of Legends (US)\\LeagueClient.exe',
+            args: '',
+          },
+        ],
+      },
+      {
+        id: 'cp2077',
+        name: '赛博朋克 2077',
+        glyph: '7',
+        color: '#f2d94e',
+        platforms: ['steam', 'gog'],
+        weight: 0.2,
+        disabled: [],
+        runs: [
+          {
+            id: 'cp2077-r1',
+            platformId: 'steam',
+            path: 'D:\\SteamLibrary\\steamapps\\common\\Cyberpunk 2077\\bin\\x64\\Cyberpunk2077.exe',
+            args: '',
+          },
+          {
+            id: 'cp2077-r2',
+            platformId: 'gog',
+            path: 'D:\\GOG Games\\Cyberpunk 2077\\bin\\x64\\Cyberpunk2077.exe',
+            args: '',
+          },
+        ],
+      },
+      {
+        id: 'hollow',
+        name: '空洞骑士',
+        glyph: '空',
+        color: '#9aa7b4',
+        platforms: ['steam', 'epic'],
+        weight: 0.15,
+        disabled: [],
+        runs: [
+          {
+            id: 'hollow-r1',
+            platformId: 'steam',
+            path: 'D:\\SteamLibrary\\steamapps\\common\\Hollow Knight\\hollow_knight.exe',
+            args: '',
+          },
+        ],
+      },
+    ]
+
+    const COLOR_PRESETS = ['#4f8ff7', '#5cc9b8', '#8f7af0', '#d7b45a', '#e35c5c', '#f2d94e', '#9aa7b4', '#7fbf6a']
+
+
+    const DEMO_PATHS = {
+      zzz: 'D:\GameFile\miHoYo Launcher\games\ZenlessZoneZero Game\ZenlessZoneZero.exe',
+      genshin: 'D:\GameFile\miHoYo Launcher\games\Genshin Impact Game\GenshinImpact.exe',
+      hsr: 'D:\GameFile\miHoYo Launcher\games\Star Rail Game\StarRail.exe',
+      'lol-cn': 'D:\GameFile\TencentGames\英雄联盟(26)\Game\League of Legends.exe',
+      'lol-global': 'D:\GameFile\Riot Games\League of Legends\Game\League of Legends.exe',
+      cp2077: 'D:\SteamLibrary\steamapps\common\Cyberpunk 2077\bin\x64\Cyberpunk2077.exe',
+      hollow: 'D:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight.exe',
+    }
+
+    for (const key of Object.keys(PLATFORMS)) {
+      if (typeof PLATFORMS[key].path !== 'string') PLATFORMS[key].path = ''
+    }
+
+    for (const game of GAMES) {
+      if (!Array.isArray(game.entries)) game.entries = game.runs || []
+      if (!Array.isArray(game.installs)) game.installs = []
+      if (game.installs.length === 0) {
+        const path = DEMO_PATHS[game.id] || ''
+        if (path) {
+          game.installs.push({
+            id: game.id + '-i1',
+            platformId: (game.platforms || [])[0],
+            path: path,
+          })
+        }
+      }
+    }
+    const SETTINGS = {
+      intervalSec: 10,
+      foregroundOnly: true,
+      autostart: true,
+      density: 'comfortable',
+      historyDays: 365,
+      autoArchive: { enabled: false, value: 60, unit: 'day' },
+    }
+
+    function enabledPlatforms(game) {
+      const ids = []
+      const add = function (id) {
+        if (id && PLATFORMS[id] && ids.indexOf(id) < 0) ids.push(id)
+      }
+      for (const install of game.installs || []) add(install.platformId)
+      for (const entry of game.entries || []) add(entry.platformId)
+      for (const id of game.platforms || []) add(id)
+      return ids
+    }
+
+    function buildSessions() {
+      const rng = createRng(20261108)
+      const out = []
+      const days = 400
+
+      const todayPlan = [
+        { gameId: 'zzz', platformId: 'mihoyo', until: 420, minutes: 46 },
+        { gameId: 'zzz', platformId: 'mihoyo', until: 130, minutes: 57 },
+        { gameId: 'genshin', platformId: 'mihoyo', until: 260, minutes: 32 },
+        { gameId: 'lol-cn', platformId: 'tencent', until: 540, minutes: 47 },
+      ]
+      todayPlan.forEach(function (item, index) {
+        const end = NOW.getTime() - item.until * MINUTE
+        out.push({
+          id: 'today-' + index,
+          gameId: item.gameId,
+          platformId: item.platformId,
+          start: end - item.minutes * MINUTE,
+          end: end,
+        })
+      })
+
+      for (let back = 1; back < days; back++) {
+        const dayStart = startOfDay(NOW)
+        dayStart.setDate(dayStart.getDate() - back)
+        for (const game of GAMES) {
+          if (rng() > 0.45 * game.weight) continue
+          const count = 1 + (rng() < 0.35 ? 1 : 0) + (rng() < 0.12 ? 1 : 0)
+          let cursor = 9 * 60 + Math.floor(rng() * 600)
+          for (let i = 0; i < count; i++) {
+            const lengthMin = 18 + Math.floor(rng() * 130 * game.weight + rng() * 40)
+            const startAt = dayStart.getTime() + cursor * MINUTE
+            const endAt = startAt + lengthMin * MINUTE
+            const roll = rng()
+            const platform =
+              game.platforms.length === 1 || roll < 0.8
+                ? game.platforms[0]
+                : game.platforms[1 + Math.floor(rng() * (game.platforms.length - 1))]
+            out.push({
+              id: game.id + '-' + back + '-' + i,
+              gameId: game.id,
+              platformId: platform,
+              start: startAt,
+              end: endAt,
+            })
+            cursor += lengthMin + 40 + Math.floor(rng() * 180)
+            if (cursor > 22 * 60) break
+          }
+        }
+      }
+      return out
+    }
+
+    const SESSIONS = buildSessions()
+
+    /* ------------------------------------------------------------------ *
+     * Live data — the Host face replaces the demo snapshot in place
+     * ------------------------------------------------------------------ */
+
+    let LIVE = false
+    let ACTIVE = []
+    let ENV = { standalone: false, autostart: { supported: false, reason: 'dsh', enabled: true, target: '' } }
+    let CURRENT_ROUTE = 'today'
+    // Lazy history: `/state` only carries the configured window. Everything
+    // older is fetched on demand; these module values remember how far back
+    // the client has already loaded and what the true all-time numbers are.
+    let HISTORY_FROM = null
+    let FIRST_START = null
+    let ALL_TOTALS = null
+    let LAST_PLAYED = null
+    let HISTORY_REQUESTS = []
+    // Module scope, not component state: the panel unmounts when you switch
+    // away, so a React state would drop you back on the start page every time.
+    // A client reload (refresh / DSH restart) rebuilds the module and resets it.
+    let LAST_ROUTE = { name: 'today' }
+    let bumpPage = null
+
+    function applyLiveState(payload) {
+      if (!payload || !Array.isArray(payload.games)) return
+      const platforms = payload.platforms && typeof payload.platforms === 'object' ? payload.platforms : {}
+      for (const key of Object.keys(PLATFORMS)) delete PLATFORMS[key]
+      for (const key of Object.keys(platforms)) PLATFORMS[key] = platforms[key]
+
+      GAMES.length = 0
+      for (const game of payload.games) {
+        if (!Array.isArray(game.platforms)) game.platforms = []
+        if (!Array.isArray(game.disabled)) game.disabled = []
+        if (!Array.isArray(game.entries)) game.entries = []
+        if (!Array.isArray(game.installs)) game.installs = []
+        GAMES.push(game)
+      }
+
+      const historyFrom = Number(payload.historyFrom)
+      const hasWindow = Number.isFinite(historyFrom) && historyFrom > 0
+      // Keep what was already lazy-loaded from before the fresh window, so a
+      // 30-second refresh does not throw away pages the user has scrolled to.
+      const older = hasWindow
+        ? SESSIONS.filter(function (session) {
+            return session.end < historyFrom
+          })
+        : []
+
+      SESSIONS.length = 0
+      const sessions = Array.isArray(payload.sessions) ? payload.sessions : []
+      for (const session of sessions) SESSIONS.push(session)
+      if (hasWindow) {
+        const known = new Set(
+          SESSIONS.map(function (session) {
+            return session.id
+          })
+        )
+        for (const session of older) {
+          if (known.has(session.id)) continue
+          known.add(session.id)
+          SESSIONS.push(session)
+        }
+      }
+
+      const liveNow = payload.now || Date.now()
+      for (const item of Array.isArray(payload.active) ? payload.active : []) {
+        SESSIONS.push({
+          id: 'live-' + item.gameId,
+          gameId: item.gameId,
+          platformId: item.platformId,
+          source: null,
+          start: item.start,
+          end: liveNow,
+          live: true,
+        })
+      }
+
+      if (hasWindow) HISTORY_FROM = HISTORY_FROM === null ? historyFrom : Math.min(HISTORY_FROM, historyFrom)
+      const firstStart = Number(payload.firstStart)
+      if (Number.isFinite(firstStart) && firstStart > 0) FIRST_START = firstStart
+      else if (payload.firstStart === null) FIRST_START = null
+      ALL_TOTALS = payload.totals && typeof payload.totals === 'object' ? payload.totals : null
+      LAST_PLAYED = payload.lastPlayed && typeof payload.lastPlayed === 'object' ? payload.lastPlayed : null
+
+      if (payload.settings && typeof payload.settings === 'object') Object.assign(SETTINGS, payload.settings)
+      if (payload.env && typeof payload.env === 'object') ENV = payload.env
+      ACTIVE = Array.isArray(payload.active) ? payload.active : []
+      LIVE = true
+      markConfigChanged()
+    }
+
+    function loadLiveState(force) {
+      if (typeof fetch !== 'function') return
+      let pending = null
+      try {
+        pending = fetch('/api/game-time/state', {
+          headers: { accept: 'application/json' },
+          cache: 'no-store',
+        })
+      } catch (error) {
+        return
+      }
+      Promise.resolve(pending)
+        .then(function (response) {
+          return response && response.ok ? response.json() : null
+        })
+        .then(function (payload) {
+          if (!payload) return
+          if (!force && (CURRENT_ROUTE === 'settings' || CURRENT_ROUTE === 'game-settings')) return
+          applyLiveState(payload)
+          if (typeof bumpPage === 'function') bumpPage()
+        })
+        .catch(function () {})
+    }
+
+
+    let saveTimer = null
+
+    function serializeConfig() {
+      const platforms = {}
+      for (const key of Object.keys(PLATFORMS)) platforms[key] = PLATFORMS[key]
+      return { version: 3, settings: SETTINGS, platforms: platforms, games: GAMES }
+    }
+
+    function saveConfig() {
+      if (!LIVE || typeof fetch !== 'function') return
+      if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = setTimeout(function () {
+        let request = null
+        try {
+          request = fetch('/api/game-time/config', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(serializeConfig()),
+          })
+        } catch (error) {
+          return
+        }
+        Promise.resolve(request).catch(function () {})
+      }, 500)
+    }
+
+    /**
+     * Fetch the slice of history before the window that `/state` delivered.
+     * Overlapping requests are skipped and appends are de-duplicated by id, so
+     * a 30-second refresh and a user panning at the same time cannot double a
+     * session. Panning is incremental; each step asks only for the new slice.
+     */
+    function ensureHistory(fromMs) {
+      if (!LIVE || !Number.isFinite(fromMs) || !Number.isFinite(HISTORY_FROM)) return
+      if (fromMs >= HISTORY_FROM) return
+      if (typeof fetch !== 'function') return
+      for (const item of HISTORY_REQUESTS) {
+        if (fromMs >= item.from) return
+      }
+      // Do not re-fetch what an in-flight request already covers: stop at the
+      // earliest pending start instead of always going to HISTORY_FROM.
+      let ceiling = HISTORY_FROM
+      for (const item of HISTORY_REQUESTS) {
+        if (item.from < ceiling) ceiling = item.from
+      }
+      const request = { from: fromMs, to: ceiling }
+      HISTORY_REQUESTS.push(request)
+      let pending = null
+      try {
+        pending = fetch(
+          '/api/game-time/sessions?from=' + Math.floor(fromMs) + '&to=' + Math.floor(request.to),
+          { headers: { accept: 'application/json' }, cache: 'no-store' }
+        )
+      } catch (error) {
+        HISTORY_REQUESTS.splice(HISTORY_REQUESTS.indexOf(request), 1)
+        return
+      }
+      Promise.resolve(pending)
+        .then(function (response) {
+          return response && response.ok ? response.json() : null
+        })
+        .then(function (payload) {
+          if (!payload || !Array.isArray(payload.sessions)) return
+          const known = new Set(
+            SESSIONS.map(function (session) {
+              return session.id
+            })
+          )
+          for (const session of payload.sessions) {
+            if (known.has(session.id)) continue
+            known.add(session.id)
+            SESSIONS.push(session)
+          }
+          HISTORY_FROM = Math.min(HISTORY_FROM, fromMs)
+          if (typeof bumpPage === 'function') bumpPage()
+        })
+        .catch(function () {})
+        .then(function () {
+          const index = HISTORY_REQUESTS.indexOf(request)
+          if (index >= 0) HISTORY_REQUESTS.splice(index, 1)
+        })
+    }
+
+    loadLiveState()
+    if (typeof window !== 'undefined' && typeof setInterval === 'function') {
+      setInterval(loadLiveState, 30000)
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Queries
+     * ------------------------------------------------------------------ */
+
+    function sessionsInRange(gameId, from, to, platformFilter) {
+      return SESSIONS.filter(function (s) {
+        if (gameId !== null && s.gameId !== gameId) return false
+        if (platformFilter && platformFilter(s.platformId) === false) return false
+        if (from !== null && s.end <= from.getTime()) return false
+        if (to !== null && s.start >= to.getTime()) return false
+        return true
+      })
+    }
+
+    function allowedPlatforms(game) {
+      if (!game) return null
+      const enabled = enabledPlatforms(game)
+      return function (platformId) {
+        return enabled.indexOf(platformId) >= 0
+      }
+    }
+
+    /**
+     * One session's subtitle: the platform, plus the launch source only when it
+     * adds information. A session started from the platform's own launcher has
+     * source === platform name, which used to render as "米哈游 · 米哈游".
+     */
+    function sessionSub(session) {
+      const platform = PLATFORMS[session.platformId]
+      const name = platform ? platform.name : ''
+      const source = session.source
+      if (!source || source === name) return name
+      return name + ' · ' + source
+    }
+
+    function secondsInRange(sessions, from, to) {
+      let total = 0
+      for (const s of sessions) {
+        const start = from === null ? s.start : Math.max(s.start, from.getTime())
+        const end = to === null ? s.end : Math.min(s.end, to.getTime())
+        if (end > start) total += end - start
+      }
+      return total / 1000
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Series — one shape for every chart, whatever the slices are
+     * ------------------------------------------------------------------ */
+
+    const OTHER_ID = 'other'
+    const OTHER_COLOR = '#9199a3'
+    // A slice below this share of the range is folded into 其他, so the legend
+    // and the bar stay readable no matter how many platforms or games exist.
+    const MIN_SHARE = 0.05
+
+    /**
+     * A game may opt out of the platform split: an optional group name turns
+     * every session of that game into one slice under that name. An empty group
+     * keeps the platform as the key, so old data and old behaviour stay intact.
+     */
+    const GROUP_PREFIX = 'group:'
+
+    function groupNameOf(game) {
+      return game ? String(game.group || '').trim() : ''
+    }
+
+    /** Custom colour when set, else a stable palette slot no platform claims. */
+    function groupColorOf(name) {
+      const custom = SETTINGS.groupColors && SETTINGS.groupColors[name]
+      if (custom) return custom
+      const names = []
+      for (const game of GAMES) {
+        const value = groupNameOf(game)
+        if (value && names.indexOf(value) < 0) names.push(value)
+      }
+      names.sort()
+      const taken = new Set()
+      for (const key of Object.keys(PLATFORMS)) taken.add(PLATFORMS[key].color)
+      const free = COLOR_PRESETS.filter(function (color) {
+        return !taken.has(color)
+      })
+      const palette = free.length > 0 ? free : COLOR_PRESETS
+      return palette[Math.max(0, names.indexOf(name)) % palette.length]
+    }
+
+    /**
+     * A group named after a real platform ("Steam", "steam", or a platform id)
+     * folds into that platform instead of becoming a second Steam slice.
+     * Rank order decides when two platforms share a name.
+     */
+    function platformIdForGroup(name) {
+      const wanted = String(name || '').trim().toLowerCase()
+      if (!wanted) return ''
+      const ids = Object.keys(PLATFORMS).sort(function (left, right) {
+        return (Number(PLATFORMS[left].rank) || 0) - (Number(PLATFORMS[right].rank) || 0)
+      })
+      for (const id of ids) {
+        const platform = PLATFORMS[id]
+        if (!platform) continue
+        if (id.toLowerCase() === wanted) return id
+        if (String(platform.name || '').trim().toLowerCase() === wanted) return id
+      }
+      return ''
+    }
+
+    /** The slice key a group name resolves to: a platform id, or a group id. */
+    function platformSliceId(gameId) {
+      const name = groupNameOf(
+        GAMES.find(function (item) {
+          return item.id === gameId
+        })
+      )
+      if (!name) return ''
+      return platformIdForGroup(name) || GROUP_PREFIX + name
+    }
+
+    /** Normalised auto-archive setting; missing/old configs default to off. */
+    function autoArchiveConfig() {
+      const raw = SETTINGS.autoArchive && typeof SETTINGS.autoArchive === 'object' ? SETTINGS.autoArchive : {}
+      const unit = raw.unit === 'month' ? 'month' : 'day'
+      const value = Number(raw.value)
+      return {
+        enabled: raw.enabled === true,
+        value:
+          Number.isFinite(value) && value > 0
+            ? Math.min(unit === 'month' ? 24 : 365, Math.round(value))
+            : unit === 'month'
+              ? 2
+              : 60,
+        unit: unit,
+      }
+    }
+
+    /** How many days of silence trigger the rule; 0 means "rule off". */
+    function autoArchiveDays() {
+      const config = autoArchiveConfig()
+      if (!config.enabled) return 0
+      return config.unit === 'month' ? config.value * 30 : config.value
+    }
+
+    /**
+     * Derived, never stored: a game with at least one session whose last play is
+     * older than the rule is folded automatically. Playing it again moves
+     * `lastPlayedAt` forward, so it comes back by itself.
+     */
+    function autoArchived(game) {
+      const days = autoArchiveDays()
+      if (!days || !game || game.noAutoArchive === true) return false
+      const last = lastPlayedAt(game.id)
+      if (!last) return false
+      return Date.now() - last > days * 86400000
+    }
+
+    /**
+     * Two game entries pointing at the same exe: the host credits only the first
+     * one in config order, so every later entry can never record time. Flag them
+     * instead of silently leaving a zero row behind.
+     *
+     * Pure in-memory scan (no IO). The result is cached per config change so a
+     * re-render does not rescan; `markConfigChanged()` is called by `touch()`
+     * and by every live-state replacement.
+     */
+    let configVersion = 0
+    let duplicateCache = { key: '', map: new Map() }
+
+    function markConfigChanged() {
+      configVersion += 1
+      duplicateCache = { key: '', map: new Map() }
+    }
+
+    function duplicateMap() {
+      // `configVersion` covers edits routed through `touch()`; the length term
+      // also catches direct array edits (tests, live-state swaps).
+      const key = String(configVersion) + '|' + String(GAMES.length)
+      if (duplicateCache.key === key) return duplicateCache.map
+      const owners = new Map()
+      const duplicates = new Map()
+      for (const game of GAMES) {
+        for (const install of game.installs || []) {
+          const pathKey = normalizePath(install.path).toLowerCase()
+          if (!pathKey || !/\.exe$/i.test(pathKey)) continue
+          const owner = owners.get(pathKey)
+          if (!owner) {
+            owners.set(pathKey, game)
+            continue
+          }
+          if (owner.id !== game.id && !duplicates.has(game.id)) {
+            duplicates.set(game.id, { owner: owner, path: normalizePath(install.path) })
+          }
+        }
+      }
+      duplicateCache = { key: key, map: duplicates }
+      return duplicates
+    }
+
+    /** Turn one dropped/picked exe into a brand new game entry. */
+    function createGameFromResolved(t, resolved) {
+      const path = normalizePath(resolved && resolved.path)
+      if (!path || !/\.exe$/i.test(path)) return { state: 'fail' }
+      const owner = installOwner(path, '')
+      if (owner) return { state: 'owned', owner: owner }
+      const ids = Object.keys(PLATFORMS)
+      let platformId = resolved.platformId && PLATFORMS[resolved.platformId] ? resolved.platformId : ''
+      if (!platformId) platformId = ids[0]
+      const id = 'game-' + String(Date.now()) + '-' + String(GAMES.length)
+      const name = resolved.name || t('game.new')
+      GAMES.push({
+        id: id,
+        name: name,
+        glyph: name.charAt(0) || '游',
+        color: COLOR_PRESETS[GAMES.length % COLOR_PRESETS.length],
+        icon: '',
+        background: '',
+        backgroundFit: 'cover',
+        backgroundOpacity: 0.18,
+        backgroundMask: '#000000',
+        backgroundMaskOpacity: 0.25,
+        headerBackground: '',
+        platforms: [platformId],
+        installs: [{ id: id + '-i1', platformId: platformId, path: path }],
+        entries: [],
+      })
+      if (typeof fetch === 'function') {
+        extractIcon(path).then(function (icon) {
+          const game = GAMES.find(function (item) {
+            return item.id === id
+          })
+          if (icon && game && !game.icon) {
+            game.icon = icon
+            if (typeof bumpPage === 'function') bumpPage()
+          }
+        })
+      }
+      markConfigChanged()
+      return { state: 'added' }
+    }
+
+    function DuplicateTag({ t, duplicate }) {
+      if (!duplicate) return null
+      return h(
+        'span',
+        {
+          className: 'gt-dup-tag',
+          title: t('game.duplicate.hint').replace('{name}', duplicate.owner.name),
+        },
+        t('game.duplicate')
+      )
+    }
+
+    /**
+     * Archive is a display fold only: the game collapses out of the game tables,
+     * but its time still counts everywhere — totals, charts, sessions. Sessions
+     * are never touched, so unchecking puts the row straight back.
+     */
+    function isArchived(game) {
+      if (!game) return false
+      return game.archived === true || autoArchived(game)
+    }
+
+    /** How sessions are cut into coloured slices: by platform or by game. */
+    const BY_PLATFORM = {
+      id: 'platform',
+      of: function (session) {
+        return platformSliceId(session.gameId) || session.platformId
+      },
+      meta: function (id) {
+        if (id.indexOf(GROUP_PREFIX) === 0) {
+          const name = id.slice(GROUP_PREFIX.length)
+          return { name: name, color: groupColorOf(name) }
+        }
+        const platform = PLATFORMS[id]
+        return { name: platform ? platform.name : id, color: platform ? platform.color : OTHER_COLOR }
+      },
+    }
+
+    const BY_GAME = {
+      id: 'game',
+      of: function (session) {
+        return session.gameId
+      },
+      meta: function (id) {
+        const game = GAMES.find(function (item) {
+          return item.id === id
+        })
+        return { name: game ? game.name : id, color: game ? game.color : OTHER_COLOR }
+      },
+    }
+
+    /** Per-slice seconds inside one window — the stack source of every chart. */
+    function seriesPartsIn(sessions, from, to, slice) {
+      const byId = new Map()
+      for (const s of sessions) {
+        const start = from === null ? s.start : Math.max(s.start, from.getTime())
+        const end = to === null ? s.end : Math.min(s.end, to.getTime())
+        if (end <= start) continue
+        const id = slice.of(s)
+        byId.set(id, (byId.get(id) || 0) + (end - start) / 1000)
+      }
+      return Array.from(byId.entries())
+        .map(function (entry) {
+          const meta = slice.meta(entry[0])
+          return { id: entry[0], name: meta.name, color: meta.color, seconds: entry[1] }
+        })
+        .sort(function (a, b) {
+          return b.seconds - a.seconds
+        })
+    }
+
+    /** Seconds of any game session that is still running (not in `sessions`). */
+    function activeSeconds(gameId) {
+      let total = 0
+      for (const item of ACTIVE) {
+        if (gameId !== null && item.gameId !== gameId) continue
+        total += Number(item.seconds) || 0
+      }
+      return total
+    }
+
+    function totalsFor(gameId, range, anchor) {
+      // "总计" is all-time: the host sends the totals separately because the
+      // client only holds the configured lazy-load window of detail.
+      if (range === 'all' && ALL_TOTALS) {
+        const base = gameId === null ? Number(ALL_TOTALS.total) || 0 : Number((ALL_TOTALS.game || {})[gameId]) || 0
+        return base + activeSeconds(gameId)
+      }
+      const game = gameId === null ? null : GAMES.find(function (g) {
+        return g.id === gameId
+      })
+      const bounds = rangeBounds(range, anchor)
+      const sessions = sessionsInRange(gameId, bounds.from, bounds.to, allowedPlatforms(game))
+      return secondsInRange(sessions, bounds.from, bounds.to)
+    }
+
+    /** One x label: clock for minutes, weekday/day/date for days, month for months. */
+    function bucketLabel(range, grain, from) {
+      if (grain.kind === 'minute') return clockOf(from)
+      if (grain.kind === 'week') return shortDate(from)
+      if (range === 'week') return ['一', '二', '三', '四', '五', '六', '日'][(from.getDay() + 6) % 7]
+      if (range === 'month') return String(from.getDate())
+      return shortDate(from)
+    }
+
+    /** The buckets a window is cut into — the grain decides the tick. */
+    function seriesWindows(range, anchor, grain) {
+      const unit = grainOf(range, grain)
+      const bounds = windowBounds(range, anchor, unit)
+      const windows = []
+      if (unit.kind === 'month') {
+        let cursor = startOfMonth(bounds.from)
+        while (cursor.getTime() < bounds.to.getTime()) {
+          const from = new Date(cursor)
+          const to = new Date(from.getFullYear(), from.getMonth() + 1, 1)
+          windows.push({ key: monthKey(from), label: pad2(from.getMonth() + 1) + '月', from: from, to: to })
+          cursor = to
+        }
+        return windows
+      }
+      const step = unit.ms
+      for (let time = bounds.from.getTime(); time < bounds.to.getTime(); time += step) {
+        const from = new Date(time)
+        const to = new Date(Math.min(time + step, bounds.to.getTime()))
+        windows.push({ key: 'w' + time, label: bucketLabel(range, unit, from), from: from, to: to })
+      }
+      return windows
+    }
+
+    /**
+     * The one series builder. `gameId === null` means every game; `slice`
+     * turns each session into a coloured part (BY_PLATFORM or BY_GAME).
+     */
+    function seriesFor(gameId, range, anchor, slice, grain) {
+      const game = gameId === null ? null : GAMES.find(function (g) {
+        return g.id === gameId
+      })
+      const filter = allowedPlatforms(game)
+      const cut = slice || BY_PLATFORM
+      return seriesWindows(range, anchor, grain).map(function (window) {
+        const list = sessionsInRange(gameId, window.from, window.to, filter)
+        return {
+          key: window.key,
+          label: window.label,
+          seconds: secondsInRange(list, window.from, window.to),
+          parts: seriesPartsIn(list, window.from, window.to, cut),
+        }
+      })
+    }
+
+    function platformBreakdown(gameId, range, anchor, grain) {
+      const game = gameId === null ? null : GAMES.find(function (g) {
+        return g.id === gameId
+      })
+      const bounds = windowBounds(range, anchor, grain)
+      const list = sessionsInRange(gameId, bounds.from, bounds.to, allowedPlatforms(game))
+      return seriesPartsIn(list, bounds.from, bounds.to, BY_PLATFORM)
+    }
+
+    /** Aggregate one range across every game, sliced by `slice`. */
+    function totalsByRange(range, anchor, slice, grain) {
+      const bounds = windowBounds(range, anchor, grain)
+      const list = sessionsInRange(null, bounds.from, bounds.to, null)
+      return seriesPartsIn(list, bounds.from, bounds.to, slice)
+    }
+
+    function keepSliceIds(totals) {
+      let total = 0
+      totals.forEach(function (seconds) {
+        total += seconds
+      })
+      const keep = new Set()
+      if (total <= 0) return keep
+      let bestId = null
+      let best = -1
+      totals.forEach(function (seconds, id) {
+        if (seconds / total >= MIN_SHARE) keep.add(id)
+        if (seconds > best) {
+          best = seconds
+          bestId = id
+        }
+      })
+      // Never fold everything away when a hundred tiny slices add up.
+      if (keep.size === 0 && bestId !== null) keep.add(bestId)
+      return keep
+    }
+
+    /** Fold small slices of a flat distribution into 其他. */
+    function bucketItems(items, t) {
+      const totals = new Map()
+      items.forEach(function (item) {
+        totals.set(item.id, item.seconds)
+      })
+      const keep = keepSliceIds(totals)
+      if (keep.size === totals.size) return items
+      let other = 0
+      const kept = []
+      items.forEach(function (item) {
+        if (keep.has(item.id)) kept.push(item)
+        else other += item.seconds
+      })
+      if (other > 0) kept.push({ id: OTHER_ID, name: t('chart.other'), color: OTHER_COLOR, seconds: other })
+      return kept.sort(function (a, b) {
+        return b.seconds - a.seconds
+      })
+    }
+
+    /** Fold small slices inside every window of a stacked series into 其他. */
+    function bucketSeries(points, t) {
+      const totals = new Map()
+      points.forEach(function (point) {
+        point.parts.forEach(function (part) {
+          totals.set(part.id, (totals.get(part.id) || 0) + part.seconds)
+        })
+      })
+      const keep = keepSliceIds(totals)
+      if (keep.size === totals.size) return points
+      return points.map(function (point) {
+        const parts = []
+        let other = 0
+        point.parts.forEach(function (part) {
+          if (keep.has(part.id)) parts.push(part)
+          else other += part.seconds
+        })
+        if (other > 0) parts.push({ id: OTHER_ID, name: t('chart.other'), color: OTHER_COLOR, seconds: other })
+        return { key: point.key, label: point.label, seconds: point.seconds, parts: parts }
+      })
+    }
+
+    function segmentsOf(gameId, day) {
+      const from = startOfDay(day)
+      const to = new Date(from.getTime() + DAY_MS)
+      return segmentsBetween(gameId, from, to)
+    }
+
+    function segmentsBetween(gameId, from, to) {
+      const game = GAMES.find(function (g) {
+        return g.id === gameId
+      })
+      return sessionsInRange(gameId, from, to, allowedPlatforms(game))
+        .slice()
+        .sort(function (a, b) {
+          return a.start - b.start
+        })
+    }
+
+    function daysInRange(gameId, range, anchor, grain) {
+      const game = GAMES.find(function (g) {
+        return g.id === gameId
+      })
+      const filter = allowedPlatforms(game)
+      const rows = []
+      if (range === 'all') {
+        const base = startOfMonth(anchor)
+        for (let i = 11; i >= 0; i--) {
+          const bounds = rangeBounds('month', new Date(base.getFullYear(), base.getMonth() - i, 1))
+          const list = sessionsInRange(gameId, bounds.from, bounds.to, filter)
+          const seconds = secondsInRange(list, bounds.from, bounds.to)
+          if (seconds <= 0) continue
+          rows.push({
+            key: monthKey(bounds.from),
+            label: bounds.from.getFullYear() + '.' + pad2(bounds.from.getMonth() + 1),
+            seconds: seconds,
+            count: list.length,
+          })
+        }
+        return rows.reverse()
+      }
+
+      const bounds = windowBounds(range, anchor, grain)
+      const days = Math.round((bounds.to.getTime() - bounds.from.getTime()) / DAY_MS)
+      for (let i = 0; i < days; i++) {
+        const day = new Date(bounds.from.getTime() + i * DAY_MS)
+        if (day.getTime() > NOW.getTime()) break
+        const to = new Date(day.getTime() + DAY_MS)
+        const list = sessionsInRange(gameId, day, to, filter)
+        rows.push({
+          key: dayKey(day),
+          label: shortDate(day),
+          seconds: secondsInRange(list, day, to),
+          count: list.length,
+        })
+      }
+      return rows
+    }
+
+    function lastPlayedAt(gameId) {
+      let latest = 0
+      if (LAST_PLAYED) {
+        const stored = Number(LAST_PLAYED[gameId])
+        if (Number.isFinite(stored) && stored > latest) latest = stored
+      }
+      for (const s of SESSIONS) {
+        if (s.gameId === gameId && s.end > latest) latest = s.end
+      }
+      for (const item of ACTIVE) {
+        if (item.gameId !== gameId) continue
+        const end = (Number(item.start) || 0) + (Number(item.seconds) || 0) * 1000
+        if (end > latest) latest = end
+      }
+      return latest
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Styles
+     * ------------------------------------------------------------------ */
+
+    const STYLE = [
+      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;}',
+      '.gt-top{padding:18px 22px 0;flex:0 0 auto;}',
+      '.gt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
+      '.gt-head-left{display:flex;align-items:center;gap:10px;min-width:0;}',
+      '.gt-head-right{display:flex;align-items:center;gap:8px;}',
+      '.gt-title{font-size:17px;font-weight:600;letter-spacing:.2px;margin:0;}',
+      '.gt-live-on{display:inline-flex;align-items:center;gap:5px;font-size:11px;opacity:.8;}',
+      '.gt-dot{width:6px;height:6px;border-radius:50%;background:#3ccf7a;flex:0 0 auto;}',
+      '.gt-demo{font-size:11px;line-height:1;padding:4px 7px;border-radius:999px;border:1px solid rgba(128,128,128,.3);opacity:.55;white-space:nowrap;}',
+      '.gt-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:rgba(128,128,128,.10);flex:0 0 auto;}',
+      '.gt-tab{font:inherit;font-size:13px;line-height:1;color:inherit;background:transparent;border:0;border-radius:8px;padding:7px 14px;cursor:pointer;opacity:.62;}',
+      '.gt-tab:hover{opacity:.85;}',
+      '.gt-tab[data-active="true"]{background:rgba(128,128,128,.20);opacity:1;}',
+      '.gt-root{display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;padding:14px 22px 22px;gap:14px;overflow:auto;color:inherit;font:inherit;}',
+      '.gt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
+      '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
+      '.gt-label{font-size:12px;opacity:.62;letter-spacing:.2px;}',
+      '.gt-value{font-size:23px;font-weight:600;line-height:1.25;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.gt-value .gt-unit{font-size:.68em;font-weight:500;opacity:.55;margin-left:1px;margin-right:3px;}',
+      '.gt-section{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;margin-top:2px;}',
+      '.gt-section-title{font-size:13px;font-weight:600;opacity:.9;}',
+      '.gt-muted{font-size:12px;opacity:.55;}',
+      '.gt-grid-head,.gt-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 72px 72px;gap:8px;align-items:center;}',
+      '.gt-grid-head{font-size:11px;opacity:.5;padding:0 10px 2px;letter-spacing:.2px;}',
+      '.gt-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12.5px;letter-spacing:-.1px;}',
+      '.gt-num .gt-unit{font-size:.78em;opacity:.5;margin-left:1px;margin-right:2px;font-weight:500;}',
+      '.gt-row{font:inherit;color:inherit;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;padding:9px 10px;cursor:pointer;width:100%;}',
+      '.gt-row:hover{background:rgba(128,128,128,.09);}',
+      '.gt-row:active{background:rgba(128,128,128,.14);}',
+      '.gt-row-main{display:flex;align-items:center;gap:10px;min-width:0;}',
+      '.gt-tile{display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex:0 0 auto;letter-spacing:.5px;}',
+      '.gt-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.gt-name-wrap{display:flex;flex-direction:column;gap:3px;min-width:0;}',
+      '.gt-badges{display:flex;gap:4px;flex-wrap:wrap;}',
+      '.gt-badge{width:14px;height:14px;border-radius:4px;font-size:9px;line-height:14px;text-align:center;color:#fff;font-weight:600;}',
+      '.gt-toolbar{display:flex;gap:8px;align-items:center;flex:0 0 auto;}',
+      '.gt-search{flex:1 1 auto;min-width:0;font:inherit;font-size:13px;color:inherit;background:rgba(128,128,128,.07);border:1px solid rgba(128,128,128,.22);border-radius:9px;padding:8px 11px;outline:none;}',
+      '.gt-search:focus{border-color:rgba(128,128,128,.45);}',
+      '.gt-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:34px 24px;border:1px dashed rgba(128,128,128,.28);border-radius:12px;}',
+      '.gt-empty-title{font-size:14px;font-weight:600;}',
+      '.gt-empty-body{font-size:12.5px;opacity:.6;max-width:340px;line-height:1.6;}',
+      '.gt-back{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;box-sizing:border-box;font:inherit;font-size:12.5px;color:inherit;background:transparent;border:0;padding:5px 8px;border-radius:8px;cursor:pointer;opacity:.75;transition:opacity .16s ease,background .16s ease,transform .12s ease;}',
+      '.gt-back:hover{opacity:1;}',
+      '.gt-back:active{transform:scale(.96);}',
+      '.gt-back:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(128,128,128,.3);}',
+      '.gt-back.icon{width:21px;height:21px;padding:0;background:transparent;border:0;border-radius:7px;opacity:.45;transition:opacity .16s ease;}',
+      '.gt-back.icon:hover{opacity:1;}',
+      '.gt-back.icon:active{transform:scale(.96);}',
+      '.gt-icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;box-sizing:border-box;font:inherit;color:inherit;background:transparent;border:0;border-radius:7px;width:21px;height:21px;line-height:1;padding:0;cursor:pointer;opacity:.45;transition:opacity .16s ease;}',
+      '.gt-icon-btn svg{width:14px;height:14px;}',
+      '.gt-icon-btn:hover{opacity:1;}',
+      '.gt-icon-btn:active{transform:scale(.96);}',
+      '.gt-icon-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(128,128,128,.3);}',
+      '.gt-icon-btn:disabled{opacity:.28;cursor:default;transform:none;}',
+      '.gt-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto;}',
+      '.gt-detail-id{display:flex;align-items:center;gap:11px;min-width:0;}',
+      '.gt-detail-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.gt-detail-right{display:flex;align-items:center;gap:10px;flex:0 0 auto;}',
+      '.gt-detail-total{text-align:right;}',
+      '.gt-range{display:flex;align-items:center;gap:8px;flex:0 0 auto;}',
+      '.gt-seg{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:rgba(128,128,128,.10);}',
+      '.gt-seg-btn{font:inherit;font-size:12.5px;line-height:1;color:inherit;background:transparent;border:0;border-radius:8px;padding:6px 11px;cursor:pointer;opacity:.62;}',
+      '.gt-seg-btn:hover{opacity:.85;}',
+      '.gt-seg-btn[data-active="true"]{background:rgba(128,128,128,.20);opacity:1;}',
+      '.gt-pager{display:inline-flex;gap:2px;margin-left:auto;}',
+      '.gt-gear.spinning svg{animation:gt-spin .9s linear infinite;}',
+      '@keyframes gt-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}',
+      '.gt-gear.inline{margin-left:0;}',
+      '.gt-name-row{display:flex;align-items:center;gap:4px;min-width:0;}',
+      '.gt-swatch{width:16px;height:16px;border-radius:5px;cursor:pointer;flex:0 0 auto;}',
+      '.gt-color{width:24px;height:20px;padding:0;border:0;background:transparent;cursor:pointer;}',
+      '.gt-pselect{position:relative;min-width:0;}',
+      '.gt-pselect-btn{display:flex;align-items:center;gap:5px;width:100%;font:inherit;font-size:11.5px;color:inherit;background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.22);border-radius:8px;padding:4px 6px;cursor:pointer;text-align:left;}',
+      '.gt-pselect-btn:hover{border-color:rgba(128,128,128,.4);}',
+      '.gt-pselect-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.gt-caret{opacity:.5;font-size:9px;}',
+      '.gt-pselect-menu{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;min-width:120px;padding:4px;border-radius:9px;border:1px solid rgba(128,128,128,.28);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 10px 26px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:1px;}',
+      '.gt-pselect-item{display:flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;color:inherit;background:transparent;border:0;border-radius:6px;padding:5px 6px;cursor:pointer;text-align:left;}',
+      '.gt-pselect-item:hover{background:rgba(128,128,128,.16);}',
+      '.gt-pselect-item[data-active="true"]{background:rgba(128,128,128,.22);}',
+      '.gt-backdrop{position:fixed;inset:0;z-index:20;}',
+      '.gt-status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;line-height:1.3;}',
+      '.gt-status-text{white-space:nowrap;letter-spacing:.1px;font-weight:500;}',
+      '.gt-status-platform{opacity:.42;transition:opacity .15s ease;}',
+      '.gt-status-platform[data-active="true"]{opacity:1;font-weight:500;}',
+      '.gt-status-sep{opacity:.45;font-size:10px;}',
+      '.gt-status{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;}',
+      '.gt-accent{width:3px;height:22px;border-radius:2px;flex:0 0 auto;}',
+      '.gt-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
+      '.gt-panel-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),calc(var(--gt-surface-alpha,.05) * 0.85));flex:0 0 auto;}',
+      '.gt-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}',
+      '.gt-card-head-title{display:flex;align-items:baseline;gap:8px;min-width:0;}',
+      '.gt-card-head-title .gt-muted{white-space:nowrap;}',
+      '.gt-card-title{font-size:12.5px;font-weight:600;opacity:.85;}',
+      '.gt-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:rgba(128,128,128,.14);}',
+      '.gt-bar-seg{height:100%;}',
+      '.gt-legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:10px;}',
+      '.gt-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.8;}',
+      '.gt-legend-dot{width:8px;height:8px;border-radius:3px;}',
+      '.gt-analysis{display:flex;flex-direction:column;gap:10px;margin-top:4px;padding-top:14px;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-share-divider{height:1px;margin:12px 0 10px;background:rgba(128,128,128,.14);}',
+      '.gt-collapse{display:flex;align-items:center;gap:8px;width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;}',
+      '.gt-collapse .gt-muted{margin-left:auto;font-variant-numeric:tabular-nums;}',
+      '.gt-collapse-caret{font-size:9px;opacity:.45;transition:transform .15s ease;}',
+      '.gt-collapse-caret[data-open="false"]{transform:rotate(-90deg);}',
+      '.gt-collapse[aria-expanded="true"]+.gt-list{margin-top:10px;}',
+      '.gt-summary-line{display:flex;align-items:center;justify-content:space-between;gap:10px;}',
+      '.gt-summary-line .gt-link{padding:0;font-size:12px;}',
+      '.gt-archived{margin-top:2px;padding-top:8px;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-archived .gt-card-title{font-size:12px;}',
+      '.gt-fixed-head{overflow:hidden;}',
+      '.gt-fixed-head>.gt-settings{flex:1 1 auto;min-height:0;overflow:auto;}',
+      '.gt-row[data-archived="true"]{opacity:.72;}',
+      '.gt-chart-wrap{width:100%;position:relative;}',
+      '.gt-chart{display:block;width:100%;height:auto;}',
+      '.gt-chart[data-pan="true"]{cursor:grab;touch-action:pan-y;user-select:none;}',
+      '.gt-chart[data-pan="true"]:active{cursor:grabbing;}',
+      '.gt-chart text{font-family:inherit;font-size:8px;font-weight:400;letter-spacing:.01em;}',
+      '.gt-chart-label{fill:currentColor;opacity:.5;}',
+      '.gt-chart-unit{fill:currentColor;opacity:.42;letter-spacing:0;}',
+      '.gt-chart-axis{stroke:currentColor;opacity:.12;stroke-width:1;}',
+      '.gt-chart-grid{stroke:currentColor;opacity:.05;stroke-width:1;}',
+      '.gt-chart .gt-chart-y,.gt-chart .gt-chart-avg-y{font-size:7px;font-weight:500;fill:currentColor;opacity:.5;letter-spacing:0;font-variant-numeric:tabular-nums;}',
+      '.gt-chart-avg{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:.75;stroke-dasharray:2 3;fill:none;}',
+      '.gt-chart-avg-tick{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:1;}',
+      '.gt-chart-avg-tag{fill:currentColor;opacity:.5;}',
+      '.gt-chart-tip{position:absolute;z-index:5;display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:7px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 8px 20px rgba(0,0,0,.18);white-space:nowrap;pointer-events:none;transform:translate(-50%,calc(-100% - 6px));font-size:11px;line-height:1.4;}',
+      '.gt-chart-tip[data-side="below"]{transform:translate(-50%,6px);}',
+      '.gt-chart-tip i{width:7px;height:7px;border-radius:2px;display:inline-block;flex:0 0 auto;}',
+      '.gt-chart-tip b{font-weight:600;}',
+      '.gt-chart-tip span{opacity:.55;font-variant-numeric:tabular-nums;}',
+      '.gt-list{display:flex;flex-direction:column;gap:1px;}',
+      '.gt-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;font-size:12.5px;}',
+      '.gt-list-row:hover{background:rgba(128,128,128,.07);}',
+      '.gt-list-row[data-selected="true"]{background:rgba(128,128,128,.12);}',
+      '.gt-list-time{opacity:.85;font-variant-numeric:tabular-nums;}',
+      '.gt-list-sub{opacity:.5;font-size:11.5px;margin-left:8px;}',
+      '.gt-list-dur{opacity:.9;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+      '.gt-modal-backdrop{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px;}',
+      '.gt-modal{width:min(360px,100%);border-radius:14px;border:1px solid rgba(128,128,128,.3);background:var(--dsw-alias-bg-overlay,Canvas);padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);}',
+      '.gt-modal-title{font-size:14px;font-weight:600;margin-bottom:8px;}',
+      '.gt-modal-body{font-size:12.5px;opacity:.7;line-height:1.6;margin-bottom:16px;}',
+      '.gt-modal-actions{display:flex;justify-content:flex-end;gap:8px;}',
+      '.gt-btn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:9px;border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;cursor:pointer;}',
+      '.gt-btn:hover{background:rgba(128,128,128,.12);}',
+      '.gt-btn.danger{background:#e5484d;border-color:#e5484d;color:#fff;}',
+      '.gt-btn.danger:hover{background:#d93b40;}',
+      '.gt-pathfield{display:flex;gap:6px;align-items:center;min-width:0;}',
+      '.gt-pathfield .gt-input{flex:1 1 auto;min-width:0;}',
+      '.gt-pathfield-wrap{display:flex;flex-direction:column;gap:4px;min-width:0;}',
+      '.gt-pathfield-wrap .gt-pathfield{width:100%;}',
+      '.gt-pathfield-wrap[data-drop="true"] .gt-input{border-color:rgba(128,128,128,.6);}',
+      '.gt-pathfield-note{font-size:11px;opacity:.62;line-height:1.45;}',
+      '.gt-dup-tag{display:inline-flex;align-items:center;margin-left:6px;padding:0 6px;height:16px;border-radius:999px;font-size:10.5px;line-height:1;color:#ff6b6b;background:rgba(229,72,77,.14);border:1px solid rgba(229,72,77,.38);white-space:nowrap;vertical-align:middle;}',
+      '.gt-iconpick{display:flex;align-items:center;gap:10px;padding:6px 0 10px;}',
+      '.gt-iconpick-pick{display:inline-flex;align-items:center;gap:10px;cursor:pointer;}',
+      '.gt-iconpick-pick > img,.gt-iconpick-pick > .gt-tile{transition:opacity .16s ease;}',
+      '.gt-iconpick-pick:hover > img,.gt-iconpick-pick:hover > .gt-tile{opacity:.85;}',
+      '.gt-iconpick.bare{padding:0;gap:0;}',
+      '.gt-iconimg{object-fit:cover;border-radius:8px;}',
+      '.gt-tile-img{object-fit:cover;display:block;}',
+      '.gt-tile-btn{cursor:pointer;}',      '.gt-imagefield{display:flex;flex-direction:column;gap:8px;padding:6px 0 10px;}',
+      '.gt-imagefield-preview{height:84px;border-radius:10px;background-size:cover;background-position:center;border:1px solid rgba(128,128,128,.24);}',
+      '.gt-imagefield-empty{height:84px;border-radius:10px;border:1px dashed rgba(128,128,128,.3);display:flex;align-items:center;justify-content:center;font-size:12px;opacity:.5;}',
+      '.gt-imagefield-actions{display:flex;align-items:center;gap:12px;}',
+      '.gt-crop-backdrop{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px;}',
+      '.gt-crop{width:min(520px,100%);border-radius:14px;border:1px solid rgba(128,128,128,.3);background:var(--dsw-alias-bg-overlay,Canvas);padding:16px;display:flex;flex-direction:column;gap:12px;}',
+      '.gt-crop-viewport{position:relative;overflow:hidden;border-radius:10px;background:rgba(0,0,0,.35);touch-action:none;}',
+      '.gt-crop-viewport img{user-select:none;pointer-events:none;}',
+      '.gt-crop-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;}',
+      '.gt-imagefield-box{position:relative;height:84px;border-radius:10px;border:1px dashed rgba(128,128,128,.3);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;}',
+      '.gt-imagefield-box.has{border-style:solid;border-color:rgba(128,128,128,.24);}',
+      '.gt-imagefield-hint{font-size:12px;opacity:.55;}',
+      '.gt-bg-controls{display:flex;flex-wrap:wrap;gap:10px 18px;padding:2px 0 10px;}',
+      '.gt-bg-control{display:flex;align-items:center;gap:6px;font-size:11.5px;opacity:.75;}',
+      '.gt-bg-control input[type=\"range\"]{width:80px;}',
+      '.gt-bg-mask{position:absolute;inset:0;z-index:0;pointer-events:none;}',      '.gt-banner{height:104px;border-radius:12px;background-size:cover;background-position:center;flex:0 0 auto;-webkit-mask-image:linear-gradient(to bottom,#000 45%,transparent);mask-image:linear-gradient(to bottom,#000 45%,transparent);}',
+      '.gt-banner.tile{background-size:auto;background-repeat:repeat;}',
+      '.gt-bg{position:absolute;inset:0;z-index:0;opacity:.16;pointer-events:none;background-position:center top;}',
+      '.gt-top{position:relative;z-index:1;}',
+      '.gt-header-bg{position:absolute;top:0;left:0;right:0;height:var(--gt-header-height,300px);z-index:0;opacity:.55;pointer-events:none;background-size:cover;background-position:center top;-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 var(--gt-header-fade,52%),transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 var(--gt-header-fade,52%),transparent 100%);}',
+      '.gt-head{position:relative;z-index:1;}',      '.gt-drag{cursor:grab;opacity:.4;font-size:13px;line-height:1;user-select:none;flex:0 0 auto;padding:2px 1px;}',
+      '.gt-platrow-actions{display:flex;align-items:center;gap:14px;padding:4px 0 10px;flex-wrap:wrap;}',
+      '.gt-platrow{padding:8px 0;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-platrow:first-of-type{border-top:0;}',
+      '.gt-platrow-head{display:grid;grid-template-columns:12px 7px 22px minmax(0,1fr) 26px;gap:8px;align-items:center;}',
+      '.gt-entry{padding:10px 0;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-entry:first-of-type{border-top:0;}',
+      '.gt-entry-head{display:grid;grid-template-columns:92px minmax(0,1fr) 26px;gap:8px;align-items:center;}',
+      '.gt-gamerow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-gamerow:first-of-type{border-top:0;}',
+      '.gt-gamerow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}',
+      '.gt-gamerow-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.gt-gamerow-meta{font-size:11.5px;opacity:.5;}',      '.gt-settings{display:flex;flex-direction:column;gap:14px;}',
+      '.gt-group{border:1px solid rgba(128,128,128,.22);border-radius:12px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));padding:4px 14px;}',
+      '.gt-group-title{font-size:12.5px;font-weight:600;opacity:.85;padding:10px 0 2px;}',
+      '.gt-group-row{display:flex;align-items:center;gap:8px;padding:2px 0 10px;}',
+      '.gt-group-label{font-size:12px;opacity:.62;white-space:nowrap;flex:0 0 auto;}',
+      '.gt-group-row .gt-input{flex:1 1 auto;width:auto;}',
+      '.gt-drop[data-drop="true"]{border-color:rgba(128,128,128,.55);background:rgba(128,128,128,.06);}',
+      '.gt-drop-hint{font-size:11px;opacity:.42;padding:2px 0 10px;}',
+      '.gt-drop[data-drop="true"] .gt-drop-hint{opacity:.9;}',
+      '.gt-drop-note{opacity:.8;padding:0 0 10px;}',
+      '.gt-field{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid rgba(128,128,128,.14);font-size:13px;}',
+      '.gt-field:first-of-type{border-top:0;}',
+      '.gt-field-text{min-width:0;}',
+      '.gt-field-name{font-size:13px;}',
+      '.gt-field-hint{font-size:11.5px;opacity:.55;margin-top:3px;line-height:1.5;}',
+      '.gt-check{width:16px;height:16px;accent-color:currentColor;cursor:pointer;}',
+      '.gt-check:disabled{opacity:.4;cursor:not-allowed;}',
+      '.gt-input{font:inherit;font-size:12.5px;color:inherit;background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.22);border-radius:8px;padding:7px 9px;outline:none;min-width:0;width:100%;box-sizing:border-box;}',
+      '.gt-input:focus{border-color:rgba(128,128,128,.5);}',
+      '.gt-run{display:grid;grid-template-columns:18px minmax(0,1fr) 26px;gap:8px;align-items:start;padding:8px 0;border-top:1px solid rgba(128,128,128,.14);}',
+      '.gt-run-meta{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:6px;min-width:0;align-items:center;}',
+      '.gt-run-path{grid-column:1 / -1;}',
+      '.gt-run:first-of-type{border-top:0;}',
+      '.gt-run-args{font-size:11px;opacity:.5;font-family:ui-monospace,Consolas,monospace;}',
+      '.gt-pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;line-height:1.55;padding:1px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap;}',
+      '.gt-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;border:1px solid rgba(128,128,128,.25);background:rgba(128,128,128,.07);font-size:12px;cursor:pointer;color:inherit;}',
+      '.gt-chip[data-on="true"]{border-color:rgba(128,128,128,.55);background:rgba(128,128,128,.16);}',
+      '.gt-chip-dot{width:8px;height:8px;border-radius:50%;}',
+      '.gt-chips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 10px;}',
+      '.gt-note{font-size:11px;opacity:.5;line-height:1.5;letter-spacing:.1px;}',
+      '.gt-credit{font-size:11px;opacity:.32;text-align:center;letter-spacing:.3px;padding:2px 0 14px;}',
+      '.gt-warn{color:#ff6b6b;opacity:.95;}',
+      '.gt-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;font:inherit;color:inherit;background:transparent;border:0;border-radius:8px;padding:0;cursor:pointer;text-align:left;}',
+      '.gt-group-head:hover{background:rgba(128,128,128,.07);}',
+      '.gt-group-head:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(128,128,128,.35);}',
+      '.gt-group-toggle{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;opacity:.55;padding:10px 6px 2px;white-space:nowrap;transition:opacity .15s ease;}',
+      '.gt-group-head:hover .gt-group-toggle{opacity:.95;}',
+      '.gt-chevron{transition:transform .15s ease;}',
+      '.gt-chevron[data-open="false"]{transform:rotate(-90deg);}',
+      '.gt-gamepills{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 10px;}',
+      '.gt-gamepill{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;line-height:1.5;color:inherit;padding:3px 9px 3px 4px;border-radius:999px;border:1px solid rgba(var(--gt-pill,128,128,128),.30);background:rgba(var(--gt-pill,128,128,128),.10);cursor:pointer;}',
+      '.gt-gamepill:hover{background:rgba(var(--gt-pill,128,128,128),.18);}',
+      '.gt-gamepill-icon{width:16px;height:16px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}',
+      '.gt-gamepill-name{white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;}',
+      '.gt-gamepill-dup{width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex:0 0 auto;}',
+      '.gt-link{font:inherit;font-size:12.5px;color:inherit;background:transparent;border:0;padding:6px 0;cursor:pointer;opacity:.75;text-decoration:none;}',
+      '.gt-link:hover{opacity:1;}',
+      '.gt-compact .gt-root{padding:10px 18px 16px;gap:10px;}',
+      '.gt-compact .gt-row{padding:6px 8px;}',
+      '.gt-compact .gt-value{font-size:21px;}',
+      '.gt-compact .gt-card{padding:10px 12px;}',
+      '.gt-compact .gt-panel-card{padding:10px 12px;}',
+    ].join('')
+
+    /* ------------------------------------------------------------------ *
+     * Small components
+     * ------------------------------------------------------------------ */
+
+    function Glyph({ size = 18 }) {
+      return h(
+        'svg',
+        { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true, style: { display: 'block' } },
+        h('path', {
+          d: 'M7.6 7.2h8.8a4.3 4.3 0 0 1 4.18 3.28l.78 3.1a2.85 2.85 0 0 1-3.79 3.4l-1.62-.62a3.4 3.4 0 0 0-1.22-.23H9.27c-.42 0-.84.08-1.22.23l-1.62.62a2.85 2.85 0 0 1-3.79-3.4l.78-3.1A4.3 4.3 0 0 1 7.6 7.2Z',
+          stroke: 'currentColor',
+          strokeWidth: 1.5,
+          strokeLinejoin: 'round',
+        }),
+        h('path', { d: 'M8.2 10.2v2.4M7 11.4h2.4', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }),
+        h('circle', { cx: 15.6, cy: 10.8, r: 1.1, fill: 'currentColor' }),
+        h('circle', { cx: 17.5, cy: 12.6, r: 1.1, fill: 'currentColor' })
+      )
+    }
+
+    /* Icons: Lucide (https://lucide.dev, ISC) — 24px grid, 2px round stroke. */
+    const ICON_PROPS = {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': true,
+    }
+
+    function iconProps(size) {
+      return Object.assign({ width: size, height: size }, ICON_PROPS, { style: { display: 'block', flex: '0 0 auto' } })
+    }
+
+    function RefreshIcon({ size = 16 }) {
+      return h(
+        'svg',
+        iconProps(size),
+        h('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8' }),
+        h('path', { d: 'M21 3v5h-5' })
+      )
+    }
+
+    /** Lucide rotate-ccw — reset the chart to its default window and scale. */
+    function ResetIcon({ size = 14 }) {
+      return h(
+        'svg',
+        iconProps(size),
+        h('path', { d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }),
+        h('path', { d: 'M3 3v5h5' })
+      )
+    }
+
+    /** Lucide chevron-down; points right while the section is collapsed. */
+    function ChevronIcon({ size = 14, open }) {
+      return h(
+        'svg',
+        Object.assign(iconProps(size), {
+          className: 'gt-chevron',
+          'data-open': open ? 'true' : 'false',
+        }),
+        h('path', { d: 'm6 9 6 6 6-6' })
+      )
+    }
+
+    function GearIcon({ size = 16 }) {      return h(
+        'svg',
+        iconProps(size),
+        h('circle', { cx: 12, cy: 12, r: 3 }),
+        h('path', {
+          d: 'M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915',
+        })
+      )
+    }
+
+    function ArrowLeftIcon({ size = 16 }) {
+      return h(
+        'svg',
+        iconProps(size),
+        h('path', { d: 'M19 12H5' }),
+        h('path', { d: 'm12 19-7-7 7-7' })
+      )
+    }
+
+    const STATUS_COLORS = {
+      offline: '#8a8a8a',
+      active: '#3ccf7a',
+      error: '#e5484d',
+      suspended: '#e5b83d',
+    }
+
+    function StatusDot({ t, status }) {
+      return h('span', {
+        className: 'gt-status',
+        title: t('status.' + status),
+        style: { background: STATUS_COLORS[status] || STATUS_COLORS.offline },
+      })
+    }
+
+    function gameStatus(game) {
+      const installs = game.installs || []
+      if (installs.some(function (install) { return install.exists === false })) return 'error'
+      if (ACTIVE.some(function (item) { return item.gameId === game.id })) return 'active'
+      if (game.running) return 'suspended'
+      return 'offline'
+    }
+
+    function platformIdList() {
+      return Object.keys(PLATFORMS).sort(function (left, right) {
+        const leftRank = Number(PLATFORMS[left].rank) || 0
+        const rightRank = Number(PLATFORMS[right].rank) || 0
+        return leftRank - rightRank
+      })
+    }
+
+    function platformStatus(id) {
+      const platform = PLATFORMS[id]
+      if (platform && /\.lnk$/i.test(platform.path || '')) return 'error'
+      if (platform && platform.path && platform.exists === false) return 'error'
+      if (ACTIVE.some(function (item) { return item.platformId === id })) return 'active'
+      if (platform && platform.running) return 'suspended'
+      return 'offline'
+    }
+
+    function Tile({ game, size }) {
+      const px = size || 34
+      const radius = Math.round(px * 0.27)
+      if (game.icon) {
+        return h('img', {
+          className: 'gt-tile gt-tile-img',
+          src: game.icon,
+          alt: '',
+          style: { width: px, height: px, borderRadius: radius },
+        })
+      }
+      return h(
+        'div',
+        {
+          className: 'gt-tile',
+          style: { width: px, height: px, borderRadius: radius, background: game.color, fontSize: Math.round(px * 0.42) },
+        },
+        game.glyph
+      )
+    }
+
+    function PlatformPill({ id, active }) {
+      const platform = PLATFORMS[id]
+      if (!platform) return null
+      const rgb = hexToRgb(platform.color)
+      return h(
+        'span',
+        {
+          className: 'gt-pill',
+          style: {
+            background: 'rgba(' + rgb + ', .16)',
+            borderColor: 'rgba(' + rgb + ', .4)',
+            opacity: active === false ? 0.42 : 1,
+          },
+          title: platform.name,
+        },
+        platform.name
+      )
+    }
+
+    function Badges({ platformIds, activeId }) {
+      return h(
+        'div',
+        { className: 'gt-badges' },
+        platformIds.map(function (id) {
+          return h(PlatformPill, { key: id, id: id, active: activeId === undefined ? undefined : id === activeId })
+        })
+      )
+    }
+
+    function StatusPill({ t, status }) {
+      const color = STATUS_COLORS[status] || STATUS_COLORS.offline
+      return h(
+        'span',
+        {
+          className: 'gt-pill',
+          style: {
+            background: 'rgba(' + hexToRgb(color) + ', .16)',
+            borderColor: 'rgba(' + hexToRgb(color) + ', .45)',
+            color: color,
+          },
+          title: t('status.' + status),
+        },
+        t('status.' + status)
+      )
+    }
+
+    let CLIENT_CTX = null
+
+    function pickDirectoryPath() {
+      const native = typeof globalThis !== 'undefined' ? globalThis.__DSH_DIRECTORY_PICKER__ : null
+      if (native && typeof native.pick === 'function') {
+        return Promise.resolve(native.pick())
+          .then(function (value) {
+            return typeof value === 'string' ? value : null
+          })
+          .catch(function () {
+            return null
+          })
+      }
+      if (!CLIENT_CTX || typeof CLIENT_CTX.get !== 'function') return Promise.resolve(null)
+      let workspace = null
+      try {
+        workspace = CLIENT_CTX.get('uiWorkspace')
+      } catch (error) {
+        return Promise.resolve(null)
+      }
+      if (!workspace || typeof workspace.pickDirectory !== 'function') return Promise.resolve(null)
+      return Promise.resolve(workspace.pickDirectory())
+        .then(function (value) {
+          return typeof value === 'string' ? value : null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    function pickExecutable() {
+      return pickDirectoryPath().then(function (dir) {
+        if (!dir) return null
+        return fetch('/api/game-time/browse?dir=' + encodeURIComponent(dir), {
+          headers: { accept: 'application/json' },
+        })
+          .then(function (response) {
+            return response.ok ? response.json() : null
+          })
+          .then(function (payload) {
+            if (!payload || !Array.isArray(payload.files) || payload.files.length === 0) return null
+            return payload.files[0].path
+          })
+          .catch(function () {
+            return null
+          })
+      })
+    }
+
+    /** Which game already owns this install path (same exe, any other game). */
+    function installOwner(path, exceptGameId) {
+      const target = normalizePath(path).toLowerCase()
+      if (!target) return null
+      for (const game of GAMES) {
+        if (game.id === exceptGameId) continue
+        for (const install of game.installs || []) {
+          if (normalizePath(install.path).toLowerCase() === target) return game
+        }
+      }
+      return null
+    }
+
+    /** Resolve one dropped file to a launch path, without needing `file.path`. */
+    function resolveDroppedFile(file) {
+      if (!file) return Promise.resolve(null)
+      const path = droppedFilePath(file)
+      if (path) return resolvePathOnHost(path)
+      return readDroppedTarget(file)
+    }
+
+    function PathField({ t, value, placeholder, onChange, dropMode, onResolved, onCommit }) {
+      const [drag, setDrag] = React.useState(false)
+      const [note, setNote] = React.useState('')
+
+      const applyResolved = function (resolved) {
+        if (!resolved || !resolved.ok || !resolved.path) {
+          setNote(t('drop.unreadable'))
+          return
+        }
+        // Platform / launch entries need a real file; a Steam shortcut resolves
+        // to the game exe, which would be the wrong answer in those rows.
+        if (dropMode !== 'game' && /^steam:/i.test(String(resolved.url || ''))) {
+          setNote(t('drop.needExe'))
+          return
+        }
+        setNote('')
+        if (typeof onResolved === 'function') onResolved(resolved)
+        else onChange(resolved.path)
+      }
+
+      const acceptPicked = function (picked) {
+        if (!picked) return pickExecutable()
+        if (!/\.(lnk|url)$/i.test(picked)) return picked
+        return resolvePathOnHost(picked).then(function (resolved) {
+          return resolved && resolved.ok && resolved.path ? resolved : picked
+        })
+      }
+
+      const handleDrop = function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        setDrag(false)
+        const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null
+        if (!file) return
+        resolveDroppedFile(file).then(applyResolved)
+      }
+
+      return h(
+        'div',
+        {
+          className: 'gt-pathfield-wrap',
+          'data-drop': drag ? 'true' : 'false',
+          onDragEnter: function (event) {
+            event.preventDefault()
+            event.stopPropagation()
+            setDrag(true)
+          },
+          onDragOver: function (event) {
+            event.preventDefault()
+            event.stopPropagation()
+            setDrag(true)
+          },
+          onDragLeave: function (event) {
+            event.stopPropagation()
+            setDrag(false)
+          },
+          onDrop: handleDrop,
+        },
+        h(
+          'div',
+          { className: 'gt-pathfield' },
+          h('input', {
+            className: 'gt-input',
+            value: value,
+            placeholder: placeholder,
+            onChange: function (event) {
+              onChange(event.target.value)
+            },
+            onBlur: function (event) {
+              const clean = normalizePath(event.target.value)
+              if (clean !== event.target.value) onChange(clean)
+              if (typeof onCommit === 'function') onCommit(clean)
+            },
+          }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-icon-btn small',
+              title: normalizePath(value) ? t('reveal') : t('pick'),
+              onClick: function () {
+                const current = normalizePath(value)
+                if (current) {
+                  revealPath(current)
+                  return
+                }
+                pickFileFromHost()
+                  .then(acceptPicked)
+                  .then(function (picked) {
+                    if (!picked) return
+                    if (typeof picked === 'string') applyResolved({ ok: true, path: picked })
+                    else applyResolved(picked)
+                  })
+              },
+            },
+            h(FolderIcon, null)
+          )
+        ),
+        note ? h('div', { className: 'gt-pathfield-note' }, note) : null
+      )
+    }
+
+    function hexToRgb(value) {
+      const hex = String(value || '#000000').replace('#', '')
+      const full = hex.length === 3
+        ? hex
+            .split('')
+            .map(function (char) {
+              return char + char
+            })
+            .join('')
+        : hex
+      const number = parseInt(full, 16)
+      if (!Number.isFinite(number)) return '0,0,0'
+      return [(number >> 16) & 255, (number >> 8) & 255, number & 255].join(',')
+    }
+
+    function normalizePath(value) {
+      let out = String(value === null || value === undefined ? '' : value).trim()
+      while (
+        out.length > 1 &&
+        ((out.charAt(0) === '"' && out.charAt(out.length - 1) === '"') ||
+          (out.charAt(0) === "'" && out.charAt(out.length - 1) === "'"))
+      ) {
+        out = out.slice(1, -1).trim()
+      }
+      return out
+    }
+
+    function shrinkIcon(dataUrl) {
+      return new Promise(function (resolve) {
+        if (!dataUrl || typeof document === 'undefined') {
+          resolve(dataUrl)
+          return
+        }
+        const image = new Image()
+        image.onload = function () {
+          const side = 96
+          const canvas = document.createElement('canvas')
+          canvas.width = side
+          canvas.height = side
+          const context = canvas.getContext('2d')
+          const scale = Math.min(side / image.width, side / image.height)
+          const width = Math.round(image.width * scale)
+          const height = Math.round(image.height * scale)
+          context.drawImage(image, (side - width) / 2, (side - height) / 2, width, height)
+          resolve(canvas.toDataURL('image/png'))
+        }
+        image.onerror = function () {
+          resolve(dataUrl)
+        }
+        image.src = dataUrl
+      })
+    }
+
+    function extractIcon(path) {
+      const target = normalizePath(path)
+      if (!target) return Promise.resolve(null)
+      return fetch('/api/game-time/icon?path=' + encodeURIComponent(target), { headers: { accept: 'application/json' } })
+        .then(function (response) {
+          return response.ok ? response.json() : null
+        })
+        .then(function (payload) {
+          if (!payload || !payload.dataUrl) return null
+          return shrinkIcon(payload.dataUrl)
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    function pickFileFromHost() {
+      return fetch('/api/game-time/pick-file', { headers: { accept: 'application/json' } })
+        .then(function (response) {
+          return response.ok ? response.json() : null
+        })
+        .then(function (payload) {
+          return payload && payload.path ? normalizePath(payload.path) : null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    /** Ask the host to turn a .exe / .lnk / .url (or steam:// URL) into a game exe. */
+    function resolvePathOnHost(input) {
+      if (typeof fetch !== 'function') return Promise.resolve(null)
+      const target = String(input || '').trim()
+      if (!target) return Promise.resolve(null)
+      const key = /^(steam|file):\/\//i.test(target) ? 'url' : 'path'
+      return fetch('/api/game-time/resolve?' + key + '=' + encodeURIComponent(target), {
+        headers: { accept: 'application/json' },
+      })
+        .then(function (response) {
+          return response.ok ? response.json() : null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    /**
+     * The real path of a dropped file. The desktop shell exposes
+     * `__DSH_HOST_PATHS__.pathFor` (Electron webUtils); a plain browser gives
+     * only the file name, so shortcuts are parsed from their bytes instead.
+     */
+    function droppedFilePath(file) {
+      if (!file) return ''
+      if (typeof file.path === 'string' && file.path) return file.path
+      try {
+        const bridge = typeof window !== 'undefined' ? window.__DSH_HOST_PATHS__ : null
+        if (bridge && typeof bridge.pathFor === 'function') {
+          const value = bridge.pathFor(file)
+          if (value) return String(value)
+        }
+      } catch (error) {
+        return ''
+      }
+      return ''
+    }
+
+    /** `.url` files are INI: `[InternetShortcut]` + `URL=...`. */
+    function shortcutUrlFromText(text) {
+      const match = /^\s*URL\s*=\s*(.+)$/im.exec(String(text || ''))
+      return match ? match[1].trim() : ''
+    }
+
+    /** Windows shortcuts store the target path as UTF-16LE somewhere in the blob. */
+    function lnkTargetFromBuffer(buffer) {
+      const bytes = new Uint8Array(buffer)
+      let text = ''
+      for (let index = 0; index + 1 < bytes.length; index += 2) {
+        text += String.fromCharCode(bytes[index] | (bytes[index + 1] << 8))
+      }
+      const match = /[A-Za-z]:\\[^\u0000"<>|?*]{1,400}?\.exe/i.exec(text)
+      return match ? match[0] : ''
+    }
+
+    /** Resolve a dropped file without a filesystem path (browser fallback). */
+    function readDroppedTarget(file) {
+      const name = String(file && file.name ? file.name : '').toLowerCase()
+      if (name.slice(-4) === '.url' && typeof file.text === 'function') {
+        return file
+          .text()
+          .then(function (text) {
+            const url = shortcutUrlFromText(text)
+            if (!url) return null
+            return resolvePathOnHost(url)
+          })
+          .catch(function () {
+            return null
+          })
+      }
+      if (name.slice(-4) === '.lnk' && typeof file.arrayBuffer === 'function') {
+        return file
+          .arrayBuffer()
+          .then(function (buffer) {
+            const target = lnkTargetFromBuffer(buffer)
+            return target ? resolvePathOnHost(target) : null
+          })
+          .catch(function () {
+            return null
+          })
+      }
+      return Promise.resolve(null)
+    }
+
+    function revealPath(path) {
+      const target = normalizePath(path)
+      if (!target) return
+      fetch('/api/game-time/reveal?path=' + encodeURIComponent(target)).catch(function () {})
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader()
+        reader.onload = function () {
+          resolve(String(reader.result))
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+    }
+
+    function prepareImage(source, aspect, width) {
+      return new Promise(function (resolve) {
+        const image = new Image()
+        image.onload = function () {
+          const height = Math.round(width / aspect)
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const context = canvas.getContext('2d')
+          const scale = Math.max(width / image.width, height / image.height)
+          const drawWidth = image.width * scale
+          const drawHeight = image.height * scale
+          context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight)
+          resolve(canvas.toDataURL('image/jpeg', 0.86))
+        }
+        image.onerror = function () {
+          resolve(null)
+        }
+        image.src = source
+      })
+    }
+
+    function uploadAsset(dataUrl) {
+      if (!dataUrl) return Promise.resolve(null)
+      return fetch('/api/game-time/asset', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dataUrl: dataUrl }),
+      })
+        .then(function (response) {
+          return response.ok ? response.json() : null
+        })
+        .then(function (payload) {
+          return payload && payload.url ? payload.url : null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    function BackgroundControls({ t, value, onChange }) {
+      const opacity = value.opacity === undefined ? 0.18 : value.opacity
+      const mask = value.mask || '#000000'
+      const maskOpacity = value.maskOpacity === undefined ? 0.25 : value.maskOpacity
+      return h(
+        'div',
+        { className: 'gt-bg-controls' },
+        h(
+          'label',
+          { className: 'gt-bg-control' },
+          h('span', null, t('bg.surface')),
+          h('input', {
+            type: 'range',
+            min: 0,
+            max: 80,
+            value: Math.round(opacity * 100),
+            onChange: function (event) {
+              onChange({ opacity: Number(event.target.value) / 100 })
+            },
+          })
+        ),
+        h(
+          'label',
+          { className: 'gt-bg-control' },
+          h('span', null, t('bg.mask')),
+          h('input', {
+            type: 'color',
+            className: 'gt-color',
+            value: mask,
+            onChange: function (event) {
+              onChange({ mask: event.target.value })
+            },
+          })
+        ),
+        h(
+          'label',
+          { className: 'gt-bg-control' },
+          h('span', null, t('bg.maskOpacity')),
+          h('input', {
+            type: 'range',
+            min: 0,
+            max: 100,
+            value: Math.round(maskOpacity * 100),
+            onChange: function (event) {
+              onChange({ maskOpacity: Number(event.target.value) / 100 })
+            },
+          })
+        )
+      )
+    }
+
+    function Cropper({ t, src: source, aspect, outputWidth, format, onCancel, onApply }) {
+      const [imageSize, setImageSize] = React.useState(null)
+      const [imageElement, setImageElement] = React.useState(null)
+      const [zoom, setZoom] = React.useState(1)
+      const [offset, setOffset] = React.useState({ x: 0, y: 0 })
+      const [dragging, setDragging] = React.useState(false)
+
+      const viewportWidth = aspect >= 2 ? 420 : aspect >= 1 ? 320 : 240
+      const viewportHeight = Math.round(viewportWidth / aspect)
+      const base = imageSize ? Math.max(viewportWidth / imageSize.w, viewportHeight / imageSize.h) : 1
+      const scale = base * zoom
+      const displayWidth = imageSize ? imageSize.w * scale : 0
+      const displayHeight = imageSize ? imageSize.h * scale : 0
+
+      const clampOffset = function (next) {
+        const minX = Math.min(0, viewportWidth - displayWidth)
+        const minY = Math.min(0, viewportHeight - displayHeight)
+        return {
+          x: Math.max(minX, Math.min(0, next.x)),
+          y: Math.max(minY, Math.min(0, next.y)),
+        }
+      }
+
+      const onLoad = function (event) {
+        const element = event.target
+        const size = { w: element.naturalWidth || viewportWidth, h: element.naturalHeight || viewportHeight }
+        const fit = Math.max(viewportWidth / size.w, viewportHeight / size.h)
+        setImageElement(element)
+        setImageSize(size)
+        setOffset({
+          x: (viewportWidth - size.w * fit) / 2,
+          y: (viewportHeight - size.h * fit) / 2,
+        })
+      }
+
+      const startDrag = function (event) {
+        if (!imageSize) return
+        event.preventDefault()
+        setDragging(true)
+        const startX = event.clientX
+        const startY = event.clientY
+        const origin = offset
+        const move = function (moveEvent) {
+          setOffset(
+            clampOffset({
+              x: origin.x + (moveEvent.clientX - startX),
+              y: origin.y + (moveEvent.clientY - startY),
+            })
+          )
+        }
+        const stop = function () {
+          setDragging(false)
+          document.removeEventListener('mousemove', move)
+          document.removeEventListener('mouseup', stop)
+        }
+        document.addEventListener('mousemove', move)
+        document.addEventListener('mouseup', stop)
+      }
+
+      const changeZoom = function (value) {
+        setZoom(value)
+        const nextBase = Math.max(viewportWidth / (imageSize ? imageSize.w : 1), viewportHeight / (imageSize ? imageSize.h : 1))
+        const nextWidth = (imageSize ? imageSize.w : 0) * nextBase * value
+        const nextHeight = (imageSize ? imageSize.h : 0) * nextBase * value
+        setOffset({
+          x: (viewportWidth - nextWidth) / 2,
+          y: (viewportHeight - nextHeight) / 2,
+        })
+      }
+
+      const apply = function () {
+        if (!imageElement || !imageSize) return
+        const canvas = document.createElement('canvas')
+        canvas.width = outputWidth
+        canvas.height = Math.max(1, Math.round(outputWidth / aspect))
+        const context = canvas.getContext('2d')
+        const sourceX = (0 - offset.x) / scale
+        const sourceY = (0 - offset.y) / scale
+        const sourceWidth = viewportWidth / scale
+        const sourceHeight = viewportHeight / scale
+        context.drawImage(imageElement, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height)
+        onApply(canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', 0.88))
+      }
+
+      return h(
+        'div',
+        { className: 'gt-crop-backdrop' },
+        h(
+          'div',
+          { className: 'gt-crop' },
+          h(
+            'div',
+            {
+              className: 'gt-crop-viewport',
+              style: { width: viewportWidth, height: viewportHeight, cursor: dragging ? 'grabbing' : 'grab' },
+              onMouseDown: startDrag,
+            },
+            h('img', {
+              src: source,
+              alt: '',
+              onLoad: onLoad,
+              style: imageSize
+                ? {
+                    position: 'absolute',
+                    left: offset.x + 'px',
+                    top: offset.y + 'px',
+                    width: displayWidth + 'px',
+                    height: displayHeight + 'px',
+                    maxWidth: 'none',
+                  }
+                : { position: 'absolute', opacity: 0, width: '1px', height: '1px' },
+            })
+          ),
+          h(
+            'label',
+            { className: 'gt-bg-control' },
+            h('span', null, t('crop.zoom')),
+            h('input', {
+              type: 'range',
+              min: 100,
+              max: 300,
+              value: Math.round(zoom * 100),
+              onChange: function (event) {
+                changeZoom(Number(event.target.value) / 100)
+              },
+            })
+          ),
+          h(
+            'div',
+            { className: 'gt-crop-actions' },
+            h('span', { className: 'gt-note' }, t('crop.hint')),
+            h('span', { style: { display: 'flex', gap: 8 } },
+              h('button', { type: 'button', className: 'gt-btn', onClick: onCancel }, t('cancel')),
+              h('button', { type: 'button', className: 'gt-btn', onClick: apply }, t('crop.apply'))
+            )
+          )
+        )
+      )
+    }
+
+    function ImageField({ t, value, aspect, width, fit, onChange, onFit }) {
+      const [busy, setBusy] = React.useState(false)
+      const [pending, setPending] = React.useState(null)
+      const choose = function (event) {
+        const file = event.target.files && event.target.files[0]
+        if (!file) return
+        readFileAsDataUrl(file)
+          .then(function (source) {
+            setPending(source)
+          })
+          .catch(function () {})
+      }
+      const commit = function (dataUrl) {
+        setPending(null)
+        setBusy(true)
+        uploadAsset(dataUrl)
+          .then(function (url) {
+            setBusy(false)
+            if (url) onChange(url)
+          })
+          .catch(function () {
+            setBusy(false)
+          })
+      }
+      return h(
+        'div',
+        { className: 'gt-imagefield' },
+        h(
+          'label',
+          {
+            className: 'gt-imagefield-box' + (value ? ' has' : ''),
+            style: value ? { backgroundImage: 'url("' + value + '")' } : null,
+          },
+          h('span', { className: 'gt-imagefield-hint' }, busy ? t('image.working') : value ? '' : '+ ' + t('image.choose')),
+          h('input', {
+            type: 'file',
+            accept: 'image/*',
+            style: { display: 'none' },
+            onChange: choose,
+          })
+        ),
+        pending
+          ? h(Cropper, {
+              t: t,
+              src: pending,
+              aspect: aspect,
+              outputWidth: width,
+              onCancel: function () {
+                setPending(null)
+              },
+              onApply: commit,
+            })
+          : null,
+        h(
+          'div',
+          { className: 'gt-imagefield-actions' },
+          value
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-link',
+                  onClick: function () {
+                    onChange('')
+                  },
+                },
+                t('image.remove')
+              )
+            : null,
+          onFit
+            ? h(
+                'div',
+                { className: 'gt-seg' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-seg-btn',
+                    'data-active': fit !== 'tile',
+                    onClick: function () {
+                      onFit('cover')
+                    },
+                  },
+                  t('fit.cover')
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-seg-btn',
+                    'data-active': fit === 'tile',
+                    onClick: function () {
+                      onFit('tile')
+                    },
+                  },
+                  t('fit.tile')
+                )
+              )
+            : null
+        )
+      )
+    }
+
+    function FolderIcon({ size = 14 }) {
+      return h(
+        'svg',
+        iconProps(size),
+        h('path', {
+          d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+        })
+      )
+    }
+
+    function PickButton({ t, onPick }) {
+      const [busy, setBusy] = React.useState(false)
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: 'gt-icon-btn small',
+          title: t('pick'),
+          disabled: busy,
+          onClick: function () {
+            setBusy(true)
+            pickExecutable().then(function (path) {
+              setBusy(false)
+              if (path) onPick(path)
+            })
+          },
+        },
+        h(FolderIcon, null)
+      )
+    }
+
+    function readIconFile(file, done) {
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = function () {
+        const image = new Image()
+        image.onload = function () {
+          const side = 96
+          const canvas = document.createElement('canvas')
+          canvas.width = side
+          canvas.height = side
+          const context = canvas.getContext('2d')
+          const scale = Math.min(side / image.width, side / image.height)
+          const width = Math.round(image.width * scale)
+          const height = Math.round(image.height * scale)
+          context.drawImage(image, (side - width) / 2, (side - height) / 2, width, height)
+          done(canvas.toDataURL('image/png'))
+        }
+        image.src = String(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+
+    function IconPicker({ t, value, fallback, size, sourcePath, onChange, bare }) {
+      const [pending, setPending] = React.useState(null)
+      const choose = function (event) {
+        const file = event.target.files && event.target.files[0]
+        if (!file) return
+        readFileAsDataUrl(file)
+          .then(function (source) {
+            setPending(source)
+          })
+          .catch(function () {})
+      }
+      return h(
+        'div',
+        { className: 'gt-iconpick' + (bare ? ' bare' : '') },
+        h(
+          'label',
+          { className: 'gt-iconpick-pick', title: t('icon.pick') },
+          h('input', {
+            type: 'file',
+            accept: 'image/*',
+            style: { display: 'none' },
+            onChange: choose,
+          }),
+          value
+            ? h('img', { className: 'gt-iconimg', src: value, style: { width: size, height: size } })
+            : fallback,
+          bare ? null : h('span', { className: 'gt-link' }, t('icon.pick'))
+        ),
+        bare
+          ? null
+          : sourcePath
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-link',
+                  onClick: function () {
+                    extractIcon(sourcePath).then(function (icon) {
+                      if (icon) onChange(icon)
+                    })
+                  },
+                },
+                t('icon.extract')
+              )
+            : null,
+        bare || !value
+          ? null
+          : h(
+              'button',
+              {
+                type: 'button',
+                className: 'gt-link',
+                onClick: function () {
+                  onChange('')
+                },
+              },
+              t('icon.reset')
+            ),
+        pending
+          ? h(Cropper, {
+              t: t,
+              src: pending,
+              aspect: 1,
+              outputWidth: 96,
+              format: 'png',
+              onCancel: function () {
+                setPending(null)
+              },
+              onApply: function (dataUrl) {
+                setPending(null)
+                onChange(dataUrl)
+              },
+            })
+          : null
+      )
+    }
+
+    function Stat({ label, value, seconds, t }) {
+      return h(
+        'div',
+        { className: 'gt-card' },
+        h('div', { className: 'gt-label' }, label),
+        h('div', { className: 'gt-value' }, seconds === undefined ? value : h(Duration, { seconds: seconds, t: t }))
+      )
+    }
+
+    function Duration({ seconds, t }) {
+      return h(
+        'span',
+        null,
+        durationParts(seconds, t).map(function (part, index) {
+          return h('span', { key: index }, part.v, h('span', { className: 'gt-unit' }, part.u))
+        })
+      )
+    }
+
+    function Dropdown({ value, options, onChange, minWidth }) {
+      const [open, setOpen] = React.useState(false)
+      const current = options.find(function (option) {
+        return option.value === value
+      })
+      return h(
+        'div',
+        {
+          className: 'gt-pselect',
+          style: minWidth ? { minWidth: minWidth } : undefined,
+        },
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'gt-pselect-btn',
+            onClick: function () {
+              setOpen(!open)
+            },
+          },
+          current && current.color
+            ? h('span', { className: 'gt-chip-dot', style: { background: current.color } })
+            : null,
+          h('span', { className: 'gt-pselect-label' }, current ? current.label : String(value)),
+          h('span', { className: 'gt-caret' }, '▾')
+        ),
+        open
+          ? h('div', {
+              className: 'gt-backdrop',
+              onClick: function () {
+                setOpen(false)
+              },
+            })
+          : null,
+        open
+          ? h(
+              'div',
+              { className: 'gt-pselect-menu' },
+              options.map(function (option) {
+                return h(
+                  'button',
+                  {
+                    key: option.value,
+                    type: 'button',
+                    className: 'gt-pselect-item',
+                    'data-active': option.value === value,
+                    onClick: function () {
+                      onChange(option.value)
+                      setOpen(false)
+                    },
+                  },
+                  option.color
+                    ? h('span', { className: 'gt-chip-dot', style: { background: option.color } })
+                    : null,
+                  h('span', null, option.label)
+                )
+              })
+            )
+          : null
+      )
+    }
+
+    function PlatformSelect({ value, options, onChange }) {
+      return h(Dropdown, {
+        value: value,
+        options: options.map(function (id) {
+          const platform = PLATFORMS[id]
+          return {
+            value: id,
+            label: platform ? platform.name : id,
+            color: platform ? platform.color : '#888',
+          }
+        }),
+        onChange: onChange,
+      })
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Today view
+     * ------------------------------------------------------------------ */
+
+    function TodayView({ t, onOpenGame }) {
+      const duplicates = duplicateMap()
+      const rows = GAMES.map(function (game) {
+        const day = totalsFor(game.id, 'day', NOW)
+        if (day <= 0) return null
+        return { game: game, day: day, week: totalsFor(game.id, 'week', NOW), total: totalsFor(game.id, 'all', NOW) }
+      })
+        .filter(Boolean)
+        .sort(function (a, b) {
+          return b.day - a.day
+        })
+
+      return h(
+        'div',
+        { className: 'gt-root' },
+        h(
+          'div',
+          { className: 'gt-stats' },
+          h(Stat, { label: t('stat.today'), seconds: totalsFor(null, 'day', NOW), t: t }),
+          h(Stat, { label: t('stat.week'), seconds: totalsFor(null, 'week', NOW), t: t }),
+          h(Stat, { label: t('stat.total'), seconds: totalsFor(null, 'all', NOW), t: t })
+        ),
+        rows.length === 0
+          ? h(
+              'div',
+              { className: 'gt-empty' },
+              h('div', { className: 'gt-empty-title' }, t('empty.title')),
+              h('div', { className: 'gt-empty-body' }, t('empty.body'))
+            )
+          : h(
+              'div',
+              { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
+              h(
+                'div',
+                { className: 'gt-section' },
+                h('div', { className: 'gt-section-title' }, t('today.section')),
+                h('div', { className: 'gt-muted' }, t('today.count').replace('{n}', String(rows.length)))
+              ),
+              h(
+                'div',
+                { className: 'gt-grid-head' },
+                h('div', null, t('today.col.game')),
+                h('div', { className: 'gt-num' }, t('today.col.day')),
+                h('div', { className: 'gt-num' }, t('today.col.week')),
+                h('div', { className: 'gt-num' }, t('today.col.total'))
+              ),
+              rows.map(function (row) {
+                return h(
+                  'button',
+                  {
+                    key: row.game.id,
+                    type: 'button',
+                    className: 'gt-row',
+                    onClick: function () {
+                      onOpenGame(row.game.id, 'today')
+                    },
+                  },
+                  h(
+                    'div',
+                    { className: 'gt-row-main' },
+                    h(StatusDot, { t: t, status: gameStatus(row.game) }),
+                    h(Tile, { game: row.game }),
+                    h(
+                      'div',
+                      { className: 'gt-name-wrap' },
+                      h('div', { className: 'gt-name' }, row.game.name),
+                      h(Badges, { platformIds: enabledPlatforms(row.game) })
+                    )
+                  ),
+                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.day, t: t })),
+                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t })),
+                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.total, t: t }))
+                )
+              })
+            )
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * All games view
+     * ------------------------------------------------------------------ */
+
+    function AllView({ t, onOpenGame, touch }) {
+      const [query, setQuery] = React.useState('')
+      const [sort, setSort] = React.useState('total')
+      const [range, setRange] = React.useState('week')
+      const [anchor, setAnchor] = React.useState(defaultAnchor('week'))
+      const [zoom, setZoom] = React.useState(GRAIN_LEVELS.week.base)
+      const [showArchived, setShowArchived] = React.useState(false)
+
+      const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
+      const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
+      const grain = levelConfig.levels[zoomIndex]
+      const zoomBy = function (delta) {
+        setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
+      }
+
+      // The window may reach before the lazy-load edge; pull that slice once.
+      // HISTORY_FROM/FIRST_START are deps so the first `/state` (which may land
+      // after this component mounts) still triggers the missing slice.
+      React.useEffect(function () {
+        ensureHistory(windowBounds(range, anchor, grain).from.getTime())
+      }, [range, anchor, grain, HISTORY_FROM, FIRST_START])
+
+      const pickRange = function (key) {
+        setRange(key)
+        setAnchor(defaultAnchor(key))
+        setZoom((GRAIN_LEVELS[key] || GRAIN_LEVELS.day).base)
+      }
+
+      const duplicates = duplicateMap()
+
+      const toRow = function (game) {
+        return {
+          game: game,
+          total: totalsFor(game.id, 'all', NOW),
+          week: totalsFor(game.id, 'week', NOW),
+          recent: lastPlayedAt(game.id),
+        }
+      }
+
+      const needle = query.trim().toLowerCase()
+      const matches = function (row) {
+        return !needle || row.game.name.toLowerCase().indexOf(needle) >= 0
+      }
+
+      const sortRows = function (list) {
+        return list.sort(function (a, b) {
+          if (sort === 'week') return b.week - a.week
+          if (sort === 'recent') return b.recent - a.recent
+          if (sort === 'name') return a.game.name.localeCompare(b.game.name, 'zh-Hans-CN')
+          return b.total - a.total
+        })
+      }
+
+      const rows = sortRows(
+        GAMES.filter(function (game) {
+          return !isArchived(game)
+        })
+          .map(toRow)
+          .filter(matches)
+      )
+      const archivedRows = sortRows(
+        GAMES.filter(isArchived)
+          .map(toRow)
+          .filter(matches)
+      )
+      const archivedTotal = archivedRows.reduce(function (sum, row) {
+        return sum + row.total
+      }, 0)
+
+      const uninstalled = GAMES.filter(function (game) {
+        if (isArchived(game)) return false
+        return (game.installs || []).some(function (install) {
+          return install.exists === false
+        })
+      })
+
+      const archiveUninstalled = function () {
+        uninstalled.forEach(function (game) {
+          game.archived = true
+        })
+        if (typeof touch === 'function') touch()
+        else if (typeof bumpPage === 'function') bumpPage()
+      }
+
+      const gameRow = function (row, archived) {
+        return h(
+          'button',
+          {
+            key: row.game.id,
+            type: 'button',
+            className: 'gt-row',
+            'data-archived': archived ? 'true' : undefined,
+            onClick: function () {
+              onOpenGame(row.game.id, 'all')
+            },
+          },
+          h(
+            'div',
+            { className: 'gt-row-main' },
+            h(StatusDot, { t: t, status: gameStatus(row.game) }),
+            h(Tile, { game: row.game }),
+            h(
+              'div',
+              { className: 'gt-name-wrap' },
+              h('div', { className: 'gt-name' }, row.game.name, h(DuplicateTag, { t: t, duplicate: duplicates.get(row.game.id) })),
+              h(Badges, { platformIds: enabledPlatforms(row.game) })
+            )
+          ),
+          h('div', { className: 'gt-num' }, h(Duration, { seconds: row.total, t: t })),
+          h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t })),
+          h('div', { className: 'gt-num' }, formatRelative(row.recent, t, NOW))
+        )
+      }
+
+      const grandTotal = rows.reduce(function (sum, row) {
+        return sum + row.total
+      }, 0) + archivedTotal
+
+      return h(
+        'div',
+        { className: 'gt-root' },
+        h(
+          'div',
+          { className: 'gt-toolbar' },
+          h('input', {
+            className: 'gt-search',
+            type: 'search',
+            placeholder: t('search'),
+            value: query,
+            onChange: function (event) {
+              setQuery(event.target.value)
+            },
+          }),
+          h(Dropdown, {
+            value: sort,
+            minWidth: 96,
+            options: [
+              { value: 'total', label: t('sort.total') },
+              { value: 'week', label: t('sort.week') },
+              { value: 'recent', label: t('sort.recent') },
+              { value: 'name', label: t('sort.name') },
+            ],
+            onChange: function (value) {
+              setSort(value)
+            },
+          })
+        ),
+        h(
+          'div',
+          { className: 'gt-summary-line' },
+          h(
+            'div',
+            { className: 'gt-muted' },
+            t('all.summary')
+              .replace('{n}', String(rows.length + archivedRows.length))
+              .replace('{total}', formatDuration(grandTotal, t))
+          ),
+          uninstalled.length > 0
+            ? h(
+                'button',
+                { type: 'button', className: 'gt-link', onClick: archiveUninstalled },
+                t('all.archive.uninstalled').replace('{n}', String(uninstalled.length))
+              )
+            : null
+        ),
+        rows.length === 0
+          ? archivedRows.length === 0
+            ? h('div', { className: 'gt-empty' }, h('div', { className: 'gt-empty-title' }, t('all.empty')))
+            : null
+          : h(
+              'div',
+              { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+              h(
+                'div',
+                { className: 'gt-grid-head' },
+                h('div', null, t('all.col.game')),
+                h('div', { className: 'gt-num' }, t('all.col.total')),
+                h('div', { className: 'gt-num' }, t('all.col.week')),
+                h('div', { className: 'gt-num' }, t('all.col.recent'))
+              ),
+              rows.map(function (row) {
+                return gameRow(row, false)
+              })
+            ),
+        archivedRows.length > 0
+          ? h(
+              'div',
+              { className: 'gt-archived' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-collapse',
+                  'aria-expanded': showArchived ? 'true' : 'false',
+                  onClick: function () {
+                    setShowArchived(!showArchived)
+                  },
+                },
+                h('span', { className: 'gt-card-title' }, t('archived.title')),
+                h(
+                  'span',
+                  { className: 'gt-muted' },
+                  t('all.archived')
+                    .replace('{n}', String(archivedRows.length))
+                    .replace('{total}', formatDuration(archivedTotal, t))
+                ),
+                h('span', { className: 'gt-collapse-caret', 'data-open': String(showArchived) }, '▾')
+              ),
+              showArchived
+                ? h(
+                    'div',
+                    { className: 'gt-list', style: { marginTop: 8 } },
+                    archivedRows.map(function (row) {
+                      return gameRow(row, true)
+                    })
+                  )
+                : null
+            )
+          : null,
+        h(
+          'div',
+          { className: 'gt-analysis' },
+          h(
+            'div',
+            { className: 'gt-range' },
+            h('div', { className: 'gt-muted' }, t('all.analysis')),
+            h(
+              'div',
+              { className: 'gt-seg' },
+              ['day', 'week', 'month', 'all'].map(function (key) {
+                return h(
+                  'button',
+                  {
+                    key: key,
+                    type: 'button',
+                    className: 'gt-seg-btn',
+                    'data-active': range === key,
+                    onClick: function () {
+                      pickRange(key)
+                    },
+                  },
+                  t('range.' + key)
+                )
+              })
+            )
+          ),
+          ALL_SECTIONS.map(function (section) {
+            return h(section.Component, {
+              key: section.id,
+              t: t,
+              range: range,
+              anchor: anchor,
+              grain: grain,
+              onPan: function (delta) {
+                setAnchor(panAnchor(range, anchor, delta, grain))
+              },
+              onZoom: zoomBy,
+              onReset: function () {
+                setAnchor(defaultAnchor(range))
+                setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
+              },
+            })
+          })
+        )
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Chart
+     * ------------------------------------------------------------------ */
+
+    const AXIS_STEPS = [
+      300, 600, 900, 1800, 3600, 7200, 10800, 14400, 21600, 28800, 43200, 86400, 172800, 259200, 432000, 604800,
+    ]
+
+    /** Short scale label: "30分" / "2时" in zh, "30m" / "2h" in en. */
+    function axisLabel(seconds, t) {
+      if (seconds <= 0) return '0'
+      if (seconds < 3600) return Math.round(seconds / 60) + t('minute')
+      return Math.round(seconds / 3600) + t('hour')
+    }
+
+    /** The average marker keeps its minutes: "1时12分", still narrower than a tick. */
+    function averageLabel(seconds, t) {
+      const minutes = Math.max(1, Math.round(seconds / 60))
+      if (minutes < 60) return minutes + t('minute')
+      const hours = Math.floor(minutes / 60)
+      const rest = minutes % 60
+      // Past ten hours the minutes would push the label into the plot, so the
+      // marker falls back to one decimal hour ("58.2时").
+      if (hours >= 10) return (Math.round((minutes / 60) * 10) / 10).toString().replace('.0', '') + t('hour')
+      return rest === 0 ? hours + t('hour') : hours + t('hour') + rest + t('minute')
+    }
+
+    function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit }) {
+      const [tip, setTip] = React.useState(null)
+      const drag = React.useRef(null)
+      const svgRef = React.useRef(null)
+      const zoomLock = React.useRef(0)
+      const pannable = typeof onPan === 'function'
+      const zoomable = typeof onZoom === 'function'
+
+      // Wheel zooms one level per notch. The native listener is bound
+      // explicitly so `preventDefault` can stop the page from scrolling.
+      React.useEffect(function () {
+        const node = svgRef.current
+        if (!node || !zoomable) return undefined
+        const listener = function (event) {
+          event.preventDefault()
+          const now = Date.now()
+          if (now - zoomLock.current < 180) return
+          zoomLock.current = now
+          onZoom(event.deltaY < 0 ? -1 : 1)
+        }
+        node.addEventListener('wheel', listener, { passive: false })
+        return function () {
+          node.removeEventListener('wheel', listener)
+        }
+      }, [zoomable, onZoom])
+      // Dragging is a paging gesture: every 32 css px shifts the window by one
+      // step (a day, a week or a month — the caller decides what a step is).
+      const beginDrag = function (event) {
+        if (!pannable) return
+        drag.current = { x: event.clientX, moved: false, steps: 0, active: true, suppress: false }
+        if (event.preventDefault) event.preventDefault()
+      }
+      const moveDrag = function (event) {
+        if (!drag.current || !drag.current.active) return
+        const dx = event.clientX - drag.current.x
+        if (Math.abs(dx) > 3) drag.current.moved = true
+        // One step is one x tick: the drag distance is measured against a bar,
+        // so the interval follows whatever the chart shows (hour / day / month).
+        const rect = event.currentTarget && event.currentTarget.getBoundingClientRect
+          ? event.currentTarget.getBoundingClientRect()
+          : null
+        const chartWidth = rect && rect.width > 0 ? rect.width : 480
+        const slot = chartWidth / Math.max(points.length, 1)
+        const steps = Math.trunc(-dx / Math.max(slot, 8))
+        if (steps !== drag.current.steps) {
+          const delta = steps - drag.current.steps
+          drag.current.steps = steps
+          onPan(delta)
+        }
+      }
+      const endDrag = function () {
+        if (!drag.current) return
+        drag.current.active = false
+        drag.current.suppress = drag.current.moved || drag.current.steps !== 0
+      }
+      const clicked = function (key) {
+        if (drag.current && drag.current.suppress) {
+          drag.current.suppress = false
+          return
+        }
+        onSelect(key)
+      }
+      const stroke = color || 'currentColor'
+      const width = 640
+      const height = 176
+      const pad = { top: 12, right: 6, bottom: 22, left: 34 }
+      const plotW = width - pad.left - pad.right
+      const plotH = height - pad.top - pad.bottom
+
+      // Even ticks on a fixed ladder: the labels are always round durations and
+      // the spacing between them never varies from one render to the next.
+      const peak = points.reduce(function (top, point) {
+        return Math.max(top, point.seconds)
+      }, 0)
+      const step = AXIS_STEPS.find(function (value) {
+        return value >= peak / 3
+      }) || AXIS_STEPS[AXIS_STEPS.length - 1]
+      const tickCount = peak > 0 ? Math.ceil(peak / step) : 0
+      const max = tickCount > 0 ? step * tickCount : step
+      const ticks = []
+      for (let i = 0; i <= tickCount; i++) ticks.push(i * step)
+      const yOf = function (seconds) {
+        return pad.top + plotH - (seconds / max) * plotH
+      }
+
+      const slot = plotW / Math.max(points.length, 1)
+      const barW = Math.max(1, Math.min(30, slot * 0.72))
+
+      // Stack order is each slice's total across the range, so a slice keeps
+      // the same layer from bar to bar instead of hopping around.
+      const totals = new Map()
+      const meta = new Map()
+      points.forEach(function (point) {
+        const parts = point.parts || []
+        parts.forEach(function (part) {
+          totals.set(part.id, (totals.get(part.id) || 0) + part.seconds)
+          meta.set(part.id, part)
+        })
+      })
+      const order = Array.from(totals.keys()).sort(function (a, b) {
+        return (totals.get(b) || 0) - (totals.get(a) || 0)
+      })
+      const sliceName = function (id) {
+        const part = meta.get(id)
+        return part && part.name ? part.name : id
+      }
+      const sliceColor = function (id) {
+        const part = meta.get(id)
+        return (part && part.color) || stroke
+      }
+
+      const cx = function (index) {
+        return pad.left + slot * index + slot / 2
+      }
+      const cy = function (point) {
+        return yOf(point.seconds)
+      }
+
+      const empty = points.every(function (p) {
+        return p.seconds <= 0
+      })
+
+      const mean = points.length
+        ? points.reduce(function (sum, point) {
+            return sum + point.seconds
+          }, 0) / points.length
+        : 0
+
+      const avgY = yOf(mean)
+      // The average gets its own tick. It may take over a ladder label when the
+      // two would coincide, and stays out of the gutter when it would crowd one;
+      // the zero line is never taken over.
+      const nearTick =
+        mean > 0
+          ? ticks.find(function (value) {
+              return value !== 0 && Math.abs(yOf(value) - avgY) < 3
+            })
+          : undefined
+      const closestTick = Math.min.apply(
+        null,
+        ticks.map(function (value) {
+          return Math.abs(yOf(value) - avgY)
+        })
+      )
+      const avgLabelFits = mean > 0 && Math.abs(avgY - (pad.top + plotH)) >= 9 && (nearTick !== undefined || closestTick >= 9)
+      const averageMarks =
+        mean > 0
+          ? [
+              h('line', {
+                key: 'avg-line',
+                className: 'gt-chart-avg',
+                x1: pad.left,
+                y1: avgY,
+                x2: width - pad.right,
+                y2: avgY,
+              }),
+              // The solid stub is the average's own tick on the y axis.
+              h('line', {
+                key: 'avg-tick',
+                className: 'gt-chart-avg-tick',
+                x1: pad.left - 5,
+                y1: avgY,
+                x2: pad.left,
+                y2: avgY,
+              }),
+              avgLabelFits
+                ? h(
+                    'text',
+                    {
+                      key: 'avg-value',
+                      className: 'gt-chart-avg-y',
+                      x: pad.left - 6,
+                      y: avgY,
+                      textAnchor: 'end',
+                      dominantBaseline: 'central',
+                    },
+                    averageLabel(mean, t)
+                  )
+                : null,
+              h(
+                'text',
+                {
+                  key: 'avg-tag',
+                  className: 'gt-chart-avg-tag',
+                  x: width - pad.right - 2,
+                  y: avgY - 4,
+                  textAnchor: 'end',
+                },
+                t('chart.avg')
+              ),
+            ].filter(Boolean)
+          : []
+
+      const gridMarks = ticks.map(function (value) {
+        if (value === 0) return null
+        const y = yOf(value)
+        return h('line', {
+          key: 'grid-' + value,
+          className: 'gt-chart-grid',
+          x1: pad.left,
+          y1: y,
+          x2: width - pad.right,
+          y2: y,
+        })
+      })
+
+      // A ladder label never moves; the average takes over only the one it
+      // would sit exactly on, and the zero line always stays.
+      const yLabels = ticks
+        .filter(function (value) {
+          if (!avgLabelFits) return true
+          if (value === 0) return true
+          return nearTick === undefined || value !== nearTick
+        })
+        .map(function (value) {
+          return h(
+            'text',
+            {
+              key: 'y-' + value,
+              className: 'gt-chart-y',
+              x: pad.left - 6,
+              y: yOf(value),
+              textAnchor: 'end',
+              dominantBaseline: 'central',
+            },
+            axisLabel(value, t)
+          )
+        })
+
+      const bars = points.map(function (point, index) {
+        const x = pad.left + slot * index + (slot - barW) / 2
+        const barH = (point.seconds / max) * plotH
+        const parts = (point.parts || []).filter(function (part) {
+          return part.seconds > 0
+        })
+        const sum = parts.reduce(function (total, part) {
+          return total + part.seconds
+        }, 0)
+        const stacked = order
+          .map(function (id) {
+            return parts.find(function (part) {
+              return part.id === id
+            })
+          })
+          .filter(Boolean)
+
+        if (stacked.length === 0) {
+          const plainH = Math.max(point.seconds > 0 ? 2 : 0, barH)
+          const plainY = pad.top + plotH - plainH
+          return h('rect', {
+            key: point.key,
+            className: 'gt-bar-rect',
+            x: x,
+            y: plainY,
+            width: barW,
+            height: plainH,
+            fill: stroke,
+            opacity: selectedKey === point.key ? 0.95 : point.seconds > 0 ? 0.62 : 0.14,
+            style: { cursor: 'pointer' },
+            onMouseEnter: function () {
+              setTip({
+                x: cx(index),
+                y: plainY,
+                dot: stroke,
+                title: formatDuration(point.seconds, t),
+                sub: point.label,
+              })
+            },
+            onClick: function () {
+              clicked(point.key)
+            },
+          })
+        }
+
+        let acc = 0
+        return stacked.map(function (part) {
+          const height = barH * (part.seconds / sum)
+          const y = pad.top + plotH - acc - height
+          const fill = part.color || sliceColor(part.id)
+          acc += height
+          return h('rect', {
+            key: point.key + '-' + part.id,
+            className: 'gt-bar-rect',
+            x: x,
+            y: y,
+            width: barW,
+            height: height,
+            fill: fill,
+            opacity: selectedKey === point.key ? 1 : 0.9,
+            style: { cursor: 'pointer' },
+            onMouseEnter: function () {
+              setTip({
+                x: cx(index),
+                y: y,
+                dot: fill,
+                title: part.name || sliceName(part.id),
+                sub: formatDuration(part.seconds, t) + ' · ' + point.label,
+              })
+            },
+            onClick: function () {
+              clicked(point.key)
+            },
+          })
+        })
+      })
+
+      const linePoints = points
+        .map(function (point, index) {
+          return cx(index) + ',' + cy(point)
+        })
+        .join(' ')
+
+      const areaPath =
+        'M ' +
+        cx(0) +
+        ' ' +
+        (pad.top + plotH) +
+        ' L ' +
+        points
+          .map(function (point, index) {
+            return cx(index) + ' ' + cy(point)
+          })
+          .join(' L ') +
+        ' L ' +
+        cx(points.length - 1) +
+        ' ' +
+        (pad.top + plotH) +
+        ' Z'
+
+      const marks =
+        chartType === 'line'
+          ? [
+              h('path', { key: 'area', d: areaPath, fill: stroke, opacity: 0.14 }),
+              h('polyline', {
+                key: 'line',
+                points: linePoints,
+                fill: 'none',
+                stroke: stroke,
+                strokeWidth: 2,
+                strokeLinejoin: 'round',
+                strokeLinecap: 'round',
+                opacity: 0.85,
+              }),
+            ].concat(
+              points.map(function (point, index) {
+                return h('circle', {
+                  key: 'dot-' + point.key,
+                  cx: cx(index),
+                  cy: cy(point),
+                  r: selectedKey === point.key ? 4 : 2.6,
+                  fill: stroke,
+                  opacity: point.seconds > 0 ? 0.9 : 0.2,
+                  style: { cursor: 'pointer' },
+                  onMouseEnter: function () {
+                    setTip({
+                      x: cx(index),
+                      y: cy(point),
+                      dot: stroke,
+                      title: formatDuration(point.seconds, t),
+                      sub: point.label,
+                    })
+                  },
+                  onClick: function () {
+                    clicked(point.key)
+                  },
+                })
+              })
+            )
+          : bars
+
+      // Dense grains (10-minute ticks, daily ticks over a year) can't fit every
+      // label, so the stride grows until neighbouring labels no longer touch.
+      const textWidth = function (text) {
+        let total = 0
+        for (const ch of text) total += ch === ':' ? 2.4 : /[\u4e00-\u9fff]/.test(ch) ? 8 : 4.6
+        return total
+      }
+      const widest = points.reduce(function (max, point) {
+        return Math.max(max, textWidth(point.label))
+      }, 0)
+      const fits = Math.max(2, Math.floor(plotW / Math.max(widest + 2, 8)))
+      const labelStep = Math.max(1, Math.ceil(points.length / fits))
+      const labelIndexes = {}
+      for (let index = 0; index < points.length; index += labelStep) labelIndexes[index] = true
+      const lastIndex = points.length - 1
+      if (!labelIndexes[lastIndex] && (lastIndex % labelStep) * slot >= widest + 2) labelIndexes[lastIndex] = true
+      // The scale note sits at the far left, so the first tick text steps aside
+      // when it would run into it.
+      const unitText = unit ? '(' + unit + ')' : ''
+      if (unitText && labelIndexes[0] && cx(0) - widest / 2 < textWidth(unitText) + 6) delete labelIndexes[0]
+      const labels = points.map(function (point, index) {
+        if (!labelIndexes[index]) return null
+        return h(
+          'text',
+          { key: 'label-' + point.key, className: 'gt-chart-label', x: cx(index), y: height - 6, textAnchor: 'middle' },
+          point.label
+        )
+      })
+
+      return h(
+        'div',
+        { className: 'gt-chart-wrap' },
+        h(
+          'svg',
+          {
+            className: 'gt-chart',
+            viewBox: '0 0 ' + width + ' ' + height,
+            role: 'img',
+            ref: svgRef,
+            'data-pan': pannable ? 'true' : undefined,
+            'data-zoom': zoomable ? 'true' : undefined,
+            onMouseLeave: function () {
+              setTip(null)
+            },
+            onPointerDown: beginDrag,
+            onPointerMove: moveDrag,
+            onPointerUp: endDrag,
+            onPointerCancel: endDrag,
+          },
+          h('line', {
+            className: 'gt-chart-axis',
+            x1: pad.left,
+            y1: pad.top + plotH,
+            x2: width - pad.right,
+            y2: pad.top + plotH,
+          }),
+          gridMarks,
+          averageMarks,
+          marks,
+          yLabels,
+          labels,
+          unitText
+            ? h(
+                'text',
+                { className: 'gt-chart-unit', x: 2, y: height - 6, textAnchor: 'start' },
+                unitText
+              )
+            : null
+        ),
+        tip
+          ? h(
+              'div',
+              {
+                className: 'gt-chart-tip',
+                'data-side': tip.y < 46 ? 'below' : 'above',
+                style: {
+                  left: (Math.min(Math.max(tip.x, 34), width - 34) / width) * 100 + '%',
+                  top: (tip.y / height) * 100 + '%',
+                },
+              },
+              h('i', { style: { background: tip.dot } }),
+              h('b', null, tip.title),
+              h('span', null, tip.sub)
+            )
+          : null,
+        empty
+          ? h(
+              'div',
+              {
+                style: {
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  opacity: 0.45,
+                  pointerEvents: 'none',
+                },
+              },
+              t('chart.empty')
+            )
+          : null
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Shared cards — detail and overview render the same pieces
+     * ------------------------------------------------------------------ */
+
+    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset }) {
+      const [chartType, setChartType] = React.useState('bar')
+      const template = t('chart.unit')
+      const heading = unit
+        ? template.indexOf('{title}') >= 0
+          ? template.replace('{title}', title).replace('{unit}', unit)
+          : title + ' (' + unit + ')'
+        : title
+      return h(
+        'div',
+        { className: 'gt-panel-card' },
+        h(
+          'div',
+          { className: 'gt-card-head' },
+          h(
+            'div',
+            { className: 'gt-card-head-title' },
+            h('div', { className: 'gt-card-title' }, heading),
+            onReset
+              ? h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-icon-btn',
+                    title: t('chart.reset'),
+                    'aria-label': t('chart.reset'),
+                    onClick: onReset,
+                  },
+                  h(ResetIcon, { size: 13 })
+                )
+              : null,
+            note ? h('div', { className: 'gt-muted' }, note) : null
+          ),
+          h(
+            'div',
+            { className: 'gt-seg' },
+            ['bar', 'line'].map(function (key) {
+              return h(
+                'button',
+                {
+                  key: key,
+                  type: 'button',
+                  className: 'gt-seg-btn',
+                  'data-active': chartType === key,
+                  onClick: function () {
+                    setChartType(key)
+                  },
+                },
+                t('chart.' + key)
+              )
+            })
+          )
+        ),
+        h(Chart, {
+          t: t,
+          points: points,
+          chartType: chartType,
+          selectedKey: selectedKey,
+          onSelect: onSelect,
+          color: color,
+          onPan: onPan,
+          onZoom: onZoom,
+          unit: unit,
+        })
+      )
+    }
+
+    function ShareBar({ t, items, empty }) {
+      const total = items.reduce(function (sum, item) {
+        return sum + item.seconds
+      }, 0)
+      return h(
+        'div',
+        null,
+        h(
+          'div',
+          { className: 'gt-bar' },
+          items.map(function (item) {
+            return h('div', {
+              key: item.id,
+              className: 'gt-bar-seg',
+              style: { width: (total > 0 ? (item.seconds / total) * 100 : 0) + '%', background: item.color },
+              title: item.name,
+            })
+          })
+        ),
+        h(
+          'div',
+          { className: 'gt-legend' },
+          items.map(function (item) {
+            return h(
+              'span',
+              { key: 'legend-' + item.id, className: 'gt-legend-item' },
+              h('span', { className: 'gt-legend-dot', style: { background: item.color } }),
+              item.name,
+              h('span', { style: { opacity: 0.55 } }, formatDuration(item.seconds, t))
+            )
+          }),
+          items.length === 0 ? h('span', { className: 'gt-muted' }, empty) : null
+        )
+      )
+    }
+
+    function ShareCard({ t, title, note, items }) {
+      return h(
+        'div',
+        { className: 'gt-panel-card' },
+        h(
+          'div',
+          { className: 'gt-card-head' },
+          h('div', { className: 'gt-card-title' }, title),
+          note ? h('div', { className: 'gt-muted' }, note) : null
+        ),
+        h(ShareBar, { t: t, items: items, empty: t('list.empty') })
+      )
+    }
+
+    function SessionsCard({ t, sessions, open: openByDefault }) {
+      const [open, setOpen] = React.useState(openByDefault === true)
+      const sorted = sessions.slice().sort(function (a, b) {
+        return b.start - a.start
+      })
+      const shown = sorted.slice(0, 200)
+      const total = sorted.reduce(function (sum, session) {
+        return sum + (session.end - session.start) / 1000
+      }, 0)
+      return h(
+        'div',
+        { className: 'gt-panel-card' },
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'gt-collapse',
+            'aria-expanded': open ? 'true' : 'false',
+            onClick: function () {
+              setOpen(!open)
+            },
+          },
+          h('span', { className: 'gt-card-title' }, t('all.sessions')),
+          h(
+            'span',
+            { className: 'gt-muted' },
+            t('all.sessions.summary').replace('{n}', String(sorted.length)).replace('{total}', formatDuration(total, t))
+          ),
+          h('span', { className: 'gt-collapse-caret', 'data-open': String(open) }, '▾')
+        ),
+        open
+          ? shown.length === 0
+            ? h('div', { className: 'gt-muted' }, t('list.empty'))
+            : h(
+                'div',
+                { className: 'gt-list' },
+                shown.map(function (session) {
+                  const game = GAMES.find(function (item) {
+                    return item.id === session.gameId
+                  })
+                  return h(
+                    'div',
+                    { key: session.id, className: 'gt-list-row' },
+                    h(
+                      'div',
+                      null,
+                      h(
+                        'span',
+                        { className: 'gt-list-time' },
+                        shortDate(new Date(session.start)) + ' ' + clockOf(session.start) + ' – ' + clockOf(session.end)
+                      ),
+                      h('span', { className: 'gt-list-sub' }, (game ? game.name : session.gameId) + ' · ' + sessionSub(session))
+                    ),
+                    h(
+                      'div',
+                      { className: 'gt-list-dur' },
+                      h(Duration, { seconds: (session.end - session.start) / 1000, t: t })
+                    )
+                  )
+                })
+              )
+          : null
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Overview sections — add, remove or reorder an entry in ALL_SECTIONS
+     * ------------------------------------------------------------------ */
+
+    function AllShareSection({ t, range, anchor, grain }) {
+      const platforms = bucketItems(totalsByRange(range, anchor, BY_PLATFORM, grain), t)
+      const games = bucketItems(totalsByRange(range, anchor, BY_GAME, grain), t)
+      return h(
+        'div',
+        { className: 'gt-panel-card' },
+        h('div', { className: 'gt-card-head' }, h('div', { className: 'gt-card-title' }, t('detail.platforms'))),
+        h(ShareBar, { t: t, items: platforms, empty: t('list.empty') }),
+        h('div', { className: 'gt-share-divider' }),
+        h('div', { className: 'gt-card-head' }, h('div', { className: 'gt-card-title' }, t('all.share.games'))),
+        h(ShareBar, { t: t, items: games, empty: t('list.empty') })
+      )
+    }
+
+    function AllTrendSection({ t, range, anchor, grain, onPan, onZoom, onReset }) {
+      const [selected, setSelected] = React.useState(null)
+      const points = bucketSeries(seriesFor(null, range, anchor, BY_GAME, grain), t)
+      return h(ChartCard, {
+        t: t,
+        title: t('detail.trend'),
+        unit: t('unit.' + grain.key),
+        note: rangeLabelOf(range, anchor, grain),
+        points: points,
+        selectedKey: selected,
+        onPan: onPan,
+        onZoom: onZoom,
+        onReset: onReset,
+        onSelect: function (key) {
+          setSelected(selected === key ? null : key)
+        },
+      })
+    }
+
+    function AllSessionsSection({ t, range, anchor, grain }) {
+      const bounds = windowBounds(range, anchor, grain)
+      const list = sessionsInRange(null, bounds.from, bounds.to, null)
+      return h(SessionsCard, { t: t, sessions: list })
+    }
+
+    const ALL_SECTIONS = [
+      { id: 'share', Component: AllShareSection },
+      { id: 'trend', Component: AllTrendSection },
+      { id: 'sessions', Component: AllSessionsSection },
+    ]
+
+    /* ------------------------------------------------------------------ *
+     * Game detail
+     * ------------------------------------------------------------------ */
+
+    function DetailView({ t, game, initialRange, onBack, onSettings, touch }) {
+      const [range, setRange] = React.useState(initialRange)
+      const [anchor, setAnchor] = React.useState(defaultAnchor(initialRange))
+      const [zoom, setZoom] = React.useState((GRAIN_LEVELS[initialRange] || GRAIN_LEVELS.day).base)
+      const [selected, setSelected] = React.useState(null)
+
+      const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
+      const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
+      const grain = levelConfig.levels[zoomIndex]
+      const zoomBy = function (delta) {
+        setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
+      }
+
+      // Panning a range back past the loaded window fetches just that slice.
+      React.useEffect(function () {
+        ensureHistory(windowBounds(range, anchor, grain).from.getTime())
+      }, [range, anchor, grain, HISTORY_FROM, FIRST_START])
+
+      const bounds = windowBounds(range, anchor, grain)
+      const rangeSessions = sessionsInRange(game.id, bounds.from, bounds.to, allowedPlatforms(game))
+      const rangeTotal = secondsInRange(rangeSessions, bounds.from, bounds.to)
+      const average = rangeSessions.length > 0 ? rangeTotal / rangeSessions.length : 0
+      const points = seriesFor(game.id, range, anchor, null, grain)
+      const breakdown = platformBreakdown(game.id, range, anchor, grain)
+      const groupName = groupNameOf(game)
+      const duplicate = duplicateMap().get(game.id)
+      const totalAll = totalsFor(game.id, 'all', NOW)
+      const status = gameStatus(game)
+      const platformIds = enabledPlatforms(game)
+      const activeEntry = ACTIVE.find(function (item) {
+        return item.gameId === game.id
+      })
+      const activePlatform = activeEntry ? activeEntry.platformId : null
+
+      const alignedAnchor = clampAnchor(range, anchor, grain)
+      const prevDisabled = panAnchor(range, alignedAnchor, -1, grain).getTime() === alignedAnchor.getTime()
+      const nextDisabled = panAnchor(range, alignedAnchor, 1, grain).getTime() === alignedAnchor.getTime()
+
+      const rows = range === 'day' ? [] : daysInRange(game.id, range, anchor, grain)
+      const segments = range === 'day' ? segmentsBetween(game.id, bounds.from, bounds.to) : []
+
+      const rangeLabel = rangeLabelOf(range, anchor, grain)
+
+      const shift = function (direction) {
+        setAnchor(panAnchor(range, anchor, direction, grain))
+        setSelected(null)
+      }
+
+      const pickRange = function (next) {
+        setRange(next)
+        setAnchor(defaultAnchor(next))
+        setZoom((GRAIN_LEVELS[next] || GRAIN_LEVELS.day).base)
+        setSelected(null)
+      }
+
+      const listTitle = range === 'day' ? t('list.segments') : range === 'all' ? t('list.months') : t('list.days')
+
+      const mainList =
+        range === 'day'
+          ? segments.map(function (s) {
+              return h(
+                'div',
+                { key: s.id, className: 'gt-list-row' },
+                h(
+                  'div',
+                  null,
+                  h('span', { className: 'gt-list-time' }, clockOf(s.start) + ' – ' + clockOf(s.end)),
+                  h('span', { className: 'gt-list-sub' }, sessionSub(s))
+                ),
+                h('div', { className: 'gt-list-dur' }, h(Duration, { seconds: (s.end - s.start) / 1000, t: t }))
+              )
+            })
+          : rows.map(function (row) {
+              return h(
+                'div',
+                { key: row.key, className: 'gt-list-row', 'data-selected': selected === row.key },
+                h(
+                  'div',
+                  null,
+                  h('span', { className: 'gt-list-time' }, row.label),
+                  h('span', { className: 'gt-list-sub' }, t('list.count').replace('{n}', String(row.count)))
+                ),
+                h('div', { className: 'gt-list-dur' }, h(Duration, { seconds: row.seconds, t: t }))
+              )
+            })
+
+      let drill = null
+      if (selected && range !== 'day') {
+        if (selected.length === 7) {
+          const monthRows = daysInRange(game.id, 'month', new Date(selected + '-01T00:00:00'))
+          drill = h(
+            'div',
+            { className: 'gt-list', style: { marginTop: 8, borderTop: '1px solid rgba(128,128,128,.16)', paddingTop: 8 } },
+            monthRows.map(function (row) {
+              return h(
+                'div',
+                { key: 'drill-' + row.key, className: 'gt-list-row' },
+                h(
+                  'div',
+                  null,
+                  h('span', { className: 'gt-list-time' }, row.label),
+                  h('span', { className: 'gt-list-sub' }, t('list.count').replace('{n}', String(row.count)))
+                ),
+                h('div', { className: 'gt-list-dur' }, h(Duration, { seconds: row.seconds, t: t }))
+              )
+            })
+          )
+        } else {
+          const daySegments = segmentsOf(game.id, new Date(selected + 'T00:00:00'))
+          drill = h(
+            'div',
+            { className: 'gt-list', style: { marginTop: 8, borderTop: '1px solid rgba(128,128,128,.16)', paddingTop: 8 } },
+            daySegments.map(function (s) {
+              return h(
+                'div',
+                { key: 'drill-' + s.id, className: 'gt-list-row' },
+                h(
+                  'div',
+                  null,
+                  h('span', { className: 'gt-list-time' }, clockOf(s.start) + ' – ' + clockOf(s.end)),
+                  h('span', { className: 'gt-list-sub' }, sessionSub(s))
+                ),
+                h('div', { className: 'gt-list-dur' }, h(Duration, { seconds: (s.end - s.start) / 1000, t: t }))
+              )
+            })
+          )
+        }
+      }
+
+      return h(
+        'div',
+        { className: 'gt-root' },
+        h(
+          'div',
+          { className: 'gt-detail-head' },
+          h(
+            'div',
+            { className: 'gt-detail-id' },
+            h('button', { type: 'button', className: 'gt-back icon', onClick: onBack, title: t('back'), 'aria-label': t('back') }, h(ArrowLeftIcon, { size: 14 })),
+            h(IconPicker, {
+              t: t,
+              value: game.icon || '',
+              size: 38,
+              bare: true,
+              fallback: h(Tile, { game: game, size: 38 }),
+              onChange: function (value) {
+                game.icon = value
+                if (touch) touch()
+              },
+            }),
+            h(
+              'div',
+              { className: 'gt-name-wrap' },
+              h(
+                'div',
+                { className: 'gt-name-row' },
+                h('div', { className: 'gt-detail-name' }, game.name, h(DuplicateTag, { t: t, duplicate: duplicate })),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-icon-btn gt-gear inline',
+                    title: t('settings.game'),
+                    'aria-label': t('settings.game'),
+                    onClick: function () {
+                      onSettings(game.id)
+                    },
+                  },
+                  h(GearIcon, { size: 13 })
+                )
+              ),
+              h(
+                'div',
+                { className: 'gt-status-row' },
+                h(
+                  'span',
+                  {
+                    className: 'gt-status-text',
+                    style: { color: STATUS_COLORS[status] || STATUS_COLORS.offline },
+                  },
+                  t('status.' + status)
+                ),
+                isArchived(game) ? h('span', { className: 'gt-status-platform' }, t('archived')) : null,
+                platformIds.map(function (id) {
+                  return h(
+                    'span',
+                    { key: id, className: 'gt-status-platform', 'data-active': String(id === activePlatform) },
+                    PLATFORMS[id] ? PLATFORMS[id].name : id
+                  )
+                })
+              )
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-detail-right' },
+            h(
+              'div',
+              { className: 'gt-detail-total' },
+              h('div', { className: 'gt-label' }, t('all.col.total')),
+              h('div', { className: 'gt-value', style: { fontSize: 19 } }, h(Duration, { seconds: totalAll, t: t }))
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'gt-range' },
+          h(
+            'div',
+            { className: 'gt-seg' },
+            ['day', 'week', 'month', 'all'].map(function (key) {
+              return h(
+                'button',
+                {
+                  key: key,
+                  type: 'button',
+                  className: 'gt-seg-btn',
+                  'data-active': range === key,
+                  onClick: function () {
+                    pickRange(key)
+                  },
+                },
+                t('range.' + key)
+              )
+            })
+          ),
+          h('div', { className: 'gt-muted', style: { marginLeft: 4 } }, rangeLabel),
+          h(
+            'div',
+            { className: 'gt-pager' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'gt-icon-btn small',
+                disabled: prevDisabled,
+                'aria-label': 'previous',
+                onClick: function () {
+                  shift(-1)
+                },
+              },
+              '‹'
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'gt-icon-btn small',
+                disabled: nextDisabled,
+                'aria-label': 'next',
+                onClick: function () {
+                  shift(1)
+                },
+              },
+              '›'
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'gt-summary' },
+          h(Stat, { label: t('range.' + range), seconds: rangeTotal, t: t }),
+          h(Stat, { label: t('detail.sessions'), value: String(rangeSessions.length) }),
+          h(Stat, { label: t('detail.average'), seconds: average, t: t })
+        ),
+        h(ShareCard, {
+          t: t,
+          title: t('detail.platforms'),
+          note: groupName
+            ? t('game.group.active').replace('{name}', groupName)
+            : String(breakdown.length) + ' / ' + String(enabledPlatforms(game).length),
+          items: breakdown,
+        }),
+        h(ChartCard, {
+          t: t,
+          title: t('detail.trend'),
+          unit: t('unit.' + grain.key),
+          color: game.color,
+          points: points,
+          selectedKey: selected,
+          onPan: shift,
+          onZoom: zoomBy,
+          onReset: function () {
+            setAnchor(defaultAnchor(range))
+            setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
+            setSelected(null)
+          },
+          onSelect: function (key) {
+            setSelected(selected === key ? null : key)
+          },
+        }),
+        h(
+          'div',
+          { className: 'gt-panel-card' },
+          h(
+            'div',
+            { className: 'gt-card-head' },
+            h('div', { className: 'gt-card-title' }, listTitle),
+            selected
+              ? h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-back',
+                    style: { marginLeft: 'auto' },
+                    onClick: function () {
+                      setSelected(null)
+                    },
+                  },
+                  t('back')
+                )
+              : null
+          ),
+          h(
+            'div',
+            { className: 'gt-list' },
+            mainList,
+            mainList.length === 0 ? h('div', { className: 'gt-muted', style: { padding: '8px 10px' } }, t('list.empty')) : null
+          ),
+          drill
+        )
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Settings views
+     * ------------------------------------------------------------------ */
+
+    function Field(props) {
+      return h(
+        'div',
+        { className: 'gt-field' },
+        h(
+          'div',
+          { className: 'gt-field-text' },
+          h('div', { className: 'gt-field-name' }, props.label),
+          props.hint ? h('div', { className: 'gt-field-hint' }, props.hint) : null
+        ),
+        props.children
+      )
+    }
+
+    function GroupHeader({ t, title, expanded, onToggle, count }) {
+      const label = expanded ? t('settings.collapse') : t('settings.expand')
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: 'gt-group-head',
+          'aria-expanded': expanded ? 'true' : 'false',
+          title: label,
+          onClick: onToggle,
+        },
+        h('span', { className: 'gt-group-title' }, title),
+        h(
+          'span',
+          { className: 'gt-group-toggle' },
+          h('span', null, count ? label + ' · ' + String(count) : label),
+          h(ChevronIcon, { size: 14, open: expanded })
+        )
+      )
+    }
+
+    function Confirm({ t, title, body, confirmLabel, onCancel, onConfirm }) {
+      return h(
+        'div',
+        { className: 'gt-modal-backdrop' },
+        h(
+          'div',
+          { className: 'gt-modal' },
+          h('div', { className: 'gt-modal-title' }, title),
+          h('div', { className: 'gt-modal-body' }, body),
+          h(
+            'div',
+            { className: 'gt-modal-actions' },
+            h('button', { type: 'button', className: 'gt-btn', onClick: onCancel }, t('cancel')),
+            h('button', { type: 'button', className: 'gt-btn danger', onClick: onConfirm }, confirmLabel)
+          )
+        )
+      )
+    }
+
+    function GlobalSettings({ t, onBack, touch, onEditGame }) {
+      const [newPlatformName, setNewPlatformName] = React.useState('')
+      const [newPlatformPath, setNewPlatformPath] = React.useState('')
+      const [pendingGame, setPendingGame] = React.useState(null)
+      const [pendingPlatform, setPendingPlatform] = React.useState(null)
+      const [dragging, setDragging] = React.useState(null)
+      const [showArchivedGames, setShowArchivedGames] = React.useState(false)
+      const [gameDrag, setGameDrag] = React.useState(false)
+      const [gameDropNote, setGameDropNote] = React.useState('')
+      const [gameDropWarn, setGameDropWarn] = React.useState(false)
+      const [gamesExpanded, setGamesExpanded] = React.useState(false)
+      const [platformsExpanded, setPlatformsExpanded] = React.useState(false)
+
+      const movePlatform = function (fromId, toId) {
+        if (!fromId || !toId || fromId === toId) return
+        const ids = platformIdList()
+        const fromIndex = ids.indexOf(fromId)
+        const toIndex = ids.indexOf(toId)
+        if (fromIndex < 0 || toIndex < 0) return
+        ids.splice(toIndex, 0, ids.splice(fromIndex, 1)[0])
+        ids.forEach(function (id, index) {
+          if (PLATFORMS[id]) PLATFORMS[id].rank = index
+        })
+        touch()
+      }
+
+      const setSetting = function (key, value) {
+        SETTINGS[key] = value
+        touch()
+      }
+
+      const autostartUsable = Boolean(ENV && ENV.standalone && ENV.autostart && ENV.autostart.supported)
+      const autostartNote = autostartUsable
+        ? ''
+        : ENV && ENV.autostart && ENV.autostart.reason === 'dsh'
+          ? t('settings.autostart.dsh')
+          : t('settings.autostart.unavailable')
+
+      const toggleAutostart = function (next) {
+        SETTINGS.autostart = next
+        touch()
+        if (!LIVE || typeof fetch !== 'function') return
+        try {
+          Promise.resolve(
+            fetch('/api/game-time/autostart', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ enabled: next }),
+            })
+          )
+            .then(function (response) {
+              return response && response.ok ? response.json() : null
+            })
+            .then(function (payload) {
+              if (payload && payload.autostart) ENV = Object.assign({}, ENV, { autostart: payload.autostart })
+            })
+            .catch(function () {})
+        } catch (error) {
+          /* ignore a failed toggle; the checkbox keeps the optimistic state */
+        }
+      }
+
+      const addPlatform = function () {
+        const name = newPlatformName.trim()
+        if (!name) return
+        const id = 'p-' + String(Date.now())
+        PLATFORMS[id] = {
+          id: id,
+          name: name,
+          short: name.charAt(0),
+          color: COLOR_PRESETS[Object.keys(PLATFORMS).length % COLOR_PRESETS.length],
+          path: newPlatformPath.trim(),
+          rank: Object.keys(PLATFORMS).length,
+        }
+        setNewPlatformName('')
+        setNewPlatformPath('')
+        touch()
+      }
+
+      const confirmDeletePlatform = function () {
+        if (!pendingPlatform) return
+        delete PLATFORMS[pendingPlatform.id]
+        for (const game of GAMES) {
+          game.platforms = game.platforms.filter(function (id) {
+            return id !== pendingPlatform.id
+          })
+          game.disabled = game.disabled.filter(function (id) {
+            return id !== pendingPlatform.id
+          })
+        }
+        setPendingPlatform(null)
+        touch()
+      }
+
+      const addGame = function () {
+        const ids = Object.keys(PLATFORMS)
+        const id = 'game-' + String(Date.now())
+        GAMES.push({
+          id: id,
+          name: t('game.new'),
+          glyph: '新',
+          color: '#7fbf6a',
+          icon: '',
+          background: '',
+          backgroundFit: 'cover',
+          backgroundOpacity: 0.18,
+          backgroundMask: '#000000',
+          backgroundMaskOpacity: 0.25,
+          headerBackground: '',
+          platforms: [ids[0]],
+          installs: [],
+          entries: [],
+        })
+        touch()
+        if (onEditGame) onEditGame(id)
+      }
+
+      const confirmDeleteGame = function () {
+        if (!pendingGame) return
+        const index = GAMES.findIndex(function (item) {
+          return item.id === pendingGame.id
+        })
+        if (index >= 0) GAMES.splice(index, 1)
+        setPendingGame(null)
+        touch()
+      }
+
+      const platformUsage = function (id) {
+        return GAMES.filter(function (game) {
+          return game.platforms.indexOf(id) >= 0
+        }).length
+      }
+
+      const duplicates = duplicateMap()
+
+      const manageRow = function (game) {
+        return h(
+          'div',
+          { key: game.id, className: 'gt-gamerow' },
+          h(Tile, { game: game, size: 26 }),
+          h(
+            'div',
+            { className: 'gt-gamerow-main' },
+            h(
+              'div',
+              { className: 'gt-gamerow-name' },
+              ACTIVE.some(function (item) {
+                return item.gameId === game.id
+              })
+                ? h('span', { className: 'gt-dot', style: { marginRight: 5 } })
+                : null,
+              game.name,
+              h(DuplicateTag, { t: t, duplicate: duplicates.get(game.id) })
+            ),
+            h(
+              'div',
+              { className: 'gt-gamerow-meta' },
+              t('game.meta')
+                .replace('{platforms}', String(game.platforms.length))
+                .replace('{entries}', String((game.entries || []).length))
+                .replace('{installs}', String((game.installs || []).length))
+            )
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-link',
+              onClick: function () {
+                if (onEditGame) onEditGame(game.id)
+              },
+            },
+            t('game.edit')
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-icon-btn small',
+              title: t('delete'),
+              onClick: function () {
+                setPendingGame(game)
+              },
+            },
+            '×'
+          )
+        )
+      }
+
+      const activeGames = GAMES.filter(function (game) {
+        return !isArchived(game)
+      })
+      const archivedGames = GAMES.filter(isArchived)
+
+      const handleGameDrop = function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        setGameDrag(false)
+        const files =
+          event.dataTransfer && event.dataTransfer.files
+            ? Array.prototype.slice.call(event.dataTransfer.files)
+            : []
+        if (files.length === 0) return
+        Promise.all(files.map(resolveDroppedFile)).then(function (list) {
+          let added = 0
+          let owned = null
+          let failed = 0
+          list.forEach(function (resolved) {
+            if (!resolved || !resolved.ok) {
+              failed += 1
+              return
+            }
+            const result = createGameFromResolved(t, resolved)
+            if (result.state === 'added') added += 1
+            else if (result.state === 'owned') owned = result.owner
+            else failed += 1
+          })
+          const parts = []
+          if (added > 0) parts.push(t('settings.dropGame.added').replace('{n}', String(added)))
+          if (owned) parts.push(t('settings.dropGame.owned').replace('{name}', owned.name))
+          if (failed > 0) parts.push(t('drop.failed').replace('{names}', String(failed)))
+          setGameDropNote(parts.join(' · '))
+          setGameDropWarn(Boolean(owned) || failed > 0)
+          if (added > 0) touch()
+        })
+      }
+
+      return h(
+        'div',
+        { className: 'gt-root gt-fixed-head' },
+        h(
+          'div',
+          { className: 'gt-detail-head' },
+          h(
+            'div',
+            { className: 'gt-detail-id' },
+            h('button', { type: 'button', className: 'gt-back icon', onClick: onBack, title: t('back'), 'aria-label': t('back') }, h(ArrowLeftIcon, { size: 14 })),
+            h('div', { className: 'gt-detail-name' }, t('settings'))
+          )
+        ),
+        h(
+          'div',
+          { className: 'gt-settings' },
+          h(
+            'div',
+            {
+              className: 'gt-group gt-drop',
+              'data-drop': gameDrag ? 'true' : 'false',
+              onDragEnter: function (event) {
+                event.preventDefault()
+                event.stopPropagation()
+                setGameDrag(true)
+              },
+              onDragOver: function (event) {
+                event.preventDefault()
+                event.stopPropagation()
+                setGameDrag(true)
+              },
+              onDragLeave: function (event) {
+                event.stopPropagation()
+                setGameDrag(false)
+              },
+              onDrop: handleGameDrop,
+            },
+            h(GroupHeader, {
+              t: t,
+              title: t('game.manage'),
+              expanded: gamesExpanded,
+              count: activeGames.length,
+              onToggle: function () {
+                setGamesExpanded(!gamesExpanded)
+              },
+            }),
+            h(
+              'div',
+              { className: 'gt-gamepills' },
+              activeGames.map(function (game) {
+                const dup = duplicates.get(game.id)
+                return h(
+                  'button',
+                  {
+                    key: 'gp-' + game.id,
+                    type: 'button',
+                    className: 'gt-gamepill',
+                    style: { '--gt-pill': hexToRgb(game.color) },
+                    title: game.name,
+                    onClick: function () {
+                      if (onEditGame) onEditGame(game.id)
+                    },
+                  },
+                  h('span', { className: 'gt-gamepill-icon' }, h(Tile, { game: game, size: 16 })),
+                  h('span', { className: 'gt-gamepill-name' }, game.name),
+                  dup ? h('span', { className: 'gt-gamepill-dup', title: t('game.duplicate.hint').replace('{name}', dup.owner.name) }) : null
+                )
+              })
+            ),
+            gamesExpanded
+              ? h(
+                  'div',
+                  null,
+                  activeGames.map(manageRow),
+                  archivedGames.length > 0
+                    ? h(
+                        'div',
+                        { className: 'gt-archived' },
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'gt-collapse',
+                            'aria-expanded': showArchivedGames ? 'true' : 'false',
+                            onClick: function () {
+                              setShowArchivedGames(!showArchivedGames)
+                            },
+                          },
+                          h('span', { className: 'gt-card-title' }, t('archived.title')),
+                          h('span', { className: 'gt-muted' }, String(archivedGames.length)),
+                          h('span', { className: 'gt-collapse-caret', 'data-open': String(showArchivedGames) }, '▾')
+                        ),
+                        showArchivedGames ? archivedGames.map(manageRow) : null
+                      )
+                    : null
+                )
+              : null,
+            h('button', { type: 'button', className: 'gt-link', onClick: addGame }, '+ ' + t('game.add')),
+            h('div', { className: 'gt-drop-hint' }, gameDrag ? t('settings.dropGame.release') : t('settings.dropGame.hint')),
+            gameDropNote
+              ? h('div', { className: 'gt-note gt-drop-note' + (gameDropWarn ? ' gt-warn' : '') }, gameDropNote)
+              : null,
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.note'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h(GroupHeader, {
+              t: t,
+              title: t('settings.platforms'),
+              expanded: platformsExpanded,
+              count: platformIdList().length,
+              onToggle: function () {
+                setPlatformsExpanded(!platformsExpanded)
+              },
+            }),
+            h(
+              'div',
+              { className: 'gt-chips', style: { paddingTop: 8 } },
+              platformIdList().map(function (id) {
+                const platform = PLATFORMS[id]
+                const running = ACTIVE.some(function (item) {
+                  return item.platformId === id
+                })
+                return h(
+                  'span',
+                  {
+                    key: 'over-' + id,
+                    className: 'gt-pill',
+                    style: {
+                      background: 'rgba(' + hexToRgb(platform.color) + ', .14)',
+                      borderColor: 'rgba(' + hexToRgb(platform.color) + ', .36)',
+                    },
+                    title: platform.path || platform.name,
+                  },
+                  h(StatusDot, { t: t, status: platformStatus(id) }),
+                  platform.name
+                )
+              })
+            ),
+            platformsExpanded
+              ? h(
+                  'div',
+                  null,
+                  platformIdList().map(function (id) {
+                    const platform = PLATFORMS[id]
+                    return h(
+                      'div',
+                      {
+                        key: id,
+                        className: 'gt-platrow',
+                  onDragOver: function (event) {
+                    event.preventDefault()
+                  },
+                  onDrop: function () {
+                    movePlatform(dragging, id)
+                  },
+                },
+                h(
+                  'div',
+                  { className: 'gt-platrow-head' },
+                  h(
+                    'span',
+                    {
+                      className: 'gt-drag',
+                      title: t('platform.drag'),
+                      draggable: true,
+                      onDragStart: function (event) {
+                        event.dataTransfer.effectAllowed = 'move'
+                        setDragging(id)
+                      },
+                      onDragEnd: function () {
+                        setDragging(null)
+                      },
+                    },
+                    '⠿'
+                  ),
+                  h(StatusDot, { t: t, status: platformStatus(id) }),
+                  h(
+                    'span',
+                    {
+                      className: 'gt-tile',
+                      style: {
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: platform.color,
+                        fontSize: 10,
+                        overflow: 'hidden',
+                      },
+                    },
+                    platform.icon
+                      ? h('img', {
+                          src: platform.icon,
+                          alt: '',
+                          style: { width: '100%', height: '100%', objectFit: 'cover' },
+                        })
+                      : platform.short || platform.name.charAt(0)
+                  ),
+                  h('input', {
+                    className: 'gt-input',
+                    value: platform.name,
+                    placeholder: t('platform.name'),
+                    onChange: function (event) {
+                      platform.name = event.target.value
+                      platform.short = event.target.value.charAt(0)
+                      touch()
+                    },
+                  }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-icon-btn small',
+                      title: t('delete'),
+                      onClick: function () {
+                        setPendingPlatform(platform)
+                      },
+                    },
+                    '×'
+                  )
+                ),
+                h(
+                  'div',
+                  { style: { marginTop: 5 } },
+                  h(PathField, {
+                    t: t,
+                    value: platform.path,
+                    placeholder: t('platform.path'),
+                    onChange: function (value) {
+                      platform.path = value
+                      touch()
+                    },
+                  })
+                ),
+                h(
+                  'div',
+                  { style: { marginTop: 5 } },
+                  h('input', {
+                    className: 'gt-input',
+                    style: { fontSize: 11 },
+                    value: (platform.processes || []).join(', '),
+                    placeholder: t('platform.processes'),
+                    onChange: function (event) {
+                      platform.processes = event.target.value
+                        .split(',')
+                        .map(function (item) {
+                          return item.trim()
+                        })
+                        .filter(Boolean)
+                      touch()
+                    },
+                  })
+                ),
+                h(
+                  'div',
+                  { className: 'gt-platrow-actions' },
+                  h(
+                    'label',
+                    { className: 'gt-link' },
+                    t('icon.pick'),
+                    h('input', {
+                      type: 'file',
+                      accept: 'image/*',
+                      style: { display: 'none' },
+                      onChange: function (event) {
+                        readIconFile(event.target.files && event.target.files[0], function (value) {
+                          platform.icon = value
+                          touch()
+                        })
+                      },
+                    })
+                  ),
+                  platform.icon
+                    ? h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'gt-link',
+                          onClick: function () {
+                            platform.icon = ''
+                            touch()
+                          },
+                        },
+                        t('icon.reset')
+                      )
+                    : null,
+                  h(
+                    'label',
+                    { className: 'gt-bg-control' },
+                    h('span', null, t('platform.color')),
+                    h('input', {
+                      type: 'color',
+                      className: 'gt-color',
+                      value: platform.color,
+                      onChange: function (event) {
+                        platform.color = event.target.value
+                        touch()
+                      },
+                    })
+                  )
+                )
+              )
+            })) : null,
+            h(
+              'div',
+              { style: { display: 'flex', gap: 6, padding: '8px 0' } },
+              h('input', {
+                className: 'gt-input',
+                placeholder: t('platform.name'),
+                value: newPlatformName,
+                onChange: function (event) {
+                  setNewPlatformName(event.target.value)
+                },
+              }),
+              h(
+                'div',
+                { style: { flex: '1 1 auto', minWidth: 0 } },
+                h(PathField, {
+                  t: t,
+                  value: newPlatformPath,
+                  placeholder: t('platform.path'),
+                  onChange: function (value) {
+                    setNewPlatformPath(value)
+                  },
+                })
+              ),
+              h('button', { type: 'button', className: 'gt-link', onClick: addPlatform }, '+ ' + t('settings.addPlatform'))
+            ),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.platforms.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.monitor')),
+            h(
+              Field,
+              { label: t('settings.interval'), hint: t('settings.interval.hint') },
+              h(Dropdown, {
+                value: String(SETTINGS.intervalSec),
+                minWidth: 74,
+                options: [
+                  { value: '5', label: '5 s' },
+                  { value: '10', label: '10 s' },
+                  { value: '30', label: '30 s' },
+                ],
+                onChange: function (value) {
+                  setSetting('intervalSec', Number(value))
+                },
+              })
+            ),
+            h(
+              Field,
+              { label: t('settings.history'), hint: t('settings.history.hint') },
+              h(Dropdown, {
+                value: String(SETTINGS.historyDays || 365),
+                minWidth: 90,
+                options: [
+                  { value: '30', label: t('settings.history.months').replace('{n}', '1') },
+                  { value: '90', label: t('settings.history.months').replace('{n}', '3') },
+                  { value: '180', label: t('settings.history.months').replace('{n}', '6') },
+                  { value: '365', label: t('settings.history.years').replace('{n}', '1') },
+                  { value: '730', label: t('settings.history.years').replace('{n}', '2') },
+                  { value: '1825', label: t('settings.history.years').replace('{n}', '5') },
+                ],
+                onChange: function (value) {
+                  setSetting('historyDays', Number(value))
+                },
+              })
+            ),
+            h(
+              Field,
+              { label: t('settings.foreground'), hint: t('settings.foreground.hint') },
+              h('input', {
+                className: 'gt-check',
+                type: 'checkbox',
+                checked: SETTINGS.foregroundOnly,
+                onChange: function (event) {
+                  setSetting('foregroundOnly', event.target.checked)
+                },
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.startup')),
+            h(
+              Field,
+              {
+                label: t('settings.autostart'),
+                hint: autostartUsable
+                  ? t('settings.autostart.hint')
+                  : ENV && ENV.autostart && ENV.autostart.reason === 'dsh'
+                    ? t('settings.autostart.dsh.hint')
+                    : t('settings.autostart.unavailable'),
+              },
+              h('input', {
+                className: 'gt-check',
+                type: 'checkbox',
+                checked: autostartUsable && ENV.autostart ? Boolean(ENV.autostart.enabled) : SETTINGS.autostart !== false,
+                disabled: !autostartUsable,
+                title: autostartNote,
+                onChange: function (event) {
+                  toggleAutostart(event.target.checked)
+                },
+              })
+            ),
+            autostartUsable
+              ? null
+              : h('div', { className: 'gt-note', style: { paddingBottom: 6 } }, autostartNote),
+            h('div', { className: 'gt-note', style: { paddingBottom: 6 } }, t('settings.autostart.why')),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.autostart.off'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.ui')),
+            h(
+              Field,
+              { label: t('settings.density') },
+              h(Dropdown, {
+                value: SETTINGS.density,
+                minWidth: 110,
+                options: [
+                  { value: 'comfortable', label: t('settings.density.comfortable') },
+                  { value: 'compact', label: t('settings.density.compact') },
+                ],
+                onChange: function (value) {
+                  setSetting('density', value)
+                },
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.headerBackground')),
+            h(ImageField, {
+              t: t,
+              value: SETTINGS.headerBackground || '',
+              aspect: 4,
+              width: 1600,
+              onChange: function (value) {
+                SETTINGS.headerBackground = value
+                touch()
+              },
+            }),
+            h(
+              'div',
+              { className: 'gt-bg-controls' },
+              h(
+                'label',
+                { className: 'gt-bg-control' },
+                h('span', null, t('settings.headerHeight')),
+                h('input', {
+                  className: 'gt-input',
+                  type: 'number',
+                  min: 80,
+                  max: 900,
+                  step: 10,
+                  style: { width: 74 },
+                  value: SETTINGS.headerHeight || 300,
+                  onChange: function (event) {
+                    SETTINGS.headerHeight = Number(event.target.value)
+                    touch()
+                  },
+                })
+              ),
+              h(
+                'label',
+                { className: 'gt-bg-control' },
+                h('span', null, t('settings.headerFade')),
+                h('input', {
+                  className: 'gt-input',
+                  type: 'number',
+                  min: 0,
+                  max: 95,
+                  step: 5,
+                  style: { width: 64 },
+                  value: SETTINGS.headerFade === undefined ? 52 : SETTINGS.headerFade,
+                  onChange: function (event) {
+                    SETTINGS.headerFade = Number(event.target.value)
+                    touch()
+                  },
+                })
+              )
+            ),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.headerBackground.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.surfaceColor')),
+            h(
+              Field,
+              { label: t('settings.surfaceColor'), hint: t('settings.surfaceColor.hint') },
+              h('input', {
+                type: 'color',
+                className: 'gt-color',
+                value: SETTINGS.surfaceColor || '#000000',
+                onChange: function (event) {
+                  SETTINGS.surfaceColor = event.target.value
+                  touch()
+                },
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.background')),
+            h(ImageField, {
+              t: t,
+              value: SETTINGS.background || '',
+              aspect: 8 / 3,
+              width: 1280,
+              fit: SETTINGS.backgroundFit || 'cover',
+              onChange: function (value) {
+                SETTINGS.background = value
+                touch()
+              },
+              onFit: function (fit) {
+                SETTINGS.backgroundFit = fit
+                touch()
+              },
+            }),
+            h(BackgroundControls, {
+              t: t,
+              value: {
+                opacity: SETTINGS.backgroundOpacity,
+                mask: SETTINGS.backgroundMask,
+                maskOpacity: SETTINGS.backgroundMaskOpacity,
+              },
+              onChange: function (patch) {
+                if (patch.opacity !== undefined) SETTINGS.backgroundOpacity = patch.opacity
+                if (patch.mask !== undefined) SETTINGS.backgroundMask = patch.mask
+                if (patch.maskOpacity !== undefined) SETTINGS.backgroundMaskOpacity = patch.maskOpacity
+                touch()
+              },
+            }),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.background.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.autoArchive')),
+            h(
+              Field,
+              { label: t('settings.autoArchive.on'), hint: t('settings.autoArchive.hint') },
+              h('input', {
+                className: 'gt-check',
+                type: 'checkbox',
+                checked: autoArchiveConfig().enabled,
+                onChange: function (event) {
+                  SETTINGS.autoArchive = Object.assign(autoArchiveConfig(), { enabled: event.target.checked })
+                  touch()
+                },
+              })
+            ),
+            h(
+              Field,
+              { label: t('settings.autoArchive.after') },
+              h(
+                'div',
+                { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+                h('input', {
+                  className: 'gt-input',
+                  style: { width: 64, textAlign: 'right' },
+                  type: 'number',
+                  min: 1,
+                  max: autoArchiveConfig().unit === 'month' ? 24 : 365,
+                  value: String(autoArchiveConfig().value),
+                  onChange: function (event) {
+                    const next = Number(event.target.value)
+                    if (!Number.isFinite(next) || next <= 0) return
+                    SETTINGS.autoArchive = Object.assign(autoArchiveConfig(), { value: next })
+                    touch()
+                  },
+                }),
+                h(Dropdown, {
+                  value: autoArchiveConfig().unit,
+                  minWidth: 64,
+                  options: [
+                    { value: 'day', label: t('settings.autoArchive.day') },
+                    { value: 'month', label: t('settings.autoArchive.month') },
+                  ],
+                  onChange: function (value) {
+                    SETTINGS.autoArchive = Object.assign(autoArchiveConfig(), { unit: value })
+                    touch()
+                  },
+                })
+              )
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.data')),
+            h(Field, { label: t('settings.data.retention') }),
+            h(Field, { label: t('settings.data.later'), hint: t('settings.note') })
+          ),
+          h('div', { className: 'gt-credit' }, t('settings.credit'))
+        ),
+        pendingGame
+          ? h(Confirm, {
+              t: t,
+              title: t('game.delete.title'),
+              body: t('game.delete.body').replace('{name}', pendingGame.name),
+              confirmLabel: t('delete'),
+              onCancel: function () {
+                setPendingGame(null)
+              },
+              onConfirm: confirmDeleteGame,
+            })
+          : null,
+        pendingPlatform
+          ? h(Confirm, {
+              t: t,
+              title: t('platform.delete.title'),
+              body: t('platform.delete.body')
+                .replace('{name}', pendingPlatform.name)
+                .replace('{count}', String(platformUsage(pendingPlatform.id))),
+              confirmLabel: t('delete'),
+              onCancel: function () {
+                setPendingPlatform(null)
+              },
+              onConfirm: confirmDeletePlatform,
+            })
+          : null
+      )
+    }
+
+    function GameSettings({ t, game, onBack, touch, onDeleted }) {
+      const groupName = groupNameOf(game)
+      const groupPlatform = groupName ? PLATFORMS[platformIdForGroup(groupName)] : null
+      const duplicate = duplicateMap().get(game.id)
+      const [dragActive, setDragActive] = React.useState(false)
+      const [dropNote, setDropNote] = React.useState('')
+      const [dropWarn, setDropWarn] = React.useState(false)
+      const [pendingOwned, setPendingOwned] = React.useState(null)
+      const [confirmDelete, setConfirmDelete] = React.useState(false)
+
+      const showNote = function (text, warn) {
+        setDropNote(text)
+        setDropWarn(!!warn)
+      }
+
+      const deleteGame = function () {
+        const index = GAMES.findIndex(function (item) {
+          return item.id === game.id
+        })
+        if (index >= 0) GAMES.splice(index, 1)
+        setConfirmDelete(false)
+        touch()
+        if (typeof onDeleted === 'function') onDeleted()
+      }
+
+      /** Warn (don't block) when a row's path belongs to another game. */
+      const warnIfOwned = function (path) {
+        const owner = installOwner(path, game.id)
+        showNote(owner ? t('drop.owned').replace('{name}', owner.name) : '', !!owner)
+        return !!owner
+      }
+
+      const flashDrop = function (text, warn) {
+        showNote(text, warn)
+        if (typeof setTimeout === 'function') {
+          setTimeout(function () {
+            showNote('', false)
+          }, 6000)
+        }
+      }
+
+      /** Add one resolved launch file; returns 'added' | 'duplicate' | 'fail'. */
+      const applyResolved = function (resolved) {
+        const path = normalizePath(resolved && resolved.path)
+        if (!path || !/\.exe$/i.test(path)) return 'fail'
+        if (!Array.isArray(game.installs)) game.installs = []
+        const lower = path.toLowerCase()
+        const seen = game.installs.some(function (item) {
+          return normalizePath(item.path).toLowerCase() === lower
+        })
+        if (seen) return 'duplicate'
+
+        let platformId = resolved.platformId && PLATFORMS[resolved.platformId] ? resolved.platformId : ''
+        if (!platformId && game.installs.length > 0 && PLATFORMS[game.installs[0].platformId]) {
+          platformId = game.installs[0].platformId
+        }
+        if (!platformId) platformId = Object.keys(PLATFORMS)[0]
+        game.installs.push({
+          id: game.id + '-i' + String(Date.now()) + '-' + String(game.installs.length),
+          platformId: platformId,
+          path: path,
+        })
+
+        // Only name a game that still carries the placeholder name.
+        if (resolved.name && (!game.name || game.name === t('game.new'))) {
+          game.name = resolved.name
+          game.glyph = resolved.name.charAt(0) || game.glyph
+        }
+        if (!game.icon) {
+          extractIcon(path).then(function (icon) {
+            if (icon && !game.icon) {
+              game.icon = icon
+              touch()
+            }
+          })
+        }
+        return 'added'
+      }
+
+      const handleDrop = function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        setDragActive(false)
+        const files =
+          event.dataTransfer && event.dataTransfer.files
+            ? Array.prototype.slice.call(event.dataTransfer.files)
+            : []
+        if (files.length === 0) return
+        Promise.all(files.map(resolveDroppedFile)).then(function (list) {
+          const added = []
+          const duplicates = []
+          const owned = []
+          const failed = []
+          let ownedBy = null
+          let pending = null
+          list.forEach(function (resolved, index) {
+            const label = files[index] && files[index].name ? files[index].name : String(index)
+            if (!resolved || !resolved.ok || !resolved.path) {
+              failed.push(label)
+              return
+            }
+            // Another game already times this exe: one tick can only credit one
+            // game, so a second row would just sit at zero.
+            const owner = installOwner(resolved.path, game.id)
+            if (owner) {
+              owned.push(label)
+              ownedBy = owner
+              if (!pending) pending = resolved
+              return
+            }
+            const state = applyResolved(resolved)
+            if (state === 'added') added.push(label)
+            else if (state === 'duplicate') duplicates.push(label)
+            else failed.push(label)
+          })
+          const parts = []
+          if (added.length > 0) parts.push(t('drop.added').replace('{n}', String(added.length)))
+          if (duplicates.length > 0) parts.push(t('drop.dup').replace('{n}', String(duplicates.length)))
+          if (failed.length > 0) parts.push(t('drop.failed').replace('{names}', failed.join('、')))
+          if (owned.length > 0) {
+            parts.push(t('drop.owned').replace('{name}', ownedBy ? ownedBy.name : ''))
+            if (pending) setPendingOwned({ resolved: pending, name: ownedBy ? ownedBy.name : '' })
+          }
+          flashDrop(parts.join(' · '), owned.length > 0 || duplicates.length > 0)
+          if (added.length > 0) touch()
+        })
+      }
+
+      const rename = function (value) {
+        game.name = value
+        game.glyph = value.charAt(0) || game.glyph
+        touch()
+      }
+
+      const setInstallPath = function (install, value) {
+        install.path = value
+        touch()
+        if (!value || !/\.exe$/i.test(value)) return
+        extractIcon(value).then(function (icon) {
+          if (!icon || game.icon) return
+          game.icon = icon
+          touch()
+        })
+      }
+
+      const setInstallPlatform = function (install, platformId) {
+        install.platformId = platformId
+        touch()
+      }
+
+      const removeInstall = function (install) {
+        game.installs = game.installs.filter(function (item) {
+          return item.id !== install.id
+        })
+        touch()
+      }
+
+      const addInstall = function () {
+        if (!Array.isArray(game.installs)) game.installs = []
+        game.installs.push({
+          id: game.id + '-i' + String(Date.now()),
+          platformId: enabledPlatforms(game)[0] || Object.keys(PLATFORMS)[0],
+          path: '',
+        })
+        touch()
+      }
+
+      const setEntry = function (entry, patch) {
+        Object.assign(entry, patch)
+        touch()
+      }
+
+      const changeEntryPlatform = function (entry, platformId) {
+        const previous = PLATFORMS[entry.platformId]
+        const next = PLATFORMS[platformId]
+        entry.platformId = platformId
+        if (next) {
+          if (!entry.name || (previous && entry.name === previous.name)) entry.name = next.name
+          if (!entry.path || (previous && entry.path === previous.path)) entry.path = next.path || ''
+        }
+        touch()
+      }
+
+      const addEntry = function () {
+        if (!Array.isArray(game.entries)) game.entries = []
+        const platformId = (game.installs || []).length > 0 ? game.installs[0].platformId : Object.keys(PLATFORMS)[0]
+        const platform = PLATFORMS[platformId]
+        game.entries.push({
+          id: game.id + '-e' + String(Date.now()),
+          platformId: platformId,
+          name: platform ? platform.name : '',
+          path: platform ? platform.path || '' : '',
+          args: '',
+        })
+        touch()
+      }
+
+      const removeEntry = function (entry) {
+        game.entries = game.entries.filter(function (item) {
+          return item.id !== entry.id
+        })
+        touch()
+      }
+
+      return h(
+        'div',
+        { className: 'gt-root gt-fixed-head' },
+        h(
+          'div',
+          { className: 'gt-detail-head' },
+          h(
+            'div',
+            { className: 'gt-detail-id' },
+            h('button', { type: 'button', className: 'gt-back icon', onClick: onBack, title: t('back'), 'aria-label': t('back') }, h(ArrowLeftIcon, { size: 14 })),
+            h(StatusDot, { t: t, status: gameStatus(game) }),
+            h(Tile, { game: game, size: 30 }),
+            h('div', { className: 'gt-detail-name' }, game.name, h(DuplicateTag, { t: t, duplicate: duplicate })),
+            h('div', { className: 'gt-muted', style: { marginLeft: 4 } }, t('settings.game'))
+          )
+        ),
+        h(
+          'div',
+          { className: 'gt-settings' },
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.name')),
+            h(
+              'div',
+              { style: { paddingBottom: 10 } },
+              h('input', {
+                className: 'gt-input',
+                value: game.name,
+                onChange: function (event) {
+                  rename(event.target.value)
+                },
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.icon')),
+            h(IconPicker, {
+              t: t,
+              value: game.icon || '',
+              size: 40,
+              sourcePath: game.installs && game.installs[0] ? game.installs[0].path : '',
+              fallback: h(Tile, { game: game, size: 40 }),
+              onChange: function (value) {
+                game.icon = value
+                touch()
+              },
+            })
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.color')),
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10 } },
+              COLOR_PRESETS.map(function (color) {
+                return h('span', {
+                  key: color,
+                  className: 'gt-swatch',
+                  style: {
+                    background: color,
+                    outline: color === game.color ? '2px solid currentColor' : 'none',
+                    outlineOffset: 2,
+                  },
+                  onClick: function () {
+                    game.color = color
+                    touch()
+                  },
+                })
+              }),
+              h('input', {
+                type: 'color',
+                className: 'gt-color',
+                value: game.color,
+                title: t('game.color'),
+                onChange: function (event) {
+                  game.color = event.target.value
+                  touch()
+                },
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.headerBackground')),
+            h(ImageField, {
+              t: t,
+              value: game.headerBackground || '',
+              aspect: 4,
+              width: 1600,
+              onChange: function (value) {
+                game.headerBackground = value
+                touch()
+              },
+            }),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('game.headerBackground.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.background')),
+            h(ImageField, {
+              t: t,
+              value: game.background || '',
+              aspect: 8 / 3,
+              width: 1280,
+              fit: game.backgroundFit || 'cover',
+              onChange: function (value) {
+                game.background = value
+                touch()
+              },
+              onFit: function (fit) {
+                game.backgroundFit = fit
+                touch()
+              },
+            }),
+            h(BackgroundControls, {
+              t: t,
+              value: {
+                opacity: game.backgroundOpacity,
+                mask: game.backgroundMask,
+                maskOpacity: game.backgroundMaskOpacity,
+              },
+              onChange: function (patch) {
+                if (patch.opacity !== undefined) game.backgroundOpacity = patch.opacity
+                if (patch.mask !== undefined) game.backgroundMask = patch.mask
+                if (patch.maskOpacity !== undefined) game.backgroundMaskOpacity = patch.maskOpacity
+                touch()
+              },
+            }),
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('game.background.hint'))
+          ),          h(
+            'div',
+            {
+              className: 'gt-group gt-drop',
+              'data-drop': dragActive ? 'true' : 'false',
+              onDragEnter: function (event) {
+                event.preventDefault()
+                event.stopPropagation()
+                setDragActive(true)
+              },
+              onDragOver: function (event) {
+                event.preventDefault()
+                event.stopPropagation()
+                setDragActive(true)
+              },
+              onDragLeave: function (event) {
+                event.stopPropagation()
+                setDragActive(false)
+              },
+              onDrop: handleDrop,
+            },
+            h('div', { className: 'gt-group-title' }, t('game.installs')),
+            h(
+              'div',
+              { className: 'gt-group-row' },
+              h('span', { className: 'gt-group-label' }, t('game.group')),
+              h('input', {
+                className: 'gt-input',
+                maxLength: 30,
+                value: game.group || '',
+                placeholder: t('game.group.placeholder'),
+                title: t('game.group.hint'),
+                onChange: function (event) {
+                  game.group = event.target.value
+                  touch()
+                },
+                onBlur: function () {
+                  // Freeze the auto colour once the name is final, so later
+                  // groups cannot shift it; the colour picker can still override.
+                  const name = groupNameOf(game)
+                  if (!name) return
+                  if (SETTINGS.groupColors && SETTINGS.groupColors[name]) return
+                  if (!SETTINGS.groupColors) SETTINGS.groupColors = {}
+                  SETTINGS.groupColors[name] = groupColorOf(name)
+                  touch()
+                },
+              }),
+              groupPlatform
+                ? h('span', { className: 'gt-group-label', style: { opacity: 0.8 } }, t('game.group.into').replace('{name}', groupPlatform.name))
+                : groupName
+                  ? h('input', {
+                      type: 'color',
+                      className: 'gt-color',
+                      value: groupColorOf(groupName),
+                      title: t('game.group.color'),
+                      'aria-label': t('game.group.color'),
+                      onChange: function (event) {
+                        if (!SETTINGS.groupColors) SETTINGS.groupColors = {}
+                        SETTINGS.groupColors[groupName] = event.target.value
+                        touch()
+                      },
+                    })
+                  : null
+            ),
+            (game.installs || []).map(function (install) {
+              const platform = PLATFORMS[install.platformId]
+              const process = baseName(install.path)
+              return h(
+                'div',
+                { key: install.id, className: 'gt-entry' },
+                h(
+                  'div',
+                  { className: 'gt-entry-head' },
+                  h(PlatformSelect, {
+                    value: install.platformId,
+                    options: platformIdList(),
+                    onChange: function (id) {
+                      setInstallPlatform(install, id)
+                    },
+                  }),
+                  h(PathField, {
+                    t: t,
+                    value: install.path,
+                    placeholder: platform && platform.path ? platform.path : t('game.install.path'),
+                    dropMode: 'game',
+                    onChange: function (value) {
+                      setInstallPath(install, value)
+                    },
+                    onResolved: function (resolved) {
+                      setInstallPath(install, resolved.path)
+                      warnIfOwned(resolved.path)
+                    },
+                    onCommit: function (value) {
+                      warnIfOwned(value)
+                    },
+                  }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-icon-btn small',
+                      title: t('remove'),
+                      onClick: function () {
+                        removeInstall(install)
+                      },
+                    },
+                    '×'
+                  )
+                ),
+                process
+                  ? h(
+                      'div',
+                      { className: 'gt-run-args', style: { marginTop: 4 } },
+                      t('game.install.process').replace('{process}', process)
+                    )
+                  : null
+              )
+            }),
+            h('button', { type: 'button', className: 'gt-link', onClick: addInstall }, '+ ' + t('game.installs.add')),
+            h('div', { className: 'gt-note', style: { padding: '6px 0 2px' } }, t('game.installs.hint')),
+            h('div', { className: 'gt-drop-hint' }, dragActive ? t('drop.release') : ENV.standalone ? t('drop.hintBrowser') : t('drop.hint')),
+            dropNote ? h('div', { className: 'gt-note gt-drop-note' + (dropWarn ? ' gt-warn' : '') }, dropNote) : null,
+            pendingOwned
+              ? h(
+                  'div',
+                  { className: 'gt-note gt-drop-note gt-warn' },
+                  t('drop.ownedAddAsk').replace('{name}', pendingOwned.name || ''),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-link',
+                      style: { marginLeft: 8, padding: 0, fontSize: 12 },
+                      onClick: function () {
+                        applyResolved(pendingOwned.resolved)
+                        setPendingOwned(null)
+                        showNote('', false)
+                        touch()
+                      },
+                    },
+                    t('drop.ownedAdd')
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-link',
+                      style: { marginLeft: 10, padding: 0, fontSize: 12 },
+                      onClick: function () {
+                        setPendingOwned(null)
+                        showNote('', false)
+                      },
+                    },
+                    t('cancel')
+                  )
+                )
+              : null
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.entries')),
+            (game.entries || []).map(function (entry) {
+              const platform = PLATFORMS[entry.platformId]
+              return h(
+                'div',
+                { key: entry.id, className: 'gt-entry' },
+                h(
+                  'div',
+                  { className: 'gt-entry-head' },
+                  h(PlatformSelect, {
+                    value: entry.platformId,
+                    options: platformIdList(),
+                    onChange: function (id) {
+                      changeEntryPlatform(entry, id)
+                    },
+                  }),
+                  h('input', {
+                    className: 'gt-input',
+                    value: entry.name,
+                    placeholder: platform ? platform.name : t('game.entry.name'),
+                    onChange: function (event) {
+                      setEntry(entry, { name: event.target.value })
+                    },
+                  }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-icon-btn small',
+                      title: t('remove'),
+                      onClick: function () {
+                        removeEntry(entry)
+                      },
+                    },
+                    '×'
+                  )
+                ),
+                h(
+                  'div',
+                  { style: { marginTop: 6 } },
+                  h(PathField, {
+                    t: t,
+                    value: entry.path,
+                    placeholder: platform && platform.path ? platform.path : t('game.entry.path'),
+                    onChange: function (value) {
+                      setEntry(entry, { path: value })
+                    },
+                  })
+                ),
+                h('input', {
+                  className: 'gt-input',
+                  style: { marginTop: 6, fontSize: 11 },
+                  value: entry.args,
+                  placeholder: t('game.entry.args'),
+                  onChange: function (event) {
+                    setEntry(entry, { args: event.target.value })
+                  },
+                })
+              )
+            }),
+            h('button', { type: 'button', className: 'gt-link', onClick: addEntry }, '+ ' + t('game.entries.add')),
+            h('div', { className: 'gt-note', style: { padding: '6px 0 10px' } }, t('game.entries.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.archive')),
+            h(
+              'div',
+              { className: 'gt-group-row' },
+              h('input', {
+                type: 'checkbox',
+                className: 'gt-check',
+                checked: game.archived === true,
+                'aria-label': t('game.archive.toggle'),
+                onChange: function (event) {
+                  game.archived = event.target.checked
+                  touch()
+                },
+              }),
+              h('span', { className: 'gt-group-label' }, t('game.archive.toggle'))
+            ),
+            h(
+              'div',
+              { className: 'gt-group-row' },
+              h('input', {
+                type: 'checkbox',
+                className: 'gt-check',
+                checked: game.noAutoArchive === true,
+                'aria-label': t('game.archive.exempt'),
+                onChange: function (event) {
+                  game.noAutoArchive = event.target.checked
+                  touch()
+                },
+              }),
+              h('span', { className: 'gt-group-label' }, t('game.archive.exempt'))
+            ),
+            autoArchived(game) && game.archived !== true
+              ? h('div', { className: 'gt-note gt-drop-note' }, t('game.archive.auto'))
+              : null,
+            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('game.archive.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('game.danger')),
+            h(
+              'div',
+              { className: 'gt-group-row' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-btn danger',
+                  onClick: function () {
+                    setConfirmDelete(true)
+                  },
+                },
+                t('game.delete.button')
+              ),
+              h('span', { className: 'gt-group-label', style: { marginLeft: 'auto' } }, t('game.delete.note'))
+            )
+          )
+        ),
+        confirmDelete
+          ? h(Confirm, {
+              t: t,
+              title: t('game.delete.title'),
+              body: t('game.delete.body').replace('{name}', game.name),
+              confirmLabel: t('delete'),
+              onCancel: function () {
+                setConfirmDelete(false)
+              },
+              onConfirm: deleteGame,
+            })
+          : null
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Root page
+     * ------------------------------------------------------------------ */
+
+    function Page(props) {
+      const t = props.t
+      const [route, setRouteState] = React.useState(LAST_ROUTE)
+      const setRoute = function (next) {
+        LAST_ROUTE = next
+        setRouteState(next)
+      }
+      const [version, setVersion] = React.useState(0)
+      const [refreshing, setRefreshing] = React.useState(false)
+
+      CURRENT_ROUTE = route.name
+
+      bumpPage = function () {
+        setVersion(function (value) {
+          return value + 1
+        })
+      }
+
+      const touch = function () {
+        markConfigChanged()
+        setVersion(version + 1)
+        saveConfig()
+      }
+
+      const refresh = function () {
+        setRefreshing(true)
+        loadLiveState(true)
+        setTimeout(function () {
+          setRefreshing(false)
+        }, 900)
+      }
+
+      const openGame = function (gameId, from) {
+        setRoute({ name: 'game', id: gameId, from: from })
+      }
+
+      const openSettings = function () {
+        setRoute({ name: 'settings', from: route.name })
+      }
+
+      const openGameSettings = function (gameId) {
+        setRoute({ name: 'game-settings', id: gameId, from: route.from })
+      }
+
+      const back = function () {
+        setRoute({ name: route.from === 'all' ? 'all' : 'today' })
+      }
+
+      const backFromSettings = function () {
+        setRoute({ name: route.from === 'all' || route.from === 'today' ? route.from : 'today' })
+      }
+
+      const backFromGameSettings = function () {
+        if (route.from === 'settings') {
+          setRoute({ name: 'settings', from: 'today' })
+          return
+        }
+        setRoute({ name: 'game', id: route.id, from: route.from })
+      }
+
+      const activeGame = route.name === 'game' || route.name === 'game-settings'
+        ? GAMES.find(function (item) {
+            return item.id === route.id
+          })
+        : null
+
+      const bgUrl = activeGame ? activeGame.background || '' : SETTINGS.background || ''
+      const bgFit = activeGame ? activeGame.backgroundFit || 'cover' : SETTINGS.backgroundFit || 'cover'
+      const bgOpacity =
+        (activeGame ? activeGame.backgroundOpacity : SETTINGS.backgroundOpacity) === undefined
+          ? 0.18
+          : activeGame
+            ? activeGame.backgroundOpacity
+            : SETTINGS.backgroundOpacity
+      const surfaceSource = activeGame ? activeGame.backgroundOpacity : SETTINGS.backgroundOpacity
+      const surfaceAlpha = surfaceSource === undefined ? 0.05 : surfaceSource
+      const headerBg = activeGame
+        ? activeGame.headerBackground || SETTINGS.headerBackground || ''
+        : SETTINGS.headerBackground || ''
+      const bgMask = activeGame ? activeGame.backgroundMask || '#000000' : SETTINGS.backgroundMask || '#000000'
+      const bgMaskOpacity =
+        (activeGame ? activeGame.backgroundMaskOpacity : SETTINGS.backgroundMaskOpacity) === undefined
+          ? 0.25
+          : activeGame
+            ? activeGame.backgroundMaskOpacity
+            : SETTINGS.backgroundMaskOpacity
+      let body
+      if (route.name === 'game-settings') {
+        const game = GAMES.find(function (item) {
+          return item.id === route.id
+        })
+        body = game
+          ? h(GameSettings, {
+              t: t,
+              game: game,
+              onBack: backFromGameSettings,
+              touch: touch,
+              // Deleting a game inside its own settings returns to the time list,
+              // not to the settings page it may have been opened from.
+              onDeleted: function () {
+                setRoute({ name: route.from === 'all' ? 'all' : 'today' })
+              },
+            })
+          : h(TodayView, { t: t, onOpenGame: openGame })
+      } else if (route.name === 'settings') {
+        body = h(GlobalSettings, {
+          t: t,
+          onBack: backFromSettings,
+          touch: touch,
+          onEditGame: function (id) {
+            setRoute({ name: 'game-settings', id: id, from: 'settings' })
+          },
+        })
+      } else if (route.name === 'game') {
+        const game = GAMES.find(function (item) {
+          return item.id === route.id
+        })
+        body = game
+          ? h(DetailView, {
+              key: route.id + ':' + route.from + ':' + String(version),
+              t: t,
+              game: game,
+              initialRange: route.from === 'all' ? 'all' : 'day',
+              onBack: back,
+              onSettings: openGameSettings,
+              touch: touch,
+            })
+          : h(TodayView, { t: t, onOpenGame: openGame })
+      } else if (route.name === 'all') {
+        body = h(AllView, { t: t, onOpenGame: openGame, touch: touch })
+      } else {
+        body = h(TodayView, { t: t, onOpenGame: openGame })
+      }
+
+      const showTabs = route.name === 'today' || route.name === 'all'
+
+      return h(
+        'div',
+        {
+          className: 'gt-shell' + (SETTINGS.density === 'compact' ? ' gt-compact' : ''),
+          style: {
+            '--gt-surface-alpha': String(surfaceAlpha),
+            '--gt-surface-color': hexToRgb(SETTINGS.surfaceColor),
+            '--gt-header-height': (SETTINGS.headerHeight || 300) + 'px',
+            '--gt-header-fade': (SETTINGS.headerFade === undefined ? 52 : SETTINGS.headerFade) + '%',
+          },
+        },
+        h('style', null, STYLE),
+        bgUrl
+          ? h('div', {
+              className: 'gt-bg',
+              style: {
+                backgroundImage: 'url("' + bgUrl + '")',
+                backgroundSize: bgFit === 'tile' ? 'auto' : 'cover',
+                backgroundRepeat: bgFit === 'tile' ? 'repeat' : 'no-repeat',
+              },
+            })
+          : null,
+        bgUrl && bgMaskOpacity > 0
+          ? h('div', { className: 'gt-bg-mask', style: { background: bgMask, opacity: bgMaskOpacity } })
+          : null,
+        headerBg
+          ? h('div', { className: 'gt-header-bg', style: { backgroundImage: 'url("' + headerBg + '")' } })
+          : null,
+        h(
+          'div',
+          { className: 'gt-top' },
+          h(
+            'div',
+            { className: 'gt-head' },
+            h(
+              'div',
+              { className: 'gt-head-left' },
+              h('h2', { className: 'gt-title' }, t('title')),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-icon-btn gt-gear' + (refreshing ? ' spinning' : ''),
+                  title: t('refresh'),
+                  'aria-label': t('refresh'),
+                  onClick: refresh,
+                },
+                h(RefreshIcon, null)
+              ),
+              showTabs
+                ? h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'gt-icon-btn gt-gear',
+                      style: { marginLeft: 6 },
+                      title: t('settings'),
+                      'aria-label': t('settings'),
+                      onClick: openSettings,
+                    },
+                    h(GearIcon, null)
+                  )
+                : null,
+              LIVE && ACTIVE.length > 0
+                ? h(
+                    'span',
+                    { className: 'gt-live-on' },
+                    h('span', { className: 'gt-dot' }),
+                    t('live.on') +
+                      ' · ' +
+                      formatDuration(
+                        ACTIVE.reduce(function (sum, item) {
+                          return sum + (item.seconds || 0)
+                        }, 0),
+                        t
+                      ) + ' · ' + formatDuration(ACTIVE.reduce(function (sum, item) { return sum + (item.seconds || 0) }, 0), t)
+                  )
+                : null,
+              h('span', { className: 'gt-demo' }, LIVE ? t('live.badge') : t('demo'))
+            ),
+            h(
+              'div',
+              { className: 'gt-head-right' },
+              showTabs
+                ? h(
+                    'div',
+                    { className: 'gt-tabs' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'gt-tab',
+                        'data-active': route.name === 'today',
+                        onClick: function () {
+                          setRoute({ name: 'today' })
+                        },
+                      },
+                      t('tab.today')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'gt-tab',
+                        'data-active': route.name === 'all',
+                        onClick: function () {
+                          setRoute({ name: 'all' })
+                        },
+                      },
+                      t('tab.all')
+                    )
+                  )
+                : null
+            )
+          )
+        ),
+        h(
+          'div',
+          { style: { position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' } },
+          body
+        )
+      )
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Test seam — only the Node render harness defines this global
+     * ------------------------------------------------------------------ */
+
+    if (typeof globalThis !== 'undefined' && globalThis.__GT_TEST__) {
+      Object.assign(globalThis.__GT_TEST__, {
+        GAMES: GAMES,
+        PLATFORMS: PLATFORMS,
+        SESSIONS: SESSIONS,
+        SETTINGS: SETTINGS,
+        NOW: NOW,
+        totalsFor: totalsFor,
+        lastPlayedAt: lastPlayedAt,
+        seriesFor: seriesFor,
+        platformBreakdown: platformBreakdown,
+        totalsByRange: totalsByRange,
+        bucketItems: bucketItems,
+        bucketSeries: bucketSeries,
+        panAnchor: panAnchor,
+        clampAnchor: clampAnchor,
+        defaultAnchor: defaultAnchor,
+        rangeLabelOf: rangeLabelOf,
+        GRAIN_LEVELS: GRAIN_LEVELS,
+        BY_PLATFORM: BY_PLATFORM,
+        BY_GAME: BY_GAME,
+        ALL_SECTIONS: ALL_SECTIONS,
+        daysInRange: daysInRange,
+        segmentsOf: segmentsOf,
+        formatDuration: formatDuration,
+        rangeBounds: rangeBounds,
+        dayKey: dayKey,
+        monthKey: monthKey,
+        enabledPlatforms: enabledPlatforms,
+        sessionSub: sessionSub,
+        applyLiveState: applyLiveState,
+        ensureHistory: ensureHistory,
+        getHistoryFrom: function () {
+          return HISTORY_FROM
+        },
+        isArchived: isArchived,
+        autoArchived: autoArchived,
+        autoArchiveConfig: autoArchiveConfig,
+        duplicateMap: duplicateMap,
+        createGameFromResolved: createGameFromResolved,
+        installOwner: installOwner,
+        setLastRoute: function (next) {
+          LAST_ROUTE = next
+        },
+        PathField: PathField,
+        shortcutUrlFromText: shortcutUrlFromText,
+        lnkTargetFromBuffer: lnkTargetFromBuffer,
+        Cropper: Cropper,
+        ImageField: ImageField,
+        TodayView: TodayView,
+        AllView: AllView,
+        DetailView: DetailView,
+        GlobalSettings: GlobalSettings,
+        GameSettings: GameSettings,
+        Chart: Chart,
+        Page: Page,
+      })
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Plugin entry
+     * ------------------------------------------------------------------ */
+
+    return {
+      inject: ['slots', 'locale'],
+      apply(ctx) {
+        CLIENT_CTX = ctx
+        ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'game-time: dictionaries')
+        const t = ctx.locale.bind(NS)
+
+        ctx.slots.inject('main', () =>
+          ctx.slots.register({ name: 'main', key: PANEL_ID, locale: NS, inject: () => ({ t }) }, Page)
+        )
+
+        ctx.slots.inject('sidebar.panellist', () =>
+          ctx.slots.register(
+            { name: 'sidebar.panellist', id: PANEL_ID, order: 12, locale: NS, label: () => t('panel') },
+            Glyph
+          )
+        )
+      },
+    }
+  },
+})

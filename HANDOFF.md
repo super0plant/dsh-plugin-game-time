@@ -1,0 +1,545 @@
+# Game Time — 交接文档
+
+> 给下一个会话/下一个人的现状说明。读完这份就能接着改，不需要回溯之前的对话。
+>
+> **回复约定**：每次答复开头先写一行「难度：★☆☆☆☆（很低）」这样的评级（5 星制 + 一句理由）；**关键步骤当场记进 §1「最近改动」**，不要攒到最后。详见 §13。
+
+---
+
+## 1. 这是什么
+
+一个 DSH 插件，在侧边栏加「游戏时长」面板，本地采集游戏游玩时长：
+
+- 按进程判断游戏是否在运行（不看启动器）
+- 记录每局开始/结束，按天、周、月、总计统计
+- 支持多平台合并、按平台拆分、背景图、自定义图标、图标裁剪
+- 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
+- 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
+
+**当前状态**：0.2.3 已出包（DSH 插件包 + 网页包），网页版有独立窗口和托盘；五套测试里四套常态通过，`standalone-check` 覆盖 vendor/挂载/HTTP/shutdown。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
+**分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
+
+### 最近改动（2026-11-09，按时间倒序，新条目加在最上面）
+
+- **保留全部 + 懒加载（本次，替代上一版日汇总）**：彻底删掉 31 天删除/日汇总，`sessions.json` 保存全部会话；`/state` 默认只回最近 `settings.historyDays`（默认 365 天，设置页「监控 → 历史加载窗口」可选 30–1825 天）的会话，另带 `historyFrom / firstStart / totals / lastPlayed`。`totalsFor(...,'all')` 用宿主算好的全量总数（含当前进行中会话），`lastPlayedAt` 用 `lastPlayed`，`clampAnchor` 用 `firstStart` 允许往回翻；`AllView`/`DetailView` 的 `useEffect` 在窗口越过已加载边界时调 `GET /api/game-time/sessions?from=&to=` 补一页，`ensureHistory()` 按 id 去重、`HISTORY_FROM` 只向前移，30 秒刷新会保留已加载的旧页。**日汇总方案已回退**：它 31 天后只有天级精度、双文件要保一致，且边界日曾丢过 30 分钟；实测一年只省 ~2×。验证：`host-check`（旧会话保留、/state 窗口、全量总计、切片接口、historyDays 钳制）+ `render-check`（窗口、总计、lastPlayed、懒加载补页、刷新保留）+ 四套全跑；宿主改了，**要重启 DSH**。
+
+- **0.2.3 收尾状态（今天到此为止）**：网页版已有桌面外壳（`launcher.ps1` + `start.cmd` + `stop.cmd`），托盘实测能常驻（`Application.Run($form)` + 隐藏宿主窗体），`icon.ico` 16/20/24/32/40/48 换成简化版（紫圆角块 + 白手柄剪影）、64+ 用原插画，构建脚本校验 `launcher.ps1` 必须带 UTF-8 BOM。**卡在分发提示**：双击 `start.cmd` 弹「打开文件 - 安全警告（无法验证发布者 / Windows 命令脚本）」——截图确认是 **Mark-of-the-Web**。结论：属性里勾「解除锁定」只对当次解压有效；微信/QQ 传 zip 通常不带标记，浏览器/邮箱会带；7-Zip 解压不复制 ADS。备选「不要 .cmd」：本地新建快捷方式指向 `powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<绝对路径>\launcher.ps1"`（快捷方式本身无标记）。
+  - **未做（下次第一件）**：把自启改成走 launcher。现在注册表写的是 `"node.exe" "server.mjs"`，登录会留一个黑色控制台窗口；计划在独立版 `server.mjs` 里拦截 `POST /api/game-time/autostart`、自己写 `powershell ... -File launcher.ps1 -NoWindow`，这样不用改宿主、不用重启 DSH。
+  - 另一个待确认：用户说 `start.cmd` 属性里**没有**「解除锁定」复选框（与截图矛盾，可能点到了文件夹）。若确实没有，就不是 MOTW，而是杀软/智能应用控制，处理方式不同。
+- **测试小坑**：`cmd /c start.cmd` 会被 cmd 解析成 START 内建命令（报「找不到文件 .cmd」），验证双击请直接运行 `.cmd` 或从 PowerShell 里 `.\start.cmd`，不要用 `cmd /c`。
+
+- **0.2.2 托盘可靠性**：用户实测「窗口打开了但没有托盘图标」。根因是 `[Windows.Forms.Application]::Run()` 无窗体时在部分宿主会立刻返回，托盘建好就随脚本退出；改成隐藏宿主 `Form` + `Run($form)`，退出走 `$form.Close()`。启动后弹气泡「已缩到托盘」（Win11 会把新图标折叠进 `^`）。新增 `stop.cmd`（`curl -X POST /shutdown`）作为托盘找不到时的干净退出。日志改到 `%LOCALAPPDATA%\GameTime\launcher.log`——解压目录可能只读，写在旁边会静默失败。
+  - 教训：**launcher 常驻 + 45917 单实例**，我自己的测试进程会和用户手测抢端口，症状会互相污染；人工复现前先 `stop.cmd` 并确认 45917 空闲。
+
+- **0.2.1 网页版桌面外壳**：`standalone/launcher.ps1`（由 `start.cmd` 隐藏启动）负责三件事——没服务就 `Start-Process node -WindowStyle Hidden` 起采集器并等 `/state` 通；用 `msedge --app=http://127.0.0.1:45917/ --window-size=1180,840` 开无地址栏窗口，没有 Edge 才退回默认浏览器；建 `NotifyIcon` 托盘（打开面板 / 开机自启 / 退出），`Local\GameTimeTray` 互斥量保证只有一个托盘。新增 `POST /api/game-time/shutdown`（仅本机、只接受 POST），托盘退出走它 → `server.close` → `process.exit` → `finaliseSync`，**不要用 Stop-Process 强杀**（会跳过退出钩子）。`standalone-check` 增加 shutdown 断言（GET 405 / POST 后进程 0 退出）。README 增加「解除锁定」步骤。
+
+- **独立版 S3+S4（打包拆包，版本 0.2.0）**：`scripts/build.mjs` 从**同一棵树**出两个互不覆盖的包——`dist/dsh-plugin-game-time-0.2.0.zip`（宿主+客户端+四套测试，**刻意不含 `standalone/`**）与 `dist/game-time-web-0.2.0.zip`（`client.js` + `src/` + `standalone/` + `icon.png/ico` + 单独一份 `standalone-check`），网页包的 `package.json` 由构建生成（`name: game-time-web`，没有 `dsh` 段）。`standalone-check` 在缺 `standalone/` 的包里打印 skipped 并退出 0，所以插件包解压后仍是「四套全绿 + 一跳过」。自启勾选改成读注册表实际状态（`ENV.autostart.enabled`），修掉「配置说开、注册表没写」的假显示。网页版拖拽提示按 `ENV.standalone` 换成 `.url/.lnk 可拖、exe 用文件夹按钮`。新增 `standalone/start.cmd`（双击启动，找不到 node 会给提示）。
+  - 两版是**共同引用**：`client.js` + `src/host/*` 只有一份，网页版外壳只是假 ctx 调同一个 `apply()`；改一处两边同时生效，没有同步步骤。数据也共用 `%USERPROFILE%\.dsh\storages\game-time\`。
+  - 验收：解压副本里 DSH 包 4 套通过、web 包 `standalone-check` 通过。
+
+- **独立版 S1（网页版骨架）**：新增 `standalone/`：`server.mjs` 用假 ctx（`logger/effect/webServer.register`）直接复用宿主 `apply()`，固定 `127.0.0.1:45917`，端口就是单实例锁（第二个进程只开浏览器、**不 import 宿主**，避免 `finaliseSync` 覆盖 `active.json`），Ctrl+C → `server.close` → `process.exit` 走同步落盘；`index.html` + `loader.js` 提供 `window.__ModuleLoader__`、`locale.register/bind`、`slots.inject/register`（`main` 挂到 `#root`，侧栏 Glyph 忽略），React/ReactDOM 18.3.1 UMD 走 `standalone/vendor/`（MIT，无 npm）。新增 `tests/standalone-check.mjs`：假 DOM 挂载 zh/en + HTTP 契约 + 第二实例退出 0。图标换成作者提供的 1024 图（`icon.png` / `icon.ico` 七档 / `standalone/icon-256.png`），**插件列表仍用 `icon.svg`**。
+  - 已修：`$home` 是 PowerShell 只读变量，复制预览数据要用别的名字（踩了一次）；代理隧道下载 vendor 时响应是 `Transfer-Encoding: chunked`，漏解码后 JS 首行是 `1641` 尺寸行 → 浏览器 `Cannot read properties of undefined (reading 'createElement')`。现在 `standalone-check` 会用 `new vm.Script()` 编译两个 UMD 文件兜底。
+  - 未做：拖拽降级「浏览…」、README/打包、双采集器互斥（现在只在检测到 `DeepSeek Harness.exe` 时打警告）。
+
+- **折叠控件视觉引导**：分组标题整行变成按钮（hover 底色、焦点环、tooltip），右侧「详细设置 · N / 收起」后面加 Lucide `chevron-down`，收起时旋转 −90°，并带上折叠项数量与 `aria-expanded`；样式在 `.gt-group-head/.gt-group-toggle/.gt-chevron`。
+- **重复提示文字改红**：`.gt-warn`（`#ff6b6b`）用于「已属于 X」「N 个已存在」「仍然添加？」等警告，成功提示仍是灰字。
+- **设置页折叠 + 记住页面**：设置页的「启动平台」「游戏」默认只显示胶囊行（平台保留状态点；游戏用**游戏图标**，点击进该游戏设置）和「添加」按钮，详细行收进右侧「详细设置 / 收起」。面板切走再回来仍停在原页面（`LAST_ROUTE` 放模块级；刷新 / 重启才回起始页）。游戏胶囊样式全部走类名（`.gt-gamepills/.gt-gamepill/.gt-gamepill-icon/.gt-gamepill-name/.gt-gamepill-dup`），颜色来自 `--gt-pill` 自定义属性，方便微调。
+- **开机自启（独立版专用）**：设置页新增「启动」分组。开关只在独立界面可操作；DSH 内恒为灰色，并在下方说明「为什么不可选 / 为什么建议开 / 关闭只移除本程序的登录项」。宿主新增 `GET/POST /api/game-time/autostart`；**注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 是唯一真源**，`settings.autostart` 只记录用户意图（`false` 时下次启动不再补写）。独立模式由 `GAME_TIME_STANDALONE=1` 判定，入口路径取 `GAME_TIME_STANDALONE_ENTRY`，默认 `<插件>/standalone/server.mjs`。
+- **设置页直接拖入游戏**：把 exe / `.lnk` / `.url` 拖到设置页的「游戏」列表即可**新建游戏**（自动取名、平台、图标）；exe 已被某个游戏计时时不新建，提示「已经在『X』里计时」。查重结果现在有缓存（`duplicateMap()` 按 `configVersion + GAMES.length`），只在配置变化后重算一次，首次渲染（启动）就会算。
+- **重复游戏标记 + 游戏设置删除**：同一 exe 路径只由**配置顺序里第一个**游戏计时，后面的游戏在标题后带红色「重复」标签（今日 / 全部 / 设置列表 / 详情 / 游戏设置都有），悬停提示「已在『X』里计时，这里不会再计时」；判定在 `duplicateMap()`。游戏设置页最后新增「删除这个游戏」，确认后删掉并**跳回时长列表**（从「全部」进来的回「全部」，其余回「今日」）。
+- **路径输入统一可拖拽 + 重复路径提示**：`PathField` 现在是唯一带拖拽的路径控件（安装位置、启动入口、平台路径、新增平台），拖 exe/快捷方式即可；拖到「安装位置」卡片仍是新增一条，拖到某一行是填这一行。若 exe 已属于别的游戏，提示「已经在 X 里计时」并给「仍然添加」覆盖（同一进程只能归一个游戏，第二条会永远 0）。
+- **自动归档**：设置里可开「N 天 / N 个月不玩自动归档」，默认关闭；按最后游玩时间**派生**（不写进 config），所以玩一次后 `lastPlayedAt` 前移、下次刷新自动回到列表。游戏设置里勾「不放入自动归档」可让单个游戏豁免。从未玩过的游戏不参与。
+- **拖拽添加安装位置**：把 exe / `.lnk` / `.url` 拖到「安装位置」卡片即可新增，自动解析真实 exe、自动填游戏名（仅当名字还是「新游戏」）、自动取图标；同路径不重复添加。`.url` 里的 `steam://rungameid/<id>` 会经 `libraryfolders.vdf` + `appmanifest_<id>.acf` 找到安装目录再挑 exe。宿主新增 `GET /api/game-time/resolve`。顺带修掉 PowerShell 输出编码 bug（中文路径变成 `◆◆◆◆`）。
+- **归档**：`game.archived` 只是把这一行折叠进「全部游戏」表和设置页游戏列表的「已归档游戏」条；**统计、图表、总计、今日页照常计入**，会话一条不删，取消勾选即回来。另有「归档已卸载 (N)」一键收起。
+- **统计归组**：`game.group` 可空；非空时「平台分布」用这个名字代替平台，多个游戏同组自动并成一片；组名命中平台名或平台 id（如 `Steam`）直接并进该平台，不会出现两个同名切片。颜色自动分配（避开平台色）+ 可改。
+- **设置页骨架**：`gt-fixed-head` 让设置 / 游戏设置的返回栏固定，只有内容区滚动；设置页游戏列表同样按归档折叠。
+- **图表重做**（细节见 §7）：柱状按平台 / 游戏分色堆叠、Y 轴 4 档阶梯 + 极淡辅助线、平均虚线带贴轴刻度、hover 气泡、X 标注按文字宽度抽稀、标题与 X 轴左缘标注当前刻度单位、`↺` 重置。
+- **时间窗与交互**：今日 = `00:00–23:00` 的 24 根小时柱；拖动一格 = 一根柱子（步长由**当前刻度**决定，不按视图写死）；滚轮一格 = 一级刻度（今日 1时/30分/10分、本月 天/周、全部 月/周/天，本周不缩放）；窗口可滚动，边界钳制到数据范围和周期末尾。
+- **全部页分析区**：平台分布（含游戏分布条）、时长趋势（按游戏分色）、游玩时段（默认收起）三张卡，由 `ALL_SECTIONS` 注册表驱动，增删 / 换序只改那个数组。
+- **宿主拆分**：`index.js` 从 1288 行变成 11 行入口，实现移到 `src/host/*`（7 个模块），行为无变化。
+- **归属与落盘**：开局算一次归属、tick 只刷新 `lastSeen`（修 Playnite → 米哈游跳变）；30 秒 `active.json` 心跳 + 启动恢复；关局 1.5 秒防抖写、退出同步写。
+- **按钮图标换套**：设置 / 刷新 / 返回改用 Lucide 内联 SVG（无新依赖），统一 21×21 方框、14px 图形、默认 `opacity .45`。
+
+---
+
+## 2. 运行环境与部署
+
+| 项 | 值 |
+|---|---|
+| 插件包名 | `dsh-plugin-game-time` |
+| 插件目录 | `<解压目录>\plugins\game-time`（DSH 里填这个路径） |
+| 面板 id | `game-time` |
+| 注册的 slot | `main`（主面板）+ `sidebar.panellist`（侧栏图标） |
+| 安装方式 | DSH 设置 → 插件 → 添加插件 → 填本地目录路径 |
+
+### 改动的生效规则（重要）
+
+| 改了什么 | 怎么生效 |
+|---|---|
+| `index.js`（宿主） | **必须重启 DSH**（模块启动时 import 一次） |
+| `client.js`（界面） | **刷新页面** 即可（`Ctrl+F5`） |
+| `standalone/`（网页版） | 改前端刷新页面；改 `server.mjs` / `loader.js` 重启 `start.cmd` |
+| 配置数据（游戏/平台/背景） | 立即生效，走 HTTP 接口 |
+| 新增游戏 / 设置字段（如 `group`、`archived`） | 先加进 `src/host/config.js` 的白名单，**再重启**；否则保存时被洗掉 |
+
+---
+
+## 3. 文件地图
+
+```
+plugins/game-time/
+  package.json        插件清单（dsh.bundle.patch + dsh.client）
+  cordis.patch.yml    插入 ID 为 game-time 的插件行
+  index.js            宿主入口（11 行，只 re-export src/host/main.js）
+  src/host/
+    main.js           采集循环、快照、路由装配（~740 行）
+    constants.js      路径、默认配置、懒加载窗口、心跳过期
+    values.js         取值/校验、JSON 与资产读写、路径工具
+    config.js         v1/v2→v3 迁移、sanitizeConfig、预置
+    sessions.js       跨零点拆分
+    processes.js      tasklist 扫描、路径查询、启动器归属
+    scripts.js        PowerShell：exe 图标、选文件、目录浏览
+  client.js           前端：全部 UI（约 6.4k 行，未拆；内部分层见 §7）
+  icon.png / icon.ico 作者提供的应用图标（1024 PNG；.ico 含 16–256 七档）；插件列表仍读 icon.svg
+  standalone/
+    server.mjs        独立版入口：假 ctx 复用 apply()、静态白名单、固定 45917、单实例、退出落盘、POST shutdown
+    launcher.ps1      桌面外壳：隐藏起服务 + Edge --app 窗口 + 托盘（打开/自启/退出），互斥量防多托盘
+    start.cmd         双击入口：隐藏启动 launcher.ps1（不留黑框）
+    stop.cmd          兜底退出：curl POST /shutdown（托盘被折叠时用）
+    index.html        独立页面壳（暗/亮跟随系统，主题变量、启动报错显示）
+    loader.js         __ModuleLoader__ shim：locale / slots(effect) / main 挂载
+    icon-256.png      独立版 favicon / 触屏图标
+    vendor/           react.production.min.js + react-dom.production.min.js（18.3.1 UMD, MIT）
+  locale/zh.json      插件管理器显示的名称/描述
+  locale/en.json
+  icon.svg            插件图标
+  tests/render-check.mjs   渲染测试（Node + 假 React，约 60 条渲染路径）
+  tests/host-check.mjs     宿主测试（路由、迁移、归属、一次完整 tick）
+  tests/exit-check.mjs     退出落盘（防抖 + process.exit 同步写）
+  tests/restore-check.mjs  崩溃重启恢复（gone / running / dupe）
+  tests/standalone-check.mjs 独立版：loader 挂载（zh/en）+ HTTP 契约 + 单实例；包里没有 standalone/ 时跳过
+  scripts/build.mjs    出两个包：DSH 插件包（不含 standalone/）与网页包（含 client/src/standalone）
+```
+
+宿主依赖方向是单向的：`constants ← values ← config ← main`，`processes/scripts/sessions` 互不依赖。
+
+---
+
+## 4. 数据模型（config v3）
+
+存储位置：`%USERPROFILE%\.dsh\storages\game-time\`
+
+| 文件 | 内容 |
+|---|---|
+| `config.json` | 平台 + 游戏 + 设置 |
+| `sessions.json` | 全部会话（**永久保留，不自动删除**；客户端按 `historyDays` 窗口懒加载） |
+| `active.json` | 正在进行的会话心跳（崩溃/强杀后重启用来续上），干净退出会删除 |
+| `presets.json` | 预置写入标记（`{version:1}`），防止删掉的预置游戏复活 |
+| `assets/` | 背景图文件（sha1 命名），配置里只存 URL |
+
+### platform
+
+```js
+{
+  id, name, short, color,      // 显示用
+  path,                        // 默认启动器 exe（可空）
+  processes: [],               // 附加进程名（检测"在线"用，逗号分隔录入）
+  icon,                        // data URL，可空
+  rank                         // 排序权重，越小越优先
+}
+```
+
+### game
+
+```js
+{
+  id, name, glyph, color,
+  group,                       // 统计归组名（可空）；空 = 按平台统计，非空 = 平台分布里用这个名字代替平台；填平台名或平台 id（如 Steam）直接并进该平台
+  archived,                    // true = 归档：只在「全部游戏」表和设置列表里折叠，统计/图表/总计照常计入，会话一条不删
+  noAutoArchive,               // true = 不参与「N 天不玩自动归档」
+  icon,                        // data URL
+  background, backgroundFit,   // 'cover' | 'tile'
+  backgroundOpacity,           // 区块透明度（0–1），不是图片透明度
+  backgroundMask, backgroundMaskOpacity,
+  headerBackground,            // 该游戏的标题背景
+  platforms: [],               // 由 installs + entries 推导，宿主会补
+  installs: [{ id, platformId, path }],   // 游戏本体 exe，计时依据
+  entries:  [{ id, platformId, name, path, args }]  // 启动入口，仅展示
+}
+```
+
+### settings
+
+```js
+{
+  intervalSec, foregroundOnly, autostart, density,   // foregroundOnly 还没实现；autostart 仅独立版可写
+  historyDays,                                   // 懒加载窗口，默认 365，范围 30–1825
+  background, backgroundFit, backgroundOpacity,
+  backgroundMask, backgroundMaskOpacity,
+  headerBackground, headerHeight, headerFade,
+  surfaceColor,                                  // 卡片底色，默认 #000000
+  groupColors,                                   // 归组名 → 颜色；没配就按组名排序取一个平台没占用的调色板色
+  autoArchive                                    // { enabled, value, unit: 'day'|'month' }；1 个月按 30 天算
+}
+```
+
+### session
+
+```js
+{ id, gameId, platformId, source, start, end }
+// source：启动器名（如 "Playnite"）或 "自启动"
+// start/end：epoch ms；跨零点会被拆成两条
+```
+
+---
+
+## 5. HTTP 接口
+
+全部挂在 DSH web server 上，基址是 `http://127.0.0.1:<当前端口>`（端口每次启动都变）。
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/api/game-time/state` | 全量快照（`sessions` 只是 `historyDays` 窗口；另带 `historyFrom`、`firstStart`、`totals`、`lastPlayed`、`active`、`env`、`lastError`） |
+| GET | `/api/game-time/sessions?from=&to=` | 懒加载：返回与 `[from, to)` 重叠的会话（epoch ms）；客户端补旧页用 |
+| GET/POST | `/api/game-time/autostart` | 查询 / 设置开机自启；不可写时（DSH、非 Windows、入口缺失）GET 返回 `supported:false`，POST 返回 409 |
+| POST | `/api/game-time/shutdown` | **仅独立版**：托盘「退出」用，`server.close` → `process.exit` 同步落盘；GET 405 |
+| POST | `/api/game-time/config` | 整份配置写入（带校验与迁移） |
+| POST | `/api/game-time/asset` | 上传图片（body `{dataUrl}`），返回 `{url}` |
+| GET | `/api/game-time/asset/<name>` | 读取图片 |
+| GET | `/api/game-time/browse?dir=` | 列出目录下的 exe（深度 2，按体积排序） |
+| GET | `/api/game-time/icon?path=` | 提取 exe 图标（原图标最大帧尺寸 16–256，PNG data URL，保留透明） |
+| GET | `/api/game-time/pick-file` | 弹原生文件对话框（exe / lnk / url） |
+| GET | `/api/game-time/resolve?path=` 或 `?url=` | 把 exe / `.lnk` / `.url` / `steam://rungameid/<id>` 解析成真实 exe，返回 `{ok, path, name, kind, platformId, warning}` |
+| GET | `/api/game-time/reveal?path=` | 资源管理器定位 |
+| GET | `/api/game-time/debug/processes` | **调试用**：采集器当前看到的进程名列表 |
+
+排查口诀：**先看 `lastError`，再看 `debug/processes`，最后看 `config.json`。**
+
+---
+
+## 6. 宿主机制
+
+### 采集循环（tick）
+
+- 每 `intervalSec` 秒（默认 10）执行一次
+- `tasklist /FO CSV` 拿全部进程名（→ `state.processes`，Map<name, pid[]>）
+- `claimsByProcess()`：按 installs 里的 exe 文件名建立"进程名 → 游戏"映射
+- 同名多游戏（如英雄联盟国服/日服）→ `queryProcessPath(pid)` 查一次完整路径，按目录区分
+- 新出现的游戏 → `attributePlatform()` 决定平台，开一条 active 记录
+- 进程消失 → 关闭会话，`splitByDay()` 按天切分后写入
+- 单次会话短于 30 秒不记录；会话永久保留，不再按 31 天清理
+
+### 落盘策略（2026-11 修的，重要）
+
+宿主的退出链路是 `shutdown()` → 立刻 `process.exit()`，任何没 await 的异步写都会丢。所以：
+
+1. **关一局 → 1.5 秒防抖写** `sessions.json`（`scheduleFlush`）；
+2. **退出时同步写**：`process.on('exit')` + `writeFileSync` + `rename`（`flushSync`），覆盖关机/托盘退出/`app.quit()`；
+3. **进行中的会话**每 30 秒写一次 `active.json` 心跳；启动时读回来——进程还在就接着计时，不在了就按 `lastSeen` 补一条（`restoreActive`，按 `gameId@start` 去重）；
+4. 干净退出（`finaliseSync`）会先把还在跑的会话关掉、同步写 `sessions.json`，再删掉 `active.json`。
+
+改这块的时候**必须**让 `tests/exit-check.mjs` 和 `tests/restore-check.mjs` 都过。
+
+### 归属规则
+
+1. **多安装位置**（如英雄联盟）→ 命中哪个安装就归哪个平台的归属
+2. **单安装位置**（绝区零、地平线）→ 看当前在线的启动器：
+   - 没有 → 归安装平台，`source = "自启动"`
+   - 有一个 → 归它
+   - 多个 → 按 `platform.rank` 取最靠前
+3. 归到的新平台会自动追加进该游戏的 `platforms`
+
+### 迁移与预置
+
+- `migrate()` 把 v1/v2 转成 v3；会把 `lol-cn` + `lol-jp` 合并成一个「英雄联盟」
+- 迁移时**保留游戏对象的所有字段**（曾经因为丢字段把背景清空过）
+- `applyPresets()` 只在 `presets.json` 缺失/版本低时执行一次，补默认平台路径和预置游戏
+
+### 素材
+
+- 背景图上传后存 `assets/<sha1>.<ext>`，配置只存 `/api/game-time/asset/<name>`
+- 图标存 data URL（小，96×96 PNG，保留透明）
+- 图标提取：PowerShell 解析 exe/ico 图标资源，取最大帧尺寸（16–256）向 shell 取图，再用 `GetDIBits` 保留 alpha；Electron `getFileIcon`（最大 32px）只作兜底。改这块要重启 DSH。
+- **PowerShell 返回字符串一律走 JSON 文件**（`runJsonScript`）：`-File` 的 stdout 用的是控制台代码页（中文系统 GBK），Node 按 UTF-8 解码会把中文路径变成 `◆◆◆◆`。图标脚本返回 base64（纯 ASCII）所以不受影响。
+
+---
+
+## 7. 前端结构
+
+### 入口
+
+`client.js` 用 `window.__ModuleLoader__.load({ id, factory })` 注册，`factory` 返回 `{ inject, apply }`。
+
+### 路由（组件内状态，不是 URL）
+
+```
+today → all → game（详情）→ settings（总设置）→ game-settings（游戏设置）
+```
+
+`Page` 持有 `route`，各视图通过回调切换。
+
+### 实时数据
+
+- `loadLiveState(force)`：拉 `/state` 并**原地替换** `GAMES` / `PLATFORMS` / `SESSIONS`
+- 每 30 秒自动刷新一次；在设置页时跳过（避免冲掉正在编辑的内容），除非手动刷新
+- 改动 → `touch()` → `saveConfig()`（500ms 防抖）→ POST 整份配置
+- **保存必须带 `version: 3`**（曾经漏了，导致每次保存都被当旧格式迁移、背景字段被清空）
+
+### 关键组件
+
+| 组件 | 作用 |
+|---|---|
+| `Tile` | 游戏图标（有自定义图则 `<img>`，否则色块 + 首字） |
+| `StatusDot` | 状态圆点：灰=离线、绿=计时中、红=路径错误、黄=挂起 |
+| `PlatformPill` | 平台胶囊（全名 + 平台色） |
+| `Dropdown` / `PlatformSelect` | 唯一的下拉实现（原生 select 太丑） |
+| `ImageField` + `Cropper` | 图片选择 + 拖拽/缩放裁剪，固定比例导出 |
+| `BackgroundControls` | 区块透明度、蒙版颜色、蒙版浓度 |
+| `Confirm` | 删除确认弹窗 |
+| `Chart` | 纯绘图：柱/线、堆叠分段、Y 轴、平均线、hover 气泡、拖动/滚轮 |
+| `ChartCard` | 卡片壳 + 柱/线切换 + 单位标题 + `↺` 重置 |
+| `ShareBar` / `ShareCard` | 占比条 + 图例 / 卡片壳 |
+| `SessionsCard` | 可折叠的启停记录列表 |
+
+### 图表与数据层（改图之前先读这一节）
+
+**数据层只有一个序列构建器**，不要另写统计：
+
+```
+seriesFor(gameId, range, anchor, slice, grain)
+  ├─ seriesWindows(range, anchor, grain)      窗口（今日 24 根、本周 7 根、本月 N 根、全部 12 根）
+  ├─ sessionsInRange(...)                    取窗口内的会话
+  └─ seriesPartsIn(...)                     按 slice 切成 {id, name, color, seconds}
+```
+
+- `slice` 只有两个：`BY_PLATFORM`（平台，`game.group` 非空时用组名/平台名）和 `BY_GAME`（游戏）。新增维度就再加一个 `{id, of, meta}`，不要改 `Chart`。
+- `platformBreakdown / totalsByRange / seriesFor` 全部复用 `seriesPartsIn`，所以「占比条、堆叠、图例」天然一致。
+- **小于 5% 的切片并入灰色「其他」**：`MIN_SHARE` + `keepSliceIds()`，灰色固定 `#9199a3`；平台条、游戏条、趋势图三处同一规则，改阈值只改一个常量。
+- 时间粒度 `GRAIN_LEVELS`：今日 `[1时, 30分, 10分]`、本周 `[1天]`、本月 `[周, 天]`、全部 `[月, 周, 天]`；`base` 是打开时的默认级。
+
+| 视图 | 打开时的窗口 | 拖动一格 | 滚轮级别 |
+|---|---|---|---|
+| 今日 | `00:00–23:00`（最近 24 小时） | 1 小时 | 1时 / 30分 / 10分 |
+| 本周 | 周一–周日（最近 7 天） | 1 天 | 不缩放（只有一级） |
+| 本月 | 1 号–月末（最近 31 天，按月份取 28–31） | 1 天 | 天 / 周 |
+| 全部 | 最近 12 个月 | 1 个月 | 月 / 周 / 天 |
+
+> 窗口长度按周期自动算，**不写死**（比如 2 月就是 28/29 格）；右端最多停在本周期末尾，左端停在第一条记录。
+
+**`Chart` 是纯函数式 SVG**，不认平台/游戏，只认每段的 `name/color/seconds`：
+
+- Y 轴固定 **0 → 顶部 4 档**，档位来自 `AXIS_STEPS`（5/10/15/30 分 → 1/2/3/4/6/8/12/24 时…），保证「刻度值是好读整数 + 像素等距」；辅助线 `opacity .05`，不画 0 那条。
+- 平均线：中性灰 `rgba(148,155,166,.5)`、0.75px、`2 3` 虚线，左端有贴轴短刻度（`x2 = 34`），数值标签与刻度同高；与阶梯标签冲突时**接管**那条标签。颜色可用 `--gt-chart-avg` 覆盖。
+- 所有文字 `7–8px`、`fill:currentColor`（**必须写**，否则 SVG 默认黑色）、`tabular-nums`；X 标注按「格子宽度 ÷ 文字宽度」自动抽稀，24 小时视图全标。
+- 交互：按住拖动（一格 = 一根柱子，`dx > 3px` 才算拖动并吞掉这次 click）、滚轮（一格 = 一级刻度，方向：上滚变粗）、hover 气泡（`useState`）、拖拽状态（`useRef`）、点击柱子钻取当天明细、`↺` 回默认窗口与默认级别。
+- 标题写成 `时长趋势（1时）`，X 轴左缘也标一次单位（`.gt-chart-unit`），两处必须同步。
+
+**懒加载（2026-11 加）**：`/state` 只带 `historyDays` 窗口；全量数字单独给——`totalsFor(...,'all')` 读 `payload.totals`（客户端再补进行中会话），`lastPlayedAt` 读 `payload.lastPlayed`，`clampAnchor` 的「最早」读 `payload.firstStart`。`AllView`/`DetailView` 用 `useEffect` 在窗口越过 `HISTORY_FROM` 时调 `ensureHistory(window.from)` → `GET /api/game-time/sessions?from=&to=`，按 id 去重后 append，`HISTORY_FROM` 只向前移；30 秒刷新用 `applyLiveState` 把 `end < historyFrom` 的旧页保留下来。窗口大小 = `settings.historyDays`（默认 365，30–1825，设置页「监控 → 历史加载窗口」）。
+
+**全部页的卡片用注册表**，增删/换序只改这个数组：
+
+```js
+const ALL_SECTIONS = [
+  { id: 'share',    Component: AllShareSection },
+  { id: 'trend',    Component: AllTrendSection },
+  { id: 'sessions', Component: AllSessionsSection },
+]
+```
+
+**不要引 npm 图表库。** 依据：插件的 `require` 只能解析 `window.__ModuleLoader__` seed 表（react / cordis / zod / tanstack virtual / ui-slots / ui-primitives 等，**没有图表库**），解析不到直接抛 `missed the module table`；官方 practices 也禁止 require 宿主 client 包。要用库就得先加 esbuild 打包（等于先做待办 #1），而且 canvas 类库还要重做 `currentColor` 与 `--gt-surface-*` 主题适配。现自绘 SVG 已覆盖堆叠、轴、平均线、平移、缩放，够用。
+
+### 样式
+
+单段 CSS 字符串常量 `STYLE`，插在页面里。主题色全部用半透明灰 + `currentColor`，跟随明暗主题。
+
+CSS 变量（在 `.gt-shell` 上设置）：
+
+```
+--gt-surface-alpha   区块透明度
+--gt-surface-color   区块底色（rgb 三元组）
+--gt-header-height   标题背景高度
+--gt-header-fade     标题背景渐隐起点
+```
+
+### UI 约定（改界面之前先看这几条，别改回旧样子）
+
+1. **下拉只有一个实现**：`Dropdown`（client.js）＋ `.gt-pselect*` 一套样式。排序、监控间隔、视觉密度、平台/安装位置全用它；**不要再写原生 `<select>`**。
+2. **图标按钮只有一套规格**：21×21 方框、14px 图形、默认 `opacity .45`、无边框无底色；hover 只提亮到 `1`（不出底色）；按下 `scale(.96)`；键盘 `focus-visible` 才有焦点环。
+3. **卡片头那个文字「返回」**保持文字样式，不要套图标按钮规则。
+4. **图标来源 Lucide**（内联 SVG，ISC），不引依赖、不联网；同一 24px 网格、2px 描边。
+5. 新增视觉控件时先找现成组件，没有就先抽一个，**不允许同一个控件出现两套实现**。
+6. **归档 = 折叠**：`game.archived` 只让该游戏从「全部游戏」表（折叠条）和设置页游戏列表里收起，判定走 `isArchived()`；统计、图表、总计、今日页照常计入，会话一条不删。**不要把归档接进任何聚合/统计**，否则总计会和列表对不上。
+   - 自动归档是**派生**：`autoArchived(game)` = 规则开 && 没勾 `noAutoArchive` && 最后游玩早于阈值；**不写入 config**（写进去就会和手动取消打架）。玩一次之后 `lastPlayedAt` 前移，自动失效。
+7. **统计归组**：`game.group` 非空时 `BY_PLATFORM` 用组名当切片键；组名命中平台名或平台 id 时经 `platformIdForGroup()` 并进该平台，**不要再生成一个同名并列切片**。
+8. **设置页返回栏固定**：`GlobalSettings`/`GameSettings` 根节点带 `gt-fixed-head`，只有 `.gt-settings` 滚动，头部不随内容滚走；游戏详情页 `DetailView` 的头部仍随内容滚动（有意，别顺手改）。
+9. **图表不引第三方库**（理由见 §7）；要新形态优先让 `Chart`/`ChartCard` 参数化，别复制第二份画图代码。
+10. **图表视觉**：平均线、辅助线用中性灰 + 低透明度，**不要借用游戏主题色**（会和平台色混淆）；SVG 轴文字必须写 `fill:currentColor`；刻度单位同时出现在标题和 X 轴左缘。
+11. **图表交互**：拖动一格 = 一根柱子，滚轮一格 = 一级刻度；步长必须由「当前刻度」推出来，**按视图写死步长会导致今日一次跳一整天**。
+12. **页面状态放模块级**：`LAST_ROUTE` 存"哪一页"，面板卸载重挂时恢复；**不要塞回 `Page` 的 `useState`**，否则切走面板就回起始页。设置页的展开状态（`gamesExpanded/platformsExpanded`）仍在组件内，切走会重置，这是有意的。
+
+> 判断一条 UI 改动要不要记下来：**下一个人不知道这条，会不会把它改回去？** 会，就记成约定；不会，就不用记。
+
+---
+
+## 8. 测试
+
+```powershell
+cd plugins/game-time
+node tests/render-check.mjs    # 假 React 渲染全部视图，约 60 条路径 + 图表几何断言
+node tests/host-check.mjs      # 路由、迁移、归属、完整 tick
+node tests/exit-check.mjs      # 关一局的防抖落盘 + process.exit() 时的同步落盘
+node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe 三个场景
+node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单实例（DSH 包内会跳过）
+```
+
+`render-check` 用 `globalThis.__GT_TEST__` 暴露内部函数；`host-check` 用 `__GT_HOST_TEST__` 暴露 `tick / setLister / sanitizeConfig / migrate / attributePlatform` 等（`setLister` 在模块加载时就可用，其余在 `apply()` 之后）。
+
+假 React 只实现了 `createElement / useState / useRef / useEffect`，**没有调度器**：`setState` 是空操作，组件只渲染一次。所以测试只能验证「初始渲染 + 纯函数」，交互路径（拖拽、悬停、点击）靠人工验收；写组件时别依赖 `useEffect` 去产生渲染树。
+
+**改宿主后至少跑一次 host-check + exit-check + restore-check；改 UI 后跑 render-check。** 都过再让你重启/刷新。
+
+**打包**：`node scripts/build.mjs` 出两个包，别在解压目录里改代码（那边是快照，改了就和源码分叉）。网页包只带 `standalone-check`；DSH 包不带 `standalone/`，所以那一套会打印 skipped。
+
+---
+
+## 9. 已知的坑（都真实踩过）
+
+| 坑 | 症状 | 教训 |
+|---|---|---|
+| 保存配置用了 `version: 1` | 每次保存后背景/图标消失 | 保存必须带当前版本号 |
+| `tick` 里用了未定义变量 | 进程在跑但永远"挂起" | 异常被 catch 吞掉；现在有 `lastError` 和 tick 测试 |
+| 字符串替换匹配到多处 | 同一个模块被插了 2–3 份 | 改大文件必须用唯一锚点，改完跑测试 |
+| 平台路径填了 `.lnk` | 永远检测不到"在线" | 现在 `.lnk` 直接标红 |
+| 端口每次启动都变 | 脚本/请求连不上 | 用运行时给的 URL，或扫端口 |
+| 父进程溯源查询超时 | tick 中断 → 挂起 | 已回退，改成"在线启动器 + 排名" |
+| 整文件重写 | 文件被拼重复、损坏一次 | 大改前先备份/先测；拆模块是根本解法 |
+| 退出时 `flush()` 没 await | 正常关机/右键退出就丢掉「上次保存配置以来」的全部会话 | 宿主的 `process.exit()` 不等 Promise；退出必须同步写（`flushSync`） |
+| 进行中的会话只存在 `active` Map | 崩溃/强杀丢掉当前这一局 | 30 秒心跳写 `active.json`，启动时恢复 |
+| SVG `<text>` 没写 `fill` | 暗色主题下 Y 轴刻度是纯黑，和 X 轴不同色 | SVG 文字默认黑色，必须 `fill:currentColor` |
+| i18n key 写错/漏定义 | UI 直接显示裸 key（真出现过 `all.archived.tag`） | 新增文案必须中英两份都加；渲染测试里 `t` 是恒等函数，**测不出缺 key**，只能靠对照 |
+| 拖动步长按视图写死 | 「今日」拖一下直接跳到前一天 | 步长 = 一根柱子 = 当前刻度，由 `GRAIN` 推导 |
+| 平均线借用游戏主题色 | 平均线和平台色分不清 | 改中性灰 + 0.75px 细虚线，颜色走 `--gt-chart-avg` |
+| 把归档接进统计 | 「总计」和「共 N 款」对不上，用户无法理解口径 | 归档只是折叠：`isArchived()` 只用于列表拆分，**不进聚合** |
+| 自动归档写成持久化状态 | 手动取消后又被规则写回，来回打架 | 自动归档只做派生判断，`archived` 只存手动决定 |
+| 同一个 exe 加到两个游戏 | 不会双计，但后加的那条永远 0 分（`entries.find` 只取配置里第一个） | 标题后已标红「重复」；要保住历史就用合并，别直接删。判定必须跟宿主一致：**按配置顺序，先声明的那个赢** |
+| 直接改 `GAMES` / `installs` 没走 `touch()` | 红标和查重结果不更新（缓存按 `configVersion + GAMES.length` 失效） | 任何直接改动都要调 `markConfigChanged()`；正常编辑走 `touch()` 已经包含 |
+| 删除游戏会连带删会话 | `handleConfig` 里 `sessions.filter(keep)`，删了就找不回 | 卸载的游戏用**归档**，不要删；删除按钮的文案已写明不可恢复 |
+| 为了省体积引入日汇总（试过，已回退） | 31 天后只有天级精度；双文件要保一致，边界日曾丢 30 分钟；实测一年只省 ~2× | 历史永久保留 + 懒加载；体积真成问题时按年分片/懒加载，不要丢精度 |
+| `sanitizeConfig` 是白名单 | 新增的 `game.*` / `settings.*` 字段保存后凭空消失 | 加字段必须同步 `src/host/config.js` 的白名单，然后重启 |
+| PowerShell stdout 编码 | 中文路径存进配置后变成 `◆◆◆◆`（或 `�`） | 路径/名称一律通过 UTF-8 JSON 文件回传，不要读 stdout |
+| 拖拽被聊天附件抢走 | 文件拖到面板上却上传到了对话框 | 拖拽容器里 `preventDefault()` **且** `stopPropagation()`，否则 DSH 的 document 级 drop 会接手 |
+| 代理隧道下载 vendor 忘了 de-chunk | 页面白屏，控制台 `Cannot read properties of undefined (reading 'createElement')`；JS 首行是 `1641` 这样的十六进制尺寸 | HTTP 是 `Transfer-Encoding: chunked`，必须按块解码；测试里用 `new vm.Script()` 编译一遍 vendor 文件 |
+| 用任务管理器强杀网页版 | 当前这一局丢最多 30 秒（`process.exit` 钩子没跑） | 退出走托盘「退出」→ `POST /shutdown`；文档里写死这条 |
+| 双击 `start.cmd` 弹「无法验证发布者」 | 这是 Mark-of-the-Web，不是杀软；属性里勾「解除锁定」只对当次解压有效 | 发 zip 用微信/QQ（通常不带标记）或让对方 7-Zip 解压；再不行就本地新建快捷方式指向 `powershell -File launcher.ps1` |
+
+---
+
+## 10. 待办 / 建议下一步
+
+**优先级高**
+
+1. **拆分重构**：把 `client.js`/`index.js` 拆成小模块，用 esbuild 打包成现在的单文件产物。行为不变，靠现有测试兜底。**注意**：拆完就必须 build，会改变现在的「改完刷新」流程。
+2. **真机确认**：归档折叠条、设置页固定返回栏、组名并入平台、图表拖动 / 滚轮 / 重置。
+3. **自动发现**：方案已定、**未实现**，照 §11 做，别重新调研。
+
+**功能**
+
+4. **双采集器互斥**：网页版启动时只会检测 `DeepSeek Harness.exe` 打警告；没有硬锁，两版同时开仍会各写一份会话。要硬锁得让宿主定期写一个带 pid/端口的心跳，双方都读。
+5. `foregroundOnly`（仅前台计时）目前只有开关，没有实现
+6. 图标裁剪已接到图标；可考虑给平台图标也用同一裁剪器
+7. 归档目前只折叠、不停止计时；「归档即停表」是另一个开关，没做（容易误停）
+8. 平台支持更多进程别名（目前已支持数组，UI 是逗号分隔输入）
+
+**工程**
+
+9. **自启 launcher 化**（下次第一件）：独立版拦截 `POST /api/game-time/autostart`，注册表写 `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<目录>\launcher.ps1" -NoWindow`；否则登录时黑框常驻。DSH 侧保持只读。
+10. **README 补 MOTW 分发说明**：解除锁定（只对当次解压）、7-Zip、微信/QQ 传 zip 通常不带标记、本地快捷方式替代 `.cmd`。
+11. 抽设计令牌（颜色/字号/间距）到一个地方
+12. `client.js` 加 JSDoc + `tsc --checkJs`，消灭未定义变量类问题
+13. 渲染快照测试（DOM 序列化比对），减少「靠人眼看」的次数；**顺便解决 i18n 缺 key 测不出来**的问题（现在 `t` 是恒等函数）
+14. **超大历史优化**（触发条件：`sessions.json` > 8–10 MB 或 `/state` 序列化 >100 ms）：按年分文件 / 懒加载索引 / 紧凑 JSON；**不要回到日汇总**（见 §9）
+
+---
+
+## 11. 自动发现（已调研，未实现）
+
+> 2026-11-09 讨论过：启动了没在插件里添加的游戏，也要自动计时。**结论：可行、中等工作量，暂缓。** 真要动手照这一节做，别重新调研。
+
+### 平台有哪些「运行中」标记
+
+| 平台 | 运行标记 | 安装清单 |
+|---|---|---|
+| Steam | `HKCU\Software\Valve\Steam\Apps\<appid>` 的 `Running=1`（Steam 自己写；离线 / 非 Steam 启动可能没有） | `steamapps\libraryfolders.vdf` 给库目录；`appmanifest_<appid>.acf` 给 `name` + `installdir` |
+| Epic | 无 | `C:\ProgramData\Epic\UnrealEngineLauncher\LauncherInstalled.dat`（AppName + InstallLocation） |
+| GOG | 无 | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\<id>`（path + gameName） |
+| EA / Ubisoft / 战网 | 无 | 各自注册表，仅安装 |
+
+**统一用「进程」当运行标记**（tick 本来就在扫 tasklist），平台清单只负责「取名 + 归属」。
+
+### 优先级（一个进程只归一个游戏，高的赢）
+
+1. 显式 install 精确路径命中（含同名 exe 用路径区分）
+2. 显式 install 进程名命中
+3. 自动识别：路径落在 `<Steam库>\steamapps\common\`、`<Epic库>\Epic Games\`、GOG 注册表 path 的父目录下
+4. 其余忽略（绝不把 `chrome.exe` 当游戏）
+
+### 不重复计时的四条硬规则（每条都要测试）
+
+1. **按 pid 去重**：一个 pid 一 tick 只开一局（现在是按 gameId 去重，双开同名进程会算两次）。
+2. **按路径去重**：建自动条目前，把全表 `installs[].path` 规范化（小写 + 统一反斜杠）比一遍，命中就复用已有游戏。
+3. **按 id 去重**：自动条目 `id = 'auto-' + sha1(规范化路径).slice(0,10)`，同一路径永远同一 id，重启不多一条。
+4. **删除不复活**：用户删掉的自动条目记进 `autoIgnored`（路径或 id），下次不再建（同 `presets.json` 的思路）。
+
+### 数据模型（改 `sanitizeConfig` 白名单，否则保存就丢）
+
+```js
+game.auto = true           // UI 标「自动」
+game.id   = 'auto-<hash>'  // 内容寻址，稳定
+game.name = appmanifest name || 目录名 || exe 名
+```
+
+宿主只在**新建自动条目**时写一次 `config.json`（`writeJson`，tmp→rename），不要每 tick 写；归属仍走现有 `attributePlatform()`。
+
+### UI
+
+全部页 / 详情页名称旁一个「自动」小标；设置页游戏列表可「确认」（清 `auto` 标）或删除（写入 `autoIgnored`）；「归档已卸载」照常能收它们。
+
+### 预算与风险
+
+| 版本 | 内容 | 工时 |
+|---|---|---|
+| A 最小 | Steam 库判定 + 自动建条目 + 四条去重 + 「自动」标 + 测试 | 2.5–3.5h，重启 1 次 |
+| B | A + Epic/GOG 库 + appmanifest 真名 / 图标 | +1.5–2h |
+| C | B + 「未识别进程」确认队列（不自动建，先问） | +2h |
+
+风险：反作弊 / 启动器 exe 混在库目录（排除 `easyanticheat`、`unitycrashhandler`、`crashpad`、`steamwebhelper` 等）；先起 launcher 再起本体被当成两个游戏（同一 appid 只建一条）；目录名带版本号（有 appmanifest 就用真名，没有就允许改名）。建议先做 A 跑一周看误判。
+
+---
+
+## 12. 常用命令
+
+```powershell
+# 当前状态（端口从 DSH 运行时拿，或逐个试）
+Invoke-RestMethod "http://127.0.0.1:<port>/api/game-time/state"
+
+# 采集器看到了哪些进程
+Invoke-RestMethod "http://127.0.0.1:<port>/api/game-time/debug/processes"
+
+# 配置文件
+Get-Content "$env:USERPROFILE\.dsh\storages\game-time\config.json" -Raw
+
+# 重置（保留会话记录）
+Remove-Item "$env:USERPROFILE\.dsh\storages\game-time\config.json"
+Remove-Item "$env:USERPROFILE\.dsh\storages\game-time\presets.json"
+```
+
+---
+
+## 13. 文档与回复约定（给下一个会话）
+
+1. **每条回复开头先给难度**：`难度：★☆☆☆☆（很低）` / `★★★☆☆（中等）` 这样，5 星制 + 括号里一句理由。用户明确要求默认这样做，不要等被问。
+2. **关键步骤当场记进 §1「最近改动」**：新增功能、改行为、加字段、改 UI 约定、踩到新坑，做完就在同一次答复里追加一条——写清「改了什么 / 影响什么 / 怎么验证」，不要攒到最后或只留在对话里。
+3. **顺带更新对应小节**：新字段 → §4；新接口 → §5；新界面约定 → §7；新坑 → §9；待办变化 → §10。
+4. **「最近改动」是无序列表，新条目加在最上面**，不要再改成编号——编号每加一条就要重排，之前已经乱过一次。
+5. **成本**：这些全是纯文本追加，1–2 分钟，**没有任何运行时开销**（不读写配置、不请求接口）；相比下个会话重新翻对话，几乎免费。
+6. **写完自检一句**：如果这句「一句话总结」写不出来，说明改动还没想清楚。
