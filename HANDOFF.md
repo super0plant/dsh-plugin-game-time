@@ -16,8 +16,14 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：0.2.3 已出包（DSH 插件包 + 网页包），网页版有独立窗口和托盘；五套测试里四套常态通过，`standalone-check` 覆盖 vendor/挂载/HTTP/shutdown。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
+**当前状态**：0.2.3 已出包（DSH 插件包 + 网页包），网页版有独立窗口和托盘。源码另有**未发版**改动：历史永久保留 + 懒加载（见 §1/§7/§8），`dist/` 还没重新打包。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
+
+### 版本管理（2026-11-10 起）
+
+- 仓库：`plugins/game-time/.git`（main 分支）；当前 4 个提交：`bfd00b1`（保留全部+懒加载）、`361537f`（changelog）、`890d80f`（首包幽灵修复）、外加本次 docs 交接/性能提交。工作区干净。
+- `.gitignore` 忽略 `node_modules/`、`dist/`、日志、`.tmp-*` 等；`.gitattributes` 对 `.ps1`/`.cmd` 用 `-text`，**`launcher.ps1` 的 UTF-8 BOM 不能丢**（build 会校验）。
+- 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（2026-11-09，按时间倒序，新条目加在最上面）
 
@@ -402,6 +408,26 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 
 **打包**：`node scripts/build.mjs` 出两个包，别在解压目录里改代码（那边是快照，改了就和源码分叉）。网页包只带 `standalone-check`；DSH 包不带 `standalone/`，所以那一套会打印 skipped。
 
+### 性能与内存（2026-11-10 实测）
+
+合成数据：单游戏单平台、每条会话 15 分钟、JSON 2 空格缩进；`snapshot()` 是 `/state` 的主体，`window` 是实际下发的 `sessions`。测试机为当前开发机，数字用于看趋势，不是绝对承诺。
+
+| 场景 | 总会话 | 下发窗口 | sessions.json | /state | snapshot | stringify | parse | 100 次过滤 | 宿主 heap |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 年 × 4/天 | 1,460 | 1,460 | 0.21 MB | 157 KB | 0.7 ms | 1.4 ms | 0.6 ms | 3.3 ms | 5.4 MB |
+| 3 年 × 4/天 | 4,380 | 1,464 | 0.63 MB | 157 KB | 1.7 ms | 1.5 ms | 0.7 ms | 3.1 ms | 6.1 MB |
+| 10 年 × 4/天 | 14,600 | 1,464 | 2.11 MB | 157 KB | 2.9 ms | 1.4 ms | 0.8 ms | 3.0 ms | 8.8 MB |
+| 10 年 × 30/天 | 109,500 | 10,980 | 15.91 MB | 1.17 MB | 10.6 ms | 11.1 ms | 8.7 ms | 23.7 ms | 34.2 MB |
+
+- **真实宿主**（7 条会话、13 个游戏、图标约 300 KB）：`/state` **300.9 KB**；20 次请求 median **9.8 ms**（min 8.7 / max 42.9）。现在 payload 主要是**图标**，不是会话。
+- 10 年 × 30/天 的启动：读 24.7 ms + `JSON.parse` 74.8 ms；整文件落盘：stringify 61.8 ms + write 11.6 ms（每次关局防抖写一次）。
+- 日常估算（按 3.5 局/天、约 150–170 B/条）：
+  - `sessions.json` **约 0.2 MB/年**，10 年约 2 MB。
+  - `/state` ≈ 图标 0.3 MB + 最近 1 年窗口约 0.2 MB ≈ **0.5 MB**；30 秒一次约 1.4 GB/天（本机内存拷贝，不是外网）。
+  - 宿主 heap 约 6–9 MB；客户端窗口解析约 0.3 MB；一次渲染的 100 次过滤约 3 ms。
+- 重度 10 年 × 30/天才会到：`/state` ~1.5–1.9 MB、宿主 heap ~34 MB、启动 ~100 ms、每次关局写 ~75 ms、一次渲染查询 ~24 ms。
+- 结论：**≤10 局/天，10 年内基本无感**；真正值得优化的是 30 局/天 × 10 年，或把 300 KB 图标压小（比再压会话收益大）。
+
 ---
 
 ## 9. 已知的坑（都真实踩过）
@@ -428,6 +454,8 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | 删除游戏会连带删会话 | `handleConfig` 里 `sessions.filter(keep)`，删了就找不回 | 卸载的游戏用**归档**，不要删；删除按钮的文案已写明不可恢复 |
 | 为了省体积引入日汇总（试过，已回退） | 31 天后只有天级精度；双文件要保一致，边界日曾丢 30 分钟；实测一年只省 ~2× | 历史永久保留 + 懒加载；体积真成问题时按年分片/懒加载，不要丢精度 |
 | 首个 live 包把 demo 旧页当懒加载页 | 全部趋势/平台分布出现 demo 幽灵，总计和切片对不上；删游戏后旧页也会残留 | `applyLiveState` 用 `wasLive` 守卫，`older` 与 `ensureHistory` 响应都按当前 `GAMES` 过滤 |
+| `/sessions` 补页失败被 `.catch` 吞 | 图表静默少一段，刷新/重新翻页恢复；只有请求失败时触发 | 后续加一次重试或错误提示；别把 `HISTORY_FROM` 当成“已覆盖”的唯一证据 |
+| host `totals` 不按平台过滤 | 改过平台/删过安装后，「总计」可能大于图表切片之和 | 先定产品口径（历史平台时长算不算总计），再决定是否按平台给 totals |
 | `sanitizeConfig` 是白名单 | 新增的 `game.*` / `settings.*` 字段保存后凭空消失 | 加字段必须同步 `src/host/config.js` 的白名单，然后重启 |
 | PowerShell stdout 编码 | 中文路径存进配置后变成 `◆◆◆◆`（或 `�`） | 路径/名称一律通过 UTF-8 JSON 文件回传，不要读 stdout |
 | 拖拽被聊天附件抢走 | 文件拖到面板上却上传到了对话框 | 拖拽容器里 `preventDefault()` **且** `stopPropagation()`，否则 DSH 的 document 级 drop 会接手 |
@@ -442,7 +470,7 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 **优先级高**
 
 1. **拆分重构**：把 `client.js`/`index.js` 拆成小模块，用 esbuild 打包成现在的单文件产物。行为不变，靠现有测试兜底。**注意**：拆完就必须 build，会改变现在的「改完刷新」流程。
-2. **真机确认**：归档折叠条、设置页固定返回栏、组名并入平台、图表拖动 / 滚轮 / 重置。
+2. **真机确认**：归档折叠条、设置页固定返回栏、组名并入平台、图表拖动 / 滚轮 / 重置，以及**全部页往回翻 >1 年时自动补页**、设置页历史窗口。
 3. **自动发现**：方案已定、**未实现**，照 §11 做，别重新调研。
 
 **功能**
@@ -460,7 +488,9 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 11. 抽设计令牌（颜色/字号/间距）到一个地方
 12. `client.js` 加 JSDoc + `tsc --checkJs`，消灭未定义变量类问题
 13. 渲染快照测试（DOM 序列化比对），减少「靠人眼看」的次数；**顺便解决 i18n 缺 key 测不出来**的问题（现在 `t` 是恒等函数）
-14. **超大历史优化**（触发条件：`sessions.json` > 8–10 MB 或 `/state` 序列化 >100 ms）：按年分文件 / 懒加载索引 / 紧凑 JSON；**不要回到日汇总**（见 §9）
+14. **超大历史优化**（触发条件：`sessions.json` > 8–10 MB 或 `/state` 序列化 >100 ms）：懒加载已做；再按年分文件 / 懒加载索引 / 紧凑 JSON；**不要回到日汇总**（见 §9）
+15. **懒加载补页失败**：`/sessions` 失败被吞，可能静默缺一段；加一次重试或错误提示（见 §9）
+16. **总计与平台口径**：host `totals` 不按 `enabledPlatforms` 过滤；改平台/删安装后总计可能大于切片之和。先定口径，再决定是否让 host 按平台给 totals
 
 ---
 
@@ -546,3 +576,42 @@ Remove-Item "$env:USERPROFILE\.dsh\storages\game-time\presets.json"
 4. **「最近改动」是无序列表，新条目加在最上面**，不要再改成编号——编号每加一条就要重排，之前已经乱过一次。
 5. **成本**：这些全是纯文本追加，1–2 分钟，**没有任何运行时开销**（不读写配置、不请求接口）；相比下个会话重新翻对话，几乎免费。
 6. **写完自检一句**：如果这句「一句话总结」写不出来，说明改动还没想清楚。
+
+---
+
+## 14. 新会话交接提示词（复制到新窗口）
+
+> 新会话把下面整段作为第一条消息发出去；把最后一行「本次任务」替换成要做的事。任务为空时，先读 HANDOFF、给建议，不要改代码。
+
+```text
+你在 DSH 工作区 C:\Users\10601\Documents\deepseek-harness\default-workspace 里维护插件 plugins/game-time（游戏时长）。
+
+先读：
+- plugins/game-time/HANDOFF.md（现状、坑、待办；§14 就是本提示）
+- docs/plugin-design-template.md（设计约束）
+
+当前状态（2026-11-10）：
+- 源码含未发版改动：会话永久保留（不再 31 天删除/日汇总）+ 懒加载（默认 1 年，设置可改 30–1825 天）。
+- 宿主 /state 只回 settings.historyDays 窗口，另带 totals / firstStart / lastPlayed / historyFrom；GET /api/game-time/sessions?from=&to= 补旧页；客户端 ensureHistory 按 id 去重，只保留当前 GAMES 的页。
+- git 仓库在 plugins/game-time/.git，main 分支，当前 4 个提交，工作区干净。
+- 五套测试：render-check / host-check / exit-check / restore-check / standalone-check。
+
+硬规则：
+1. 不要删会话、不要恢复日汇总；「总计」必须保持全量。
+2. 改宿主（index.js / src/host/*）要重启 DSH；只改 client.js 刷新页面即可。
+3. 新设置/游戏字段先加 src/host/config.js 白名单，再重启。
+4. 不要引 npm 图表库；图表/数据层只有一个序列构建器。
+5. 改完跑对应测试：UI 改 client 跑 render-check；宿主跑 host + exit + restore（+ standalone）。
+6. 关键改动手记 HANDOFF §1；新坑记 §9；待办变化记 §10。
+
+已知风险：
+- /sessions 补页失败会被吞，图表可能静默缺一段（刷新可恢复）。
+- host totals 与「按平台过滤」的口径未定，改平台/删安装后总计可能大于切片之和。
+- 真实 React useEffect 没被假 React 覆盖，改懒加载后需要真机点一次「全部页往回翻 >1 年」。
+
+git：完成一个可验证的检查点后自动 commit；push、改历史、删分支/标签先问我。不要提交 %USERPROFILE%\.dsh 里的游玩数据。
+
+回复约定：每条答复开头给难度（★☆☆☆☆…）；最后用一句话总结「改了什么 / 影响什么 / 怎么验证」。
+
+本次任务：<在这里写新任务；如果留空，就先读 HANDOFF 并给出下一步建议，不要改代码。>
+```
