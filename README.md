@@ -24,6 +24,13 @@
 
 ## 安装（DSH 插件）
 
+**从 npm 安装（推荐）**
+
+- 桌面端：DSH → 设置 → 插件 → 搜索 `dsh-plugin-game-time` → 安装 → 重启 DSH。
+- 命令行：`dsh plugin --profile <profile> add dsh-plugin-game-time`，`<profile>` 换成你实际在用的名字（桌面端通常是 `desktop`）。
+
+**从目录安装（不走 npm）**
+
 1. 解压本包到任意目录，例如 `D:\Tools\dsh-plugin-game-time`。
 2. 打开 DSH → 设置 → 插件 → 添加插件 → 填写解压后的目录路径。
 3. 重启 DSH（宿主代码在启动时加载一次）。
