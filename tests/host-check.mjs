@@ -364,29 +364,54 @@ const multi = {
   ],
 }
 
-let result = testApi.attributePlatform(single, { platformId: "mihoyo" }, platforms, new Set(["zenlesszonezero.exe"]))
-assert.equal(result.platformId, "mihoyo", "no launcher running falls back to the install platform")
-assert.equal(result.source, "自启动")
+/** Same shape `processChain()` returns: the game first, then its ancestors. */
+const chain = (...names) =>
+  names.map((name, index) => ({ pid: 9000 - index, name, parent: index === 0 ? 0 : 9001 - index, created: 0 }))
 
-result = testApi.attributePlatform(single, { platformId: "mihoyo" }, platforms, new Set(["zenlesszonezero.exe", "playnite.desktopapp.exe"]))
-assert.equal(result.platformId, "playnite", "the only running launcher wins")
-assert.equal(result.source, "Playnite")
+let result = testApi.attributePlatform(single, { platformId: "mihoyo" }, platforms, chain("ZenlessZoneZero.exe"))
+assert.equal(result.platformId, "mihoyo", "no launcher evidence falls back to the install platform")
+assert.equal(result.source, "自启动")
 
 result = testApi.attributePlatform(
   single,
   { platformId: "mihoyo" },
   platforms,
-  new Set(["zenlesszonezero.exe", "playnite.desktopapp.exe", "xxmi launcher.exe"])
+  chain("ZenlessZoneZero.exe", "launcher.exe", "explorer.exe")
 )
-assert.equal(result.platformId, "xxmi", "the lowest rank wins when several run")
+assert.equal(result.platformId, "mihoyo", "the install platform always owns the bucket")
+assert.equal(result.source, "米哈游", "the launcher that spawned the game is the source")
 
-result = testApi.attributePlatform(multi, { platformId: "riot" }, platforms, new Set(["playnite.desktopapp.exe"]))
+result = testApi.attributePlatform(
+  single,
+  { platformId: "mihoyo" },
+  platforms,
+  chain("ZenlessZoneZero.exe", "playnite.desktopapp.exe")
+)
+assert.equal(result.platformId, "mihoyo", "a proven launcher must not steal the platform")
+assert.equal(result.source, "Playnite", "the launcher still rides along as the source")
+
+result = testApi.attributePlatform(single, { platformId: "mihoyo" }, platforms, chain("ZenlessZoneZero.exe", "explorer.exe"))
+assert.equal(result.platformId, "mihoyo")
+assert.equal(result.source, "自启动", "a launcher that is merely running is not evidence")
+
+result = testApi.attributePlatform(
+  multi,
+  { platformId: "riot" },
+  platforms,
+  chain("League of Legends.exe", "playnite.desktopapp.exe")
+)
 assert.equal(result.platformId, "riot", "multi-install games keep the matched install platform")
+assert.equal(result.source, null, "multi-install games keep a null source")
 
-console.log("  attribution: 4 cases pass")
+console.log("  attribution: 5 cases pass")
 
 // --- a full collector tick must not throw --------------------------------
 
+let chainCalls = 0
+testApi.setChainReader(async function () {
+  chainCalls += 1
+  return chain("ZenlessZoneZero.exe", "steam.exe")
+})
 testApi.setLister(async function () {
   return new Map([
     ["zenlesszonezero.exe", [4242]],
@@ -399,15 +424,17 @@ const afterTick = JSON.parse((await callHandler("/api/game-time/state")).body)
 assert.equal(afterTick.lastError, null, "tick must not throw: " + afterTick.lastError)
 assert.equal(afterTick.active.length, 1, "the running game opens a session")
 assert.equal(afterTick.active[0].gameId, "zzz")
-assert.equal(afterTick.active[0].platformId, "steam", "the running launcher gets the credit, not the install platform")
+assert.equal(
+  afterTick.active[0].platformId,
+  "mihoyo",
+  "the running launcher must not steal the install platform"
+)
+assert.equal(chainCalls, 1, "the parent chain is read once per launch")
 
 await testApi.tick()
 const afterSecondTick = JSON.parse((await callHandler("/api/game-time/state")).body)
-assert.equal(
-  afterSecondTick.active[0].platformId,
-  "steam",
-  "a later tick must not overwrite the launcher attribution with the install platform"
-)
+assert.equal(afterSecondTick.active[0].platformId, "mihoyo", "a later tick keeps the opening attribution")
+assert.equal(chainCalls, 1, "later ticks never re-read the parent chain")
 
 await testApi.setLister(async function () {
   return new Map()

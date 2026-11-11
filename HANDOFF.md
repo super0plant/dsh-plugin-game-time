@@ -16,7 +16,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：0.3.0 已出包（DSH 插件包 + 网页包），包含历史永久保留 + 懒加载（见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
+**当前状态**：源码 0.3.1（修「后台启动器抢归属」，见 §6）；已出包的是 0.3.0（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -25,7 +25,9 @@
 - `.gitignore` 忽略 `node_modules/`、`dist/`、日志、`.tmp-*` 等；`.gitattributes` 对 `.ps1`/`.cmd` 用 `-text`，**`launcher.ps1` 的 UTF-8 BOM 不能丢**（build 会校验）。
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
-### 最近改动（2026-11-10，按时间倒序，新条目加在最上面）
+### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-11 · 修归属被「开着的启动器」抢走（0.3.1，本次）**：原来单安装游戏按「当前在线的启动器 + `rank`」归属，Steam 常驻后台就把绝区零记成 Steam，Playnite 常驻又把地平线 5 记成 Playnite，还会把启动器 id push 进 `game.platforms`。现在改成：**`platformId` 永远是安装位置自己的平台**，启动器只在开局时按**父进程链**（`Get-CimInstance Win32_Process` 逐层向上，12 层、8 秒超时、按 pid 缓存、只查一次）认一次，只写进 `source`；链上没有就 `source = "自启动"`。后台开着的启动器不再是证据。旧会话不动（见 §6）。验证：`host-check` 归属 5 条 + tick 里「Steam 在跑不抢 mihoyo」「链只查一次」；五套测试全跑。宿主改了，**要重启 DSH**。
 
 - **0.3.0 发版（本次）**：把「保留全部历史 + 懒加载」和「首包幽灵修复」正式发出去。`package.json` 0.2.3 → 0.3.0，CHANGELOG 的「未发布」转成 `## 0.3.0 — 2026-11-10`，`dist/` 重新打包出 `dsh-plugin-game-time-0.3.0.zip` 与 `game-time-web-0.3.0.zip`。为什么是 minor 而不是 patch：这批改动新增了 `GET /api/game-time/sessions` 接口，并且改了「31 天后不再删数据」这个用户能感知的行为。验证：五套测试全绿后打包。（宿主有改动，装新版要重启 DSH。）
 
@@ -107,8 +109,8 @@ plugins/game-time/
     values.js         取值/校验、JSON 与资产读写、路径工具
     config.js         v1/v2→v3 迁移、sanitizeConfig、预置
     sessions.js       跨零点拆分
-    processes.js      tasklist 扫描、路径查询、启动器归属
-    scripts.js        PowerShell：exe 图标、选文件、目录浏览
+    processes.js      tasklist 扫描、路径查询、启动器归属（父进程链匹配）
+    scripts.js        PowerShell：exe 图标、选文件、目录浏览、父进程链
   client.js           前端：全部 UI（约 6.4k 行，未拆；内部分层见 §7）
   icon.png / icon.ico 作者提供的应用图标（1024 PNG；.ico 含 16–256 七档）；插件列表仍读 icon.svg
   standalone/
@@ -250,14 +252,16 @@ plugins/game-time/
 
 改这块的时候**必须**让 `tests/exit-check.mjs` 和 `tests/restore-check.mjs` 都过。
 
-### 归属规则
+### 归属规则（2026-11-11 改：按父进程证据，不再看「谁开着」）
 
-1. **多安装位置**（如英雄联盟）→ 命中哪个安装就归哪个平台的归属
-2. **单安装位置**（绝区零、地平线）→ 看当前在线的启动器：
-   - 没有 → 归安装平台，`source = "自启动"`
-   - 有一个 → 归它
-   - 多个 → 按 `platform.rank` 取最靠前
-3. 归到的新平台会自动追加进该游戏的 `platforms`
+1. **多安装位置**（如英雄联盟）→ 命中哪个安装就归哪个平台的归属，`source = null`。
+2. **单安装位置**（绝区零、地平线）→ `platformId` **永远是安装位置自己的平台**（统计口径不随启动器变化）；`source` 记录「真正把它拉起来的启动器」：
+   - 开局时对游戏 pid 查一次父进程链（`Get-CimInstance Win32_Process` 逐层向上，最多 12 层、8 秒超时；**只在开局查一次**并按 pid 缓存，失败当作查不到）；
+   - 链上**最近**一个匹配平台 `path` / `processes` 的进程 → `source = 平台名`；`chain[0]` 是游戏自己，永远跳过；
+   - 没有 → `source = "自启动"`；
+   - 父进程 pid 被复用时用创建时间挡掉：父进程创建时间晚于子进程 = 假父进程，停。
+3. 启动器只出现在 `source`，**不再写进 `platformId`，也不再 push 进 `game.platforms`**；后台开着的 Steam / Playnite / XXMI 不再抢归属。
+4. **旧会话保持原样**（当时记的就是启动器平台）；只有新会话按上面的规则。要重修历史见 §10。
 
 ### 迁移与预置
 
@@ -441,7 +445,8 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | 字符串替换匹配到多处 | 同一个模块被插了 2–3 份 | 改大文件必须用唯一锚点，改完跑测试 |
 | 平台路径填了 `.lnk` | 永远检测不到"在线" | 现在 `.lnk` 直接标红 |
 | 端口每次启动都变 | 脚本/请求连不上 | 用运行时给的 URL，或扫端口 |
-| 父进程溯源查询超时 | tick 中断 → 挂起 | 已回退，改成"在线启动器 + 排名" |
+| 按「运行中的启动器 + rank」归属 | Steam 常驻后台，绝区零被记成 Steam；Playnite 常驻，地平线被记成 Playnite；启动器还进了游戏平台列表 | 归属必须用**父进程证据**；平台桶只认安装平台；rank 只用于显示排序 |
+| 父进程溯源查询超时 | tick 中断 → 挂起 | 只在**开局**查、8 秒超时、按 pid 缓存、失败就当「自启动」；绝不每 tick 查 |
 | 整文件重写 | 文件被拼重复、损坏一次 | 大改前先备份/先测；拆模块是根本解法 |
 | 退出时 `flush()` 没 await | 正常关机/右键退出就丢掉「上次保存配置以来」的全部会话 | 宿主的 `process.exit()` 不等 Promise；退出必须同步写（`flushSync`） |
 | 进行中的会话只存在 `active` Map | 崩溃/强杀丢掉当前这一局 | 30 秒心跳写 `active.json`，启动时恢复 |
@@ -493,6 +498,7 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 14. **超大历史优化**：**见下方「### 超大历史：按年分文件（未实现）」**。触发条件按实测收紧为 `sessions.json` > **5 MB**。**不要回到日汇总**（见 §9）
 15. **懒加载补页失败**：`/sessions` 失败被吞，可能静默缺一段；加一次重试或错误提示（见 §9）
 16. **总计与平台口径**：host `totals` 不按 `enabledPlatforms` 过滤；改平台/删安装后总计可能大于切片之和。先定口径，再决定是否让 host 按平台给 totals
+17. **重修旧会话归属（可选，未实现）**：0.3.1 之前记的会话 `platformId` 可能是启动器（Playnite / Steam / Mod）。规则：游戏只有一个安装平台且 `session.platformId` 不是它 → 改成该安装平台、把原平台名写进 `source`；写之前**先备份 `sessions.json`**（用户数据，别自动跑）
 
 ### 超大历史：按年分文件（未实现）
 

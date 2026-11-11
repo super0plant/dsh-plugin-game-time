@@ -14,9 +14,11 @@ import {
 import { applyPresets, migrate, sanitizeConfig } from './config.js'
 import { autostartReason, isStandaloneHost, readAutostart, writeAutostart } from './autostart.js'
 import {
-  attributePlatform, listProcesses, queryProcessPath, runningLaunchers, setProcessLister, underDirectory,
+  attributePlatform, listProcesses, queryProcessPath, setProcessLister, underDirectory,
 } from './processes.js'
-import { ICON_SCRIPT, PICK_SCRIPT, browseExecutables, iconFromFile, pickFileViaDialog, resolveGamePath } from './scripts.js'
+import {
+  ICON_SCRIPT, PICK_SCRIPT, browseExecutables, iconFromFile, pickFileViaDialog, processChain, resolveGamePath,
+} from './scripts.js'
 import { splitByDay } from './sessions.js'
 import { baseName, dirName, fileExists, readJson, saveAsset, writeJson } from './values.js'
 
@@ -24,6 +26,33 @@ export const name = 'dsh-plugin-game-time'
 
 /** The JSON face needs the Host web server. */
 export const inject = ['webServer']
+
+/**
+ * Parent-chain lookup is one PowerShell call, so it runs once per game launch
+ * and the answer is cached per pid. A failed lookup is cached too: never let a
+ * broken WMI query add a stall to every tick.
+ */
+let chainReader = processChain
+const chainCache = new Map()
+
+async function chainFor(pid) {
+  const key = Number(pid)
+  if (!Number.isInteger(key) || key <= 0) return null
+  if (chainCache.has(key)) return chainCache.get(key)
+  let chain = null
+  try {
+    chain = await chainReader(key)
+  } catch {
+    chain = null
+  }
+  if (chainCache.size >= 32) chainCache.delete(chainCache.keys().next().value)
+  chainCache.set(key, chain)
+  return chain
+}
+
+function forgetChains() {
+  chainCache.clear()
+}
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -273,29 +302,25 @@ export function apply(ctx) {
         const record = active.get(winner.gameId)
         if (record) {
           record.lastSeen = now
-          // Attribution is a decision made when the session opens: the launcher
-          // that started the game keeps the credit until it ends. Only a
-          // different winning install (a game installed on two platforms) is
-          // allowed to re-attribute — the install platform alone must not
-          // overwrite the launcher on every tick.
+          // Attribution is a decision made when the session opens: the platform
+          // and the launcher that started the game keep the credit until it
+          // ends. Only a different winning install (a game installed on two
+          // platforms) is allowed to re-attribute.
           if (!record.installPlatformId) {
             record.installPlatformId = winner.platformId
           } else if (record.installPlatformId !== winner.platformId && game) {
             record.installPlatformId = winner.platformId
-            const attribution = attributePlatform(game, winner, state.config.platforms, state.processes)
+            const chain = await chainFor(pids[0])
+            const attribution = attributePlatform(game, winner, state.config.platforms, chain)
             record.platformId = attribution.platformId
             record.source = attribution.source
-            if (attribution.platformId && (game.platforms || []).indexOf(attribution.platformId) < 0) {
-              game.platforms.push(attribution.platformId)
-            }
           }
         } else {
+          // One parent-chain lookup per launch — only now, never per tick.
+          const chain = game ? await chainFor(pids[0]) : null
           const attribution = game
-            ? attributePlatform(game, winner, state.config.platforms, state.processes)
+            ? attributePlatform(game, winner, state.config.platforms, chain)
             : { platformId: winner.platformId, source: null }
-          if (game && attribution.platformId && (game.platforms || []).indexOf(attribution.platformId) < 0) {
-            game.platforms.push(attribution.platformId)
-          }
           active.set(winner.gameId, {
             start: now,
             lastSeen: now,
@@ -313,6 +338,8 @@ export function apply(ctx) {
         active.delete(gameId)
         closed = true
       }
+      // A closed game's pid can be reused by anything; drop the cached chains.
+      if (closed) forgetChains()
 
       if (opened || closed || (active.size > 0 && now - activeWriteAt >= ACTIVE_HEARTBEAT_MS)) {
         await persistActive()
@@ -736,7 +763,11 @@ if (typeof globalThis !== 'undefined' && globalThis.__GT_HOST_TEST__) {
     PICK_SCRIPT,
     applyPresets,
     attributePlatform,
-    runningLaunchers,
+    setChainReader(fn) {
+      chainReader = typeof fn === 'function' ? fn : processChain
+      forgetChains()
+    },
+    forgetChains,
     DEFAULT_CONFIG,
     MIN_SESSION_MS,
     DIR,
