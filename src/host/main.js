@@ -17,7 +17,7 @@ import {
   attributePlatform, listProcesses, queryProcessPath, setProcessLister, underDirectory,
 } from './processes.js'
 import {
-  ICON_SCRIPT, PICK_SCRIPT, browseExecutables, iconFromFile, pickFileViaDialog, processChain, resolveGamePath,
+  ICON_SCRIPT, PICK_SCRIPT, browseExecutables, iconFromFile, pickFileViaDialog, resolveGamePath,
 } from './scripts.js'
 import { splitByDay } from './sessions.js'
 import { baseName, dirName, fileExists, readJson, saveAsset, writeJson } from './values.js'
@@ -26,33 +26,6 @@ export const name = 'dsh-plugin-game-time'
 
 /** The JSON face needs the Host web server. */
 export const inject = ['webServer']
-
-/**
- * Parent-chain lookup is one PowerShell call, so it runs once per game launch
- * and the answer is cached per pid. A failed lookup is cached too: never let a
- * broken WMI query add a stall to every tick.
- */
-let chainReader = processChain
-const chainCache = new Map()
-
-async function chainFor(pid) {
-  const key = Number(pid)
-  if (!Number.isInteger(key) || key <= 0) return null
-  if (chainCache.has(key)) return chainCache.get(key)
-  let chain = null
-  try {
-    chain = await chainReader(key)
-  } catch {
-    chain = null
-  }
-  if (chainCache.size >= 32) chainCache.delete(chainCache.keys().next().value)
-  chainCache.set(key, chain)
-  return chain
-}
-
-function forgetChains() {
-  chainCache.clear()
-}
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -303,23 +276,19 @@ export function apply(ctx) {
         if (record) {
           record.lastSeen = now
           // Attribution is a decision made when the session opens: the platform
-          // and the launcher that started the game keep the credit until it
-          // ends. Only a different winning install (a game installed on two
-          // platforms) is allowed to re-attribute.
+          // and the launcher keep the credit until it ends. Only a different
+          // winning install (a game installed on two platforms) re-attributes.
           if (!record.installPlatformId) {
             record.installPlatformId = winner.platformId
           } else if (record.installPlatformId !== winner.platformId && game) {
             record.installPlatformId = winner.platformId
-            const chain = await chainFor(pids[0])
-            const attribution = attributePlatform(game, winner, state.config.platforms, chain)
+            const attribution = attributePlatform(game, winner, state.config.platforms, state.processes)
             record.platformId = attribution.platformId
             record.source = attribution.source
           }
         } else {
-          // One parent-chain lookup per launch — only now, never per tick.
-          const chain = game ? await chainFor(pids[0]) : null
           const attribution = game
-            ? attributePlatform(game, winner, state.config.platforms, chain)
+            ? attributePlatform(game, winner, state.config.platforms, state.processes)
             : { platformId: winner.platformId, source: null }
           active.set(winner.gameId, {
             start: now,
@@ -338,8 +307,6 @@ export function apply(ctx) {
         active.delete(gameId)
         closed = true
       }
-      // A closed game's pid can be reused by anything; drop the cached chains.
-      if (closed) forgetChains()
 
       if (opened || closed || (active.size > 0 && now - activeWriteAt >= ACTIVE_HEARTBEAT_MS)) {
         await persistActive()
@@ -763,11 +730,6 @@ if (typeof globalThis !== 'undefined' && globalThis.__GT_HOST_TEST__) {
     PICK_SCRIPT,
     applyPresets,
     attributePlatform,
-    setChainReader(fn) {
-      chainReader = typeof fn === 'function' ? fn : processChain
-      forgetChains()
-    },
-    forgetChains,
     DEFAULT_CONFIG,
     MIN_SESSION_MS,
     DIR,

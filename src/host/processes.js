@@ -60,59 +60,55 @@ export function underDirectory(path, directory) {
   return normalise(path).startsWith(normalise(directory))
 }
 
-/**
- * One exe name → one platform. The first platform that claims a name keeps it,
- * so a duplicated alias can never make the result depend on object order.
- */
-export function launcherIndex(platforms) {
-  const index = new Map()
-  for (const id of Object.keys(platforms || {})) {
-    const platform = platforms[id]
-    if (!platform || !platform.id) continue
-    const names = []
-    if (platform.path) names.push(baseName(platform.path))
-    for (const alias of platform.processes || []) names.push(alias)
-    for (const name of names) {
-      const key = String(name || '').trim().toLowerCase()
-      if (!key || index.has(key)) continue
-      index.set(key, { id, name: platform.name })
-    }
-  }
-  return index
+/** Process names that mean "this platform's launcher is running". */
+export function launcherNames(platform) {
+  const names = []
+  if (platform && platform.path) names.push(baseName(platform.path))
+  for (const alias of (platform && platform.processes) || []) names.push(alias)
+  return names
+    .map(function (name) {
+      return String(name || '').trim().toLowerCase()
+    })
+    .filter(Boolean)
+}
+
+/** Is that platform's launcher running right now? */
+export function launcherRunning(platform, processes, exceptName) {
+  if (!platform || !processes) return false
+  return launcherNames(platform).some(function (name) {
+    return name && name !== exceptName && processes.has(name)
+  })
 }
 
 /**
- * The launcher that actually spawned the game — the first ancestor matching a
- * configured platform exe/alias. `chain[0]` is the game itself, so it is never
- * treated as its own launcher. A launcher that is merely *running* (Steam in
- * the tray, Playnite minimised) never appears in this chain.
- */
-export function launcherInChain(chain, platforms) {
-  const index = launcherIndex(platforms)
-  for (let depth = 1; depth < (chain || []).length; depth++) {
-    const item = chain[depth]
-    const key = String((item && item.name) || '').trim().toLowerCase()
-    if (!key) continue
-    const hit = index.get(key)
-    if (hit) return hit
-  }
-  return null
-}
-
-/**
- * Attribution for one session.
+ * Attribution for one session — the rule the user asked for, in their order:
  *
- * `platformId` is always where the game is installed: the stats bucket must not
- * depend on which launcher happens to be open. The launcher only rides along
- * as `source` ("通过哪个启动器启动"), and only when the parent chain proves it
- * started this process.
+ *   1. a game installed in several places keeps the install whose path matched;
+ *   2. otherwise the first launch entry (config order = priority) whose
+ *      launcher is running wins; the entry list is the per-game decision;
+ *   3. nothing in the list is running → the install platform, `source` =
+ *      "自启动" unless its own launcher is running.
+ *
+ * `platform.rank` is deliberately not consulted: reordering platforms in the
+ * settings list must never change how a game is recognised.
  */
-export function attributePlatform(game, winner, platforms, chain) {
+export function attributePlatform(game, winner, platforms, processes) {
   const installs = game.installs || []
   if (installs.length > 1) return { platformId: winner.platformId, source: null }
-  const launcher = launcherInChain(chain, platforms)
-  if (!launcher) return { platformId: winner.platformId, source: '自启动' }
-  return { platformId: winner.platformId, source: launcher.name }
+  const ownName = installs.length === 1 ? baseName(installs[0].path).toLowerCase() : ''
+
+  for (const entry of game.entries || []) {
+    const platform = entry ? platforms[entry.platformId] : null
+    if (!platform) continue
+    if (!launcherRunning(platform, processes, ownName)) continue
+    return { platformId: platform.id, source: platform.name }
+  }
+
+  const installPlatform = platforms[winner.platformId]
+  return {
+    platformId: winner.platformId,
+    source: launcherRunning(installPlatform, processes, ownName) ? installPlatform.name : '自启动',
+  }
 }
 
 export function setProcessLister(fn) {

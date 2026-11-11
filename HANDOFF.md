@@ -27,7 +27,7 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
-- **2026-11-11 · 修归属被「开着的启动器」抢走（0.3.1，本次）**：原来单安装游戏按「当前在线的启动器 + `rank`」归属，Steam 常驻后台就把绝区零记成 Steam，Playnite 常驻又把地平线 5 记成 Playnite，还会把启动器 id push 进 `game.platforms`。现在改成：**`platformId` 永远是安装位置自己的平台**，启动器只在开局时按**父进程链**（`Get-CimInstance Win32_Process` 逐层向上，12 层、8 秒超时、按 pid 缓存、只查一次）认一次，只写进 `source`；链上没有就 `source = "自启动"`。后台开着的启动器不再是证据。旧会话不动（见 §6）。验证：`host-check` 归属 5 条 + tick 里「Steam 在跑不抢 mihoyo」「链只查一次」；五套测试全跑。宿主改了，**要重启 DSH**。
+- **2026-11-11 · 归属改按「启动入口」顺序（0.3.1，本次）**：原来单安装游戏按「当前在线的启动器 + 全局 `rank`」归属，Steam 常驻就把绝区零记成 Steam，Playnite 常驻又把地平线 5 记成 Playnite。现在：`entries` 有内容就按数组顺序取**第一个在运行的启动器**，没有/都没跑就用**安装位置选的平台**；`platform.rank` 只影响显示顺序，和识别彻底无关。设置 → 游戏设置 → 启动入口前面加了拖动按钮（`⠿`，和平台列表同一个），顺序就是优先级。中间试过 CIM 父进程链（准但重、WMI 可能被拦），已按用户要求回退，**别再改回去**（见 §6）。验证：`host-check` 归属 9 条（顺序、跳过没运行、rank 无关、删平台、多安装）+ `render-check`；五套全跑。宿主 + 前端都改了，**要重启 DSH**。
 
 - **0.3.0 发版（本次）**：把「保留全部历史 + 懒加载」和「首包幽灵修复」正式发出去。`package.json` 0.2.3 → 0.3.0，CHANGELOG 的「未发布」转成 `## 0.3.0 — 2026-11-10`，`dist/` 重新打包出 `dsh-plugin-game-time-0.3.0.zip` 与 `game-time-web-0.3.0.zip`。为什么是 minor 而不是 patch：这批改动新增了 `GET /api/game-time/sessions` 接口，并且改了「31 天后不再删数据」这个用户能感知的行为。验证：五套测试全绿后打包。（宿主有改动，装新版要重启 DSH。）
 
@@ -109,8 +109,8 @@ plugins/game-time/
     values.js         取值/校验、JSON 与资产读写、路径工具
     config.js         v1/v2→v3 迁移、sanitizeConfig、预置
     sessions.js       跨零点拆分
-    processes.js      tasklist 扫描、路径查询、启动器归属（父进程链匹配）
-    scripts.js        PowerShell：exe 图标、选文件、目录浏览、父进程链
+    processes.js      tasklist 扫描、路径查询、启动器归属（启动入口顺序 + 是否在运行）
+    scripts.js        PowerShell：exe 图标、选文件、目录浏览
   client.js           前端：全部 UI（约 6.4k 行，未拆；内部分层见 §7）
   icon.png / icon.ico 作者提供的应用图标（1024 PNG；.ico 含 16–256 七档）；插件列表仍读 icon.svg
   standalone/
@@ -176,7 +176,7 @@ plugins/game-time/
   headerBackground,            // 该游戏的标题背景
   platforms: [],               // 由 installs + entries 推导，宿主会补
   installs: [{ id, platformId, path }],   // 游戏本体 exe，计时依据
-  entries:  [{ id, platformId, name, path, args }]  // 启动入口，仅展示
+  entries:  [{ id, platformId, name, path, args }]  // 启动入口；数组顺序 = 启动器优先级
 }
 ```
 
@@ -252,16 +252,16 @@ plugins/game-time/
 
 改这块的时候**必须**让 `tests/exit-check.mjs` 和 `tests/restore-check.mjs` 都过。
 
-### 归属规则（2026-11-11 改：按父进程证据，不再看「谁开着」）
+### 归属规则（2026-11-11 定稿：按「启动入口」顺序，平台 rank 不再参与）
 
-1. **多安装位置**（如英雄联盟）→ 命中哪个安装就归哪个平台的归属，`source = null`。
-2. **单安装位置**（绝区零、地平线）→ `platformId` **永远是安装位置自己的平台**（统计口径不随启动器变化）；`source` 记录「真正把它拉起来的启动器」：
-   - 开局时对游戏 pid 查一次父进程链（`Get-CimInstance Win32_Process` 逐层向上，最多 12 层、8 秒超时；**只在开局查一次**并按 pid 缓存，失败当作查不到）；
-   - 链上**最近**一个匹配平台 `path` / `processes` 的进程 → `source = 平台名`；`chain[0]` 是游戏自己，永远跳过；
-   - 没有 → `source = "自启动"`；
-   - 父进程 pid 被复用时用创建时间挡掉：父进程创建时间晚于子进程 = 假父进程，停。
-3. 启动器只出现在 `source`，**不再写进 `platformId`，也不再 push 进 `game.platforms`**；后台开着的 Steam / Playnite / XXMI 不再抢归属。
-4. **旧会话保持原样**（当时记的就是启动器平台）；只有新会话按上面的规则。要重修历史见 §10。
+1. **多安装位置**（如英雄联盟）→ 命中哪个安装就归哪个平台，`source = null`。路径是唯一证据，比入口列表准。
+2. **单安装位置**（绝区零、地平线）：
+   - `entries` 有内容 → 按数组顺序找**第一个「启动器在运行」的入口**，归它的平台，`source = 平台名`；
+   - `entries` 为空，或里面的启动器都没在跑 → 归**安装位置里选的那个平台**；它的启动器在跑则 `source = 平台名`，否则 `source = "自启动"`。
+3. 「启动器在运行」= 平台 `path` 的 exe 名或 `processes` 里的别名出现在 tasklist 里（排除游戏自己的 exe）。
+4. **`platform.rank` 只决定设置页里平台的显示顺序，和归属完全无关**；改平台排序不会改变识别结果。
+5. 入口的拖动顺序就是优先级（设置 → 游戏设置 → 启动入口），**下一局**生效；进行中的会话不改写。
+6. 试过但没采用的方案：按全局「在线启动器 + rank」归属（0.3.0，会被常驻的 Steam/Playnite 抢走）、按 CIM 父进程链归属（0.3.1 内部版本，准但重、依赖 WMI、用户觉得太复杂）。**别再改回去**。
 
 ### 迁移与预置
 
@@ -445,8 +445,8 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | 字符串替换匹配到多处 | 同一个模块被插了 2–3 份 | 改大文件必须用唯一锚点，改完跑测试 |
 | 平台路径填了 `.lnk` | 永远检测不到"在线" | 现在 `.lnk` 直接标红 |
 | 端口每次启动都变 | 脚本/请求连不上 | 用运行时给的 URL，或扫端口 |
-| 按「运行中的启动器 + rank」归属 | Steam 常驻后台，绝区零被记成 Steam；Playnite 常驻，地平线被记成 Playnite；启动器还进了游戏平台列表 | 归属必须用**父进程证据**；平台桶只认安装平台；rank 只用于显示排序 |
-| 父进程溯源查询超时 | tick 中断 → 挂起 | 只在**开局**查、8 秒超时、按 pid 缓存、失败就当「自启动」；绝不每 tick 查 |
+| 按「运行中的启动器 + 全局 rank」归属 | Steam 常驻把绝区零记成 Steam；Playnite 常驻把地平线记成 Playnite | 归属只看**这个游戏自己的启动入口**（有顺序），没有就用安装位置；平台 rank 只影响显示 |
+| 父进程溯源查询超时 | tick 中断 → 挂起 | 试过 CIM 父进程链（0.3.1 内部版本）：准但重、WMI 可能被拦；最终走「入口顺序 + 是否在运行」，见 §6 |
 | 整文件重写 | 文件被拼重复、损坏一次 | 大改前先备份/先测；拆模块是根本解法 |
 | 退出时 `flush()` 没 await | 正常关机/右键退出就丢掉「上次保存配置以来」的全部会话 | 宿主的 `process.exit()` 不等 Promise；退出必须同步写（`flushSync`） |
 | 进行中的会话只存在 `active` Map | 崩溃/强杀丢掉当前这一局 | 30 秒心跳写 `active.json`，启动时恢复 |

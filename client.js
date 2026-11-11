@@ -209,7 +209,8 @@ window.__ModuleLoader__.load({
       'game.install.path': '游戏本体 exe 路径',
       'game.install.process': '监控进程：{process}',      'game.entries': '启动入口',
       'game.entries.add': '添加启动入口',
-      'game.entries.hint': '仅用于记录“从哪启动”，不影响计时。不填名称/路径时默认用平台的值。',
+      'game.entries.hint': '顺序就是优先级：排在前面的启动器优先；都不在线时按安装位置。名称/路径留空时用平台的值。',
+      'game.entry.drag': '拖动调整优先级（越靠前越优先）',
       'game.entry.name': '名称',
       'game.entry.path': '启动文件路径',
       'game.entry.args': '启动参数（可选，一般不填）',
@@ -430,7 +431,8 @@ window.__ModuleLoader__.load({
       'game.install.path': 'Game executable path',
       'game.install.process': 'Watching: {process}',      'game.entries': 'Launch entries',
       'game.entries.add': 'Add launch entry',
-      'game.entries.hint': 'Recorded only; never used for timing. Empty name/path fall back to the platform.',
+      'game.entries.hint': 'Order is priority: the first running launcher wins; otherwise the install platform. Empty name/path fall back to the platform.',
+      'game.entry.drag': 'Drag to reorder (top wins)',
       'game.entry.name': 'Name',
       'game.entry.path': 'Launcher or game path',
       'game.entry.args': 'Arguments (optional)',
@@ -1959,6 +1961,7 @@ window.__ModuleLoader__.load({
       '.gt-entry{padding:10px 0;border-top:1px solid rgba(128,128,128,.14);}',
       '.gt-entry:first-of-type{border-top:0;}',
       '.gt-entry-head{display:grid;grid-template-columns:92px minmax(0,1fr) 26px;gap:8px;align-items:center;}',
+      '.gt-entry-head.drag{grid-template-columns:12px 92px minmax(0,1fr) 26px;}',
       '.gt-gamerow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(128,128,128,.14);}',
       '.gt-gamerow:first-of-type{border-top:0;}',
       '.gt-gamerow-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}',
@@ -5469,6 +5472,7 @@ window.__ModuleLoader__.load({
       const [dropWarn, setDropWarn] = React.useState(false)
       const [pendingOwned, setPendingOwned] = React.useState(null)
       const [confirmDelete, setConfirmDelete] = React.useState(false)
+      const [entryDrag, setEntryDrag] = React.useState(null)
 
       const showNote = function (text, warn) {
         setDropNote(text)
@@ -5661,6 +5665,21 @@ window.__ModuleLoader__.load({
         game.entries = game.entries.filter(function (item) {
           return item.id !== entry.id
         })
+        touch()
+      }
+
+      /** Entry order is the launcher priority the host reads — drag to change it. */
+      const moveEntry = function (fromId, toId) {
+        if (!fromId || !toId || fromId === toId) return
+        const list = game.entries || []
+        const fromIndex = list.findIndex(function (item) {
+          return item.id === fromId
+        })
+        const toIndex = list.findIndex(function (item) {
+          return item.id === toId
+        })
+        if (fromIndex < 0 || toIndex < 0) return
+        list.splice(toIndex, 0, list.splice(fromIndex, 1)[0])
         touch()
       }
 
@@ -5965,10 +5984,35 @@ window.__ModuleLoader__.load({
               const platform = PLATFORMS[entry.platformId]
               return h(
                 'div',
-                { key: entry.id, className: 'gt-entry' },
+                {
+                  key: entry.id,
+                  className: 'gt-entry',
+                  onDragOver: function (event) {
+                    event.preventDefault()
+                  },
+                  onDrop: function () {
+                    moveEntry(entryDrag, entry.id)
+                  },
+                },
                 h(
                   'div',
-                  { className: 'gt-entry-head' },
+                  { className: 'gt-entry-head drag' },
+                  h(
+                    'span',
+                    {
+                      className: 'gt-drag',
+                      title: t('game.entry.drag'),
+                      draggable: true,
+                      onDragStart: function (event) {
+                        event.dataTransfer.effectAllowed = 'move'
+                        setEntryDrag(entry.id)
+                      },
+                      onDragEnd: function () {
+                        setEntryDrag(null)
+                      },
+                    },
+                    '⠿'
+                  ),
                   h(PlatformSelect, {
                     value: entry.platformId,
                     options: platformIdList(),
