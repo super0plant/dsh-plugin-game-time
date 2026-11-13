@@ -2,23 +2,27 @@
   "name": "dsh-plugin-game-time",
   "version": "0.3.2",
   "type": "module",
-  "description": "Local play-time tracking for games across platforms.",
-  "author": "茄子超人",
+  "description": "Local per-game play-time tracking for Windows, as a DeepSeek Harness (DSH) plugin or a standalone web app.",
+  "author": "super0plant <super0plant@users.noreply.github.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OWNER/dsh-plugin-game-time.git"
+    "url": "git+https://github.com/super0plant/dsh-plugin-game-time.git"
   },
-  "homepage": "https://github.com/OWNER/dsh-plugin-game-time#readme",
+  "homepage": "https://github.com/super0plant/dsh-plugin-game-time#readme",
   "bugs": {
-    "url": "https://github.com/OWNER/dsh-plugin-game-time/issues"
+    "url": "https://github.com/super0plant/dsh-plugin-game-time/issues"
   },
   "keywords": [
     "deepseek",
+    "deepseek-harness",
     "dsh",
     "dsh-plugin",
     "game-time",
     "playtime",
+    "playtime-tracker",
+    "game-tracker",
+    "local-first",
     "windows"
   ],
   "engines": {

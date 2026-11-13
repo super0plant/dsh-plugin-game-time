@@ -1,0 +1,14 @@
+# awesome-dsh-plugin 收录条目
+#
+# 用法：fork github.com/awesome-dsh-plugin/awesome-dsh-plugin，
+# 把这个文件放进 data/plugins/（文件名规则：<owner>__<repo>.yml），
+# 一个 PR 只加这一个文件，不要手工改那两个生成的 README。
+# 收录前会核：package.json 有 dsh.bundle（有）、仓库创建满 1 天、加了 dsh-plugin topic、描述与代码一致。
+url: https://github.com/super0plant/dsh-plugin-game-time
+name: super0plant/dsh-plugin-game-time
+category: fun # 娱乐；不要用 usage（那是「用量与计费」）
+description:
+  en: Tracks per-game play time from running processes and charts daily, weekly, monthly and all-time totals. Data stays on local disk.
+  zh: 按运行进程统计每款游戏的游玩时长，按日 / 周 / 月 / 累计出图，数据只留在本机。
+# 可选：GitHub 托管的方形位图（png/jpg/webp，约 180px）。SVG 与第三方图床会被拒；不写则回退到你的 GitHub 头像。
+# icon: https://raw.githubusercontent.com/super0plant/dsh-plugin-game-time/main/assets/icon-180.png

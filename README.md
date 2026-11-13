@@ -2,7 +2,7 @@
 
 在 DSH 侧边栏里按游戏统计每天、每周、每月和累计游玩时长。数据全部留在本机，不联网。
 
-作者：**茄子超人**
+作者：**super0plant**（茄子超人） · MIT
 
 ---
 
@@ -142,4 +142,4 @@ node scripts/build.mjs         # 打包：dist/dsh-plugin-game-time-*.zip + dist
 
 ---
 
-作者：茄子超人
+作者：super0plant（茄子超人） · MIT
