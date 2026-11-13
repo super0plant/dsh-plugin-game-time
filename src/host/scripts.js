@@ -1,6 +1,5 @@
 /**
- * Game Time — PowerShell faces: exe icons, file picking, directory browsing,
- * and the parent chain used to recognise the launcher that started a game.
+ * Game Time — PowerShell faces: exe icons, file picking, directory browsing.
  */
 import { execFile } from 'node:child_process'
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
@@ -246,50 +245,6 @@ $json = [pscustomobject]@{ path = $path } | ConvertTo-Json -Compress
 `
 
 /**
- * Walk one process's parent chain (game ← launcher ← shell …).
- *
- * This is the only reliable way to know *which* launcher started a game: any
- * store client or front-end (Steam in the tray, Playnite minimised) can be
- * running, but only the process that actually spawned the game is its parent.
- * The chain stops at the first dead pid, at a pid that was reused (a parent
- * created after its child cannot be the real parent), or after 12 levels.
- */
-export const PROCESS_CHAIN_SCRIPT = String.raw`
-$ErrorActionPreference = 'Stop'
-$outPath = [string]$args[-1]
-$result = [ordered]@{ ok = $false; chain = @(); warning = '' }
-try {
-  $current = [int]$args[0]
-  $chain = New-Object System.Collections.ArrayList
-  $childCreated = 0
-  $seen = New-Object System.Collections.Generic.HashSet[int]
-  for ($depth = 0; $depth -lt 12 -and $current -gt 0; $depth++) {
-    if (-not $seen.Add($current)) { break }
-    $proc = Get-CimInstance -ClassName Win32_Process -Filter ('ProcessId = ' + $current) -ErrorAction SilentlyContinue
-    if (-not $proc) { break }
-    $created = 0
-    try { $created = [long]([DateTimeOffset]$proc.CreationDate).ToUnixTimeMilliseconds() } catch { $created = 0 }
-    # A parent that started after its child reused a dead pid: stop here.
-    if ($depth -gt 0 -and $childCreated -gt 0 -and $created -gt $childCreated) { break }
-    [void]$chain.Add([ordered]@{
-      pid = [int]$proc.ProcessId
-      name = [string]$proc.Name
-      parent = [int]$proc.ParentProcessId
-      created = $created
-    })
-    $childCreated = $created
-    $current = [int]$proc.ParentProcessId
-  }
-  $result.ok = $chain.Count -gt 0
-  $result.chain = @($chain)
-} catch {
-  $result.warning = $_.Exception.Message
-}
-$json = $result | ConvertTo-Json -Compress -Depth 5
-[System.IO.File]::WriteAllText($outPath, $json, (New-Object System.Text.UTF8Encoding($false)))
-`
-
-/**
  * Resolve one launch file to the real game exe, and give the game a name.
  *
  * Handles .exe, .lnk (WScript.Shell) and .url. A Steam shortcut
@@ -445,7 +400,7 @@ $json = $result | ConvertTo-Json -Compress
 const scriptCache = {}
 const scriptWrites = {}
 
-export async function runScript(name, source, args, timeoutMs) {
+export async function runScript(name, source, args) {
   let target = scriptCache[name]
   if (!target) {
     target = join(DIR, name)
@@ -464,7 +419,7 @@ export async function runScript(name, source, args, timeoutMs) {
     execFile(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', target].concat(args || []),
-      { windowsHide: true, timeout: timeoutMs || 60000, maxBuffer: 16 * 1024 * 1024 },
+      { windowsHide: true, timeout: 60000, maxBuffer: 16 * 1024 * 1024 },
       (error, stdout) => {
         resolve(error ? '' : String(stdout).trim())
       }
@@ -548,7 +503,7 @@ let jsonCallCounter = 0
  * back. stdout would be encoded with the console code page (GBK on Chinese
  * Windows) and Node decodes it as UTF-8, which mangles non-ASCII paths.
  */
-export async function runJsonScript(name, source, args, timeoutMs) {
+export async function runJsonScript(name, source, args) {
   await mkdir(DIR, { recursive: true })
   jsonCallCounter += 1
   const out = join(DIR, 'ps-out-' + String(process.pid) + '-' + String(jsonCallCounter) + '-' + name.replace(/\W+/g, '-') + '.json')
@@ -557,7 +512,7 @@ export async function runJsonScript(name, source, args, timeoutMs) {
   } catch {
     /* nothing to clean */
   }
-  await runScript(name, source, (args || []).concat([out]), timeoutMs)
+  await runScript(name, source, (args || []).concat([out]))
   let text = ''
   try {
     text = await readFile(out, 'utf8')
@@ -582,30 +537,6 @@ export async function resolveGamePath(target) {
   const value = String(target || '').trim()
   if (!value) return null
   return runJsonScript('gt-resolve.ps1', RESOLVE_SCRIPT, [value])
-}
-
-/**
- * Parent chain of one pid, nearest first (`null` when it cannot be read).
- * Only called when a session opens, so one PowerShell call per game launch.
- */
-export async function processChain(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return null
-  const value = await runJsonScript('gt-chain.ps1', PROCESS_CHAIN_SCRIPT, [String(pid)], 8000)
-  if (!value || value.ok !== true) return null
-  const chain = Array.isArray(value.chain) ? value.chain : value.chain ? [value.chain] : []
-  const out = []
-  for (const item of chain) {
-    if (!item || typeof item !== 'object') continue
-    const name = String(item.name || '').trim()
-    if (!name) continue
-    out.push({
-      pid: Number(item.pid) || 0,
-      name,
-      parent: Number(item.parent) || 0,
-      created: Number(item.created) || 0,
-    })
-  }
-  return out.length > 0 ? out : null
 }
 
 export function pickFileViaDialog() {
