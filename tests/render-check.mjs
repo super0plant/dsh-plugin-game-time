@@ -1383,3 +1383,117 @@ testApi.applyLiveState(Object.assign({}, basePayload, { games: [], sessions: [],
 assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
+
+// --- 跨零点：面板开着过夜，"今日"必须跟着时钟走 ---------------------------
+// 2026-11-13 22:00 开局，一直玩到 14 号凌晨 01:00：界面上"今日"曾经一直停在
+// 打开面板那天的窗口，整晚不刷新。现在 NOW 是活的（live 轮询 + 跨天看门狗都会
+// 推进它），下面把时钟拨过去，验证窗口、统计和组件都跟着翻页。
+
+const crossingStart = new Date(2026, 10, 13, 23, 0, 0).getTime() // 13th 23:00
+const midnight = new Date(2026, 10, 14, 0, 0, 0).getTime() // 14th 00:00
+
+function crossingPayload(now, active, sessions) {
+  return {
+    source: 'live',
+    now: now.getTime(),
+    platforms: { mihoyo: { id: 'mihoyo', name: '米哈游', short: '米', color: '#4f8ff7' } },
+    games: [
+      {
+        id: 'zzz',
+        name: '绝区零',
+        glyph: '绝',
+        color: '#4f8ff7',
+        platforms: ['mihoyo'],
+        disabled: [],
+        installs: [],
+        entries: [],
+      },
+    ],
+    sessions: sessions || [],
+    historyFrom: now.getTime() - 365 * 86400000,
+    historyDays: 365,
+    firstStart: crossingStart,
+    totals: { total: 7200, game: { zzz: 7200 }, platform: { mihoyo: 7200 } },
+    lastPlayed: { zzz: now.getTime() },
+    active: active || [],
+    settings: { intervalSec: 10, historyDays: 365 },
+  }
+}
+
+function textOf(node, out) {
+  const list = out || []
+  if (node === null || node === undefined || node === false) return list
+  if (Array.isArray(node)) {
+    node.forEach((child) => textOf(child, list))
+    return list
+  }
+  if (typeof node === 'object' && node.type) {
+    textOf(node.children, list)
+    return list
+  }
+  list.push(String(node))
+  return list
+}
+
+// 1) 还没过零点：今日 = 23:00 开的那半小时。
+testApi.applyLiveState(
+  crossingPayload(
+    new Date(2026, 10, 13, 23, 30, 0),
+    [{ gameId: 'zzz', platformId: 'mihoyo', start: crossingStart, seconds: 1800 }]
+  )
+)
+assert.equal(testApi.dayKey(testApi.NOW), '2026-11-13', '载荷里的 now 会推进模块时钟')
+assert.equal(testApi.totalsFor(null, 'day', testApi.NOW), 1800, '零点前算 13 号的半小时')
+
+// 2) 过了零点：还在玩，但"今日"必须是 14 号的那一小时，而不是整段 3 小时。
+const afterMidnight = new Date(2026, 10, 14, 1, 0, 0)
+testApi.applyLiveState(
+  crossingPayload(afterMidnight, [{ gameId: 'zzz', platformId: 'mihoyo', start: crossingStart, seconds: 7200 }])
+)
+assert.equal(testApi.dayKey(testApi.NOW), '2026-11-14', '轮询把日历翻到 14 号')
+assert.equal(testApi.totalsFor(null, 'day', testApi.NOW), 3600, '14 号只算跨零后的那一小时')
+assert.equal(
+  testApi.totalsFor(null, 'day', new Date(2026, 10, 13, 12, 0, 0)),
+  3600,
+  '13 号仍然只有零点前的一小时'
+)
+assert.equal(
+  testApi.defaultAnchor('day').getTime(),
+  new Date(2026, 10, 15, 0, 0, 0).getTime(),
+  '跟随当前的窗口锚点走到 15 号零点'
+)
+
+// 组件本身也要跟着翻页：今日卡片显示 1 小时，而不是冻结在昨天。
+const rolloverTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(rollover)')
+const rolloverText = textOf(rolloverTree)
+const todayAt = rolloverText.indexOf('stat.today')
+assert.ok(todayAt >= 0, '今日卡片存在')
+assert.equal(rolloverText[todayAt + 1] + rolloverText[todayAt + 2], '1hour', '今日卡片显示跨零后的一小时')
+
+// 3) 再过一个零点，游戏已在 01:00 结束、被宿主按天拆成两段：今日回到 0。
+const splitSessions = [
+  { id: 'split-a', gameId: 'zzz', platformId: 'mihoyo', source: null, start: crossingStart, end: midnight },
+  { id: 'split-b', gameId: 'zzz', platformId: 'mihoyo', source: null, start: midnight, end: afterMidnight.getTime() },
+]
+testApi.applyLiveState(crossingPayload(new Date(2026, 10, 15, 0, 30, 0), [], splitSessions))
+assert.equal(testApi.dayKey(testApi.NOW), '2026-11-15', '第三个日历日')
+assert.equal(testApi.totalsFor(null, 'day', testApi.NOW), 0, '15 号还没玩，今日归零')
+assert.equal(
+  testApi.totalsFor(null, 'day', new Date(2026, 10, 14, 12, 0, 0)),
+  3600,
+  '拆开的那一段仍然记在 14 号'
+)
+assert.equal(
+  testApi.totalsFor(null, 'day', new Date(2026, 10, 13, 12, 0, 0)),
+  3600,
+  '零点前的那一段仍然记在 13 号'
+)
+
+// 4) 看门狗用它判断"日历翻了没有"。
+assert.equal(testApi.setNow(new Date(2026, 10, 14, 0, 0, 1)), true, '跨天会被报告出来')
+assert.equal(testApi.setNow(new Date(2026, 10, 14, 23, 59, 59)), false, '同一天内不算跨天')
+
+// 还原真实时钟，别把后面的输出带偏。
+testApi.setNow(Date.now())
+assert.equal(testApi.dayKey(testApi.NOW), testApi.dayKey(Date.now()), '时钟恢复')
+console.log('  midnight rollover: 今日 follows the clock across 13th -> 14th -> 15th')

@@ -16,7 +16,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.3.1（修「后台启动器抢归属」，见 §6）；已出包的是 0.3.0（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
+**当前状态**：源码 0.3.2（修「面板开着过夜今日不翻页」，见 §1；上一版 0.3.1 修「后台启动器抢归属」，见 §6）；已出包的是 0.3.0（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -27,7 +27,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
-- **2026-11-11 · 归属改按「启动入口」顺序（0.3.1，本次）**：原来单安装游戏按「当前在线的启动器 + 全局 `rank`」归属，Steam 常驻就把绝区零记成 Steam，Playnite 常驻又把地平线 5 记成 Playnite。现在：`entries` 有内容就按数组顺序取**第一个在运行的启动器**，没有/都没跑就用**安装位置选的平台**；`platform.rank` 只影响显示顺序，和识别彻底无关。设置 → 游戏设置 → 启动入口前面加了拖动按钮（`⠿`，和平台列表同一个），顺序就是优先级。中间试过 CIM 父进程链（准但重、WMI 可能被拦），已按用户要求回退，**别再改回去**（见 §6）。验证：`host-check` 归属 9 条（顺序、跳过没运行、rank 无关、删平台、多安装）+ `render-check`；五套全跑。宿主 + 前端都改了，**要重启 DSH**。
+- **2026-11-14 · 「今日」跟着系统时钟翻页（0.3.2，本次）**：用户报「13 号开着一路玩到 14 号，今日不刷新」。根因在客户端：`NOW` 是**模块加载那一刻**的 `const Date`，`defaultAnchor` / `TodayView` / `totalsFor(...,'day')` 全用它，所以「今天」被钉在打开面板的那一天，30 秒轮询只更新数据、不更新日历；桌面外壳本来就常驻托盘，最容易中招。宿主没问题——`splitByDay` 在零点把会话切成两段（真实数据里能看到 `end=start=00:00:00` 的两条）。改法：`NOW` 改成可变（`setNow()` 原地 `setTime`，所有闭包同时看到），`applyLiveState` 用 `payload.now` 推进它（轮询即翻页），再加一个 15 秒跨天看门狗（比对 `dayKey`，只有真的跨天才 `bumpPage()` + 重拉），所以停在设置页、睡眠唤醒、错过的零点定时器都能补上；窗口重新可见时（`visibilitychange`）也立刻补一次时钟 + 数据，免得后台节流后回来还看着昨天。`AllView`/`DetailView` 的 `anchor` 状态改成 `null = 跟随当前周期`（往回拖才固定，`↺` 回跟随），零点图表自动右移。顺带修头部「监控中 · 时长 · 时长」印两遍。验证：`render-check` 新增「midnight rollover」（13 号 23:30 → 14 号 01:00 → 15 号 00:30 三段，跨零会话各算各的天 + 今日卡片文案 + 看门狗返回值），五套全绿；另外用真实 `sessions.json` 跑了遍：13 号 23:59 今日 3时17分 → 14 号今日 1时39分。**只改客户端，刷新页面即可**（不是重启 DSH）。
+
+- **2026-11-11 · 归属改按「启动入口」顺序（0.3.1）**：原来单安装游戏按「当前在线的启动器 + 全局 `rank`」归属，Steam 常驻就把绝区零记成 Steam，Playnite 常驻又把地平线 5 记成 Playnite。现在：`entries` 有内容就按数组顺序取**第一个在运行的启动器**，没有/都没跑就用**安装位置选的平台**；`platform.rank` 只影响显示顺序，和识别彻底无关。设置 → 游戏设置 → 启动入口前面加了拖动按钮（`⠿`，和平台列表同一个），顺序就是优先级。中间试过 CIM 父进程链（准但重、WMI 可能被拦），已按用户要求回退，**别再改回去**（见 §6）。验证：`host-check` 归属 9 条（顺序、跳过没运行、rank 无关、删平台、多安装）+ `render-check`；五套全跑。宿主 + 前端都改了，**要重启 DSH**。
 
 - **0.3.0 发版（本次）**：把「保留全部历史 + 懒加载」和「首包幽灵修复」正式发出去。`package.json` 0.2.3 → 0.3.0，CHANGELOG 的「未发布」转成 `## 0.3.0 — 2026-11-10`，`dist/` 重新打包出 `dsh-plugin-game-time-0.3.0.zip` 与 `game-time-web-0.3.0.zip`。为什么是 minor 而不是 patch：这批改动新增了 `GET /api/game-time/sessions` 接口，并且改了「31 天后不再删数据」这个用户能感知的行为。验证：五套测试全绿后打包。（宿主有改动，装新版要重启 DSH。）
 
@@ -296,6 +298,8 @@ today → all → game（详情）→ settings（总设置）→ game-settings�
 
 - `loadLiveState(force)`：拉 `/state` 并**原地替换** `GAMES` / `PLATFORMS` / `SESSIONS`
 - 每 30 秒自动刷新一次；在设置页时跳过（避免冲掉正在编辑的内容），除非手动刷新
+- **「现在」是活的（0.3.2）**：`NOW` 是一个可变的 `Date`，`applyLiveState` 用 `payload.now` 推进它，另有一个 15 秒的跨天看门狗（比对 `dayKey(NOW)` 与真实日期）负责翻页。**不要再写 `const NOW = new Date()` 之外的静态时间**——今日 / 本周 / 最近游玩 / 图表窗口全从 `NOW` 派生，钉死它就会出现「开一整晚还是昨天」
+- 图表窗口的 `anchor` 用 `null` 表示「跟随当前周期」，往回拖才落成固定日期；`↺` 把它设回 `null`
 - 改动 → `touch()` → `saveConfig()`（500ms 防抖）→ POST 整份配置
 - **保存必须带 `version: 3`**（曾经漏了，导致每次保存都被当旧格式迁移、背景字段被清空）
 
@@ -338,7 +342,7 @@ seriesFor(gameId, range, anchor, slice, grain)
 | 本月 | 1 号–月末（最近 31 天，按月份取 28–31） | 1 天 | 天 / 周 |
 | 全部 | 最近 12 个月 | 1 个月 | 月 / 周 / 天 |
 
-> 窗口长度按周期自动算，**不写死**（比如 2 月就是 28/29 格）；右端最多停在本周期末尾，左端停在第一条记录。
+> 窗口长度按周期自动算，**不写死**（比如 2 月就是 28/29 格）；右端最多停在本周期末尾，左端停在第一条记录。没手动往回翻时窗口**跟随当前周期**（零点自动右移一天），`↺` 就是回到跟随。
 
 **`Chart` 是纯函数式 SVG**，不认平台/游戏，只认每段的 `name/color/seconds`：
 
@@ -406,7 +410,7 @@ node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe 三个场�
 node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单实例（DSH 包内会跳过）
 ```
 
-`render-check` 用 `globalThis.__GT_TEST__` 暴露内部函数；`host-check` 用 `__GT_HOST_TEST__` 暴露 `tick / setLister / sanitizeConfig / migrate / attributePlatform` 等（`setLister` 在模块加载时就可用，其余在 `apply()` 之后）。
+`render-check` 用 `globalThis.__GT_TEST__` 暴露内部函数；`host-check` 用 `__GT_HOST_TEST__` 暴露 `tick / setLister / sanitizeConfig / migrate / attributePlatform` 等（`setLister` 在模块加载时就可用，其余在 `apply()` 之后）。`__GT_TEST__.setNow(ms)` 可以把模块时钟拨到任意时刻——测跨天 / 跨周的行为用它，不要依赖真实系统时间（「midnight rollover」那条就是这么测的）。
 
 假 React 只实现了 `createElement / useState / useRef / useEffect`，**没有调度器**：`setState` 是空操作，组件只渲染一次。所以测试只能验证「初始渲染 + 纯函数」，交互路径（拖拽、悬停、点击）靠人工验收；写组件时别依赖 `useEffect` 去产生渲染树。
 
@@ -453,6 +457,7 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | SVG `<text>` 没写 `fill` | 暗色主题下 Y 轴刻度是纯黑，和 X 轴不同色 | SVG 文字默认黑色，必须 `fill:currentColor` |
 | i18n key 写错/漏定义 | UI 直接显示裸 key（真出现过 `all.archived.tag`） | 新增文案必须中英两份都加；渲染测试里 `t` 是恒等函数，**测不出缺 key**，只能靠对照 |
 | 拖动步长按视图写死 | 「今日」拖一下直接跳到前一天 | 步长 = 一根柱子 = 当前刻度，由 `GRAIN` 推导 |
+| 「现在」用模块加载时的 `const NOW = new Date()` | 面板开着一整晚，13 号玩到 14 号「今日」还是 13 号的数，怎么刷新都不变（桌面外壳常驻托盘最容易中招） | 「现在」必须是活的：`setNow()` 由轮询 / 跨天看门狗推进；任何从 `NOW` 派生的窗口（今日/本周/最近游玩/图表锚点）都跟着翻页。宿主是对的（`splitByDay` 零点切两段），别去改宿主 |
 | 平均线借用游戏主题色 | 平均线和平台色分不清 | 改中性灰 + 0.75px 细虚线，颜色走 `--gt-chart-avg` |
 | 把归档接进统计 | 「总计」和「共 N 款」对不上，用户无法理解口径 | 归档只是折叠：`isArchived()` 只用于列表拆分，**不进聚合** |
 | 自动归档写成持久化状态 | 手动取消后又被规则写回，来回打架 | 自动归档只做派生判断，`archived` 只存手动决定 |
@@ -644,11 +649,12 @@ Remove-Item "$env:USERPROFILE\.dsh\storages\game-time\presets.json"
 - plugins/game-time/HANDOFF.md（现状、坑、待办；§14 就是本提示）
 - docs/plugin-design-template.md（设计约束）
 
-当前状态（2026-11-10）：
-- 源码含未发版改动：会话永久保留（不再 31 天删除/日汇总）+ 懒加载（默认 1 年，设置可改 30–1825 天）。
+当前状态（2026-11-14，源码 0.3.2）：
+- 「现在」是活的（`setNow()` + 15 秒跨天看门狗），今日/本周/图表锚点都会在零点自动翻页；别再引入静态的模块级时间。
+- 归属按每个游戏自己的「启动入口」顺序（0.3.1）。
+- 会话永久保留（不再 31 天删除/日汇总）+ 懒加载（默认 1 年，设置可改 30–1825 天）。
 - 宿主 /state 只回 settings.historyDays 窗口，另带 totals / firstStart / lastPlayed / historyFrom；GET /api/game-time/sessions?from=&to= 补旧页；客户端 ensureHistory 按 id 去重，只保留当前 GAMES 的页。
-- git 仓库在 plugins/game-time/.git，main 分支，当前 4 个提交，工作区干净。
-- 五套测试：render-check / host-check / exit-check / restore-check / standalone-check。
+- git 仓库在 plugins/game-time/.git，main 分支；五套测试：render-check / host-check / exit-check / restore-check / standalone-check。
 
 硬规则：
 1. 不要删会话、不要恢复日汇总；「总计」必须保持全量。

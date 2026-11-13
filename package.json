@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-game-time",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "Local play-time tracking for games across platforms.",
   "author": "茄子超人",

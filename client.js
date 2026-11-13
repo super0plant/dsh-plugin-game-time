@@ -754,7 +754,22 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * "Now" is a moving value, not the moment the bundle loaded. The desktop
+     * shell lives in the tray for days, so a frozen clock would keep "今日" on
+     * the day the panel was opened — exactly what a 13th→14th session saw.
+     * `setNow()` moves the same Date instance (so every closure sees it) and
+     * reports whether the calendar day changed.
+     */
     const NOW = new Date()
+
+    function setNow(value) {
+      const next = value instanceof Date ? value.getTime() : Number(value)
+      if (!Number.isFinite(next) || next <= 0) return false
+      const dayChanged = dayKey(next) !== dayKey(NOW)
+      NOW.setTime(next)
+      return dayChanged
+    }
 
     const PLATFORMS = {
       mihoyo: { id: 'mihoyo', name: '米哈游', short: '米', color: '#4f8ff7' },
@@ -1082,6 +1097,10 @@ window.__ModuleLoader__.load({
       }
 
       const liveNow = payload.now || Date.now()
+      // Trust the host clock for every window that depends on "now" (今日 /
+      // 本周 / relative labels). This is the rollover that matters: the poll
+      // that lands after midnight re-anchors the day without a reload.
+      setNow(liveNow)
       for (const item of Array.isArray(payload.active) ? payload.active : []) {
         SESSIONS.push({
           id: 'live-' + item.gameId,
@@ -1225,6 +1244,26 @@ window.__ModuleLoader__.load({
     loadLiveState()
     if (typeof window !== 'undefined' && typeof setInterval === 'function') {
       setInterval(loadLiveState, 30000)
+      // The day boundary is not something React can observe: no data changes,
+      // no state updates — only the calendar moves. Watch it on its own ticker
+      // (two date strings, no allocation) so "今日" rolls over even when the
+      // panel sits on a page that skips the poll. It also catches a wake-up
+      // from sleep, where a one-shot midnight timer can fire late.
+      setInterval(function () {
+        if (!setNow(Date.now())) return
+        if (typeof bumpPage === 'function') bumpPage()
+        loadLiveState(false)
+      }, 15000)
+      // Browsers throttle timers in a hidden window (up to a minute). Coming
+      // back to the panel should not show yesterday for another minute, so the
+      // first visible frame refreshes both the clock and the data.
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState && document.visibilityState !== 'visible') return
+          setNow(Date.now())
+          loadLiveState(false)
+        })
+      }
     }
 
     /* ------------------------------------------------------------------ *
@@ -3216,7 +3255,11 @@ window.__ModuleLoader__.load({
       const [query, setQuery] = React.useState('')
       const [sort, setSort] = React.useState('total')
       const [range, setRange] = React.useState('week')
-      const [anchor, setAnchor] = React.useState(defaultAnchor('week'))
+      // `null` means "follow the current period": the window ends at today's
+      // midnight (or this week's / month's end) and therefore rolls over on its
+      // own. Panning stores a fixed Date and the reset button goes back to null.
+      const [anchor, setAnchor] = React.useState(null)
+      const currentAnchor = anchor || defaultAnchor(range)
       const [zoom, setZoom] = React.useState(GRAIN_LEVELS.week.base)
       const [showArchived, setShowArchived] = React.useState(false)
 
@@ -3229,14 +3272,17 @@ window.__ModuleLoader__.load({
 
       // The window may reach before the lazy-load edge; pull that slice once.
       // HISTORY_FROM/FIRST_START are deps so the first `/state` (which may land
-      // after this component mounts) still triggers the missing slice.
+      // after this component mounts) still triggers the missing slice. The
+      // window start is a number, so a moving "now" does not re-run this every
+      // render — only a real rollover or a pan moves it.
+      const windowFrom = windowBounds(range, currentAnchor, grain).from.getTime()
       React.useEffect(function () {
-        ensureHistory(windowBounds(range, anchor, grain).from.getTime())
-      }, [range, anchor, grain, HISTORY_FROM, FIRST_START])
+        ensureHistory(windowFrom)
+      }, [windowFrom, HISTORY_FROM, FIRST_START])
 
       const pickRange = function (key) {
         setRange(key)
-        setAnchor(defaultAnchor(key))
+        setAnchor(null)
         setZoom((GRAIN_LEVELS[key] || GRAIN_LEVELS.day).base)
       }
 
@@ -3463,14 +3509,14 @@ window.__ModuleLoader__.load({
               key: section.id,
               t: t,
               range: range,
-              anchor: anchor,
+              anchor: currentAnchor,
               grain: grain,
               onPan: function (delta) {
-                setAnchor(panAnchor(range, anchor, delta, grain))
+                setAnchor(panAnchor(range, currentAnchor, delta, grain))
               },
               onZoom: zoomBy,
               onReset: function () {
-                setAnchor(defaultAnchor(range))
+                setAnchor(null)
                 setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
               },
             })
@@ -4223,7 +4269,9 @@ window.__ModuleLoader__.load({
 
     function DetailView({ t, game, initialRange, onBack, onSettings, touch }) {
       const [range, setRange] = React.useState(initialRange)
-      const [anchor, setAnchor] = React.useState(defaultAnchor(initialRange))
+      // `null` = follow the current period (rolls over at midnight by itself).
+      const [anchor, setAnchor] = React.useState(null)
+      const currentAnchor = anchor || defaultAnchor(range)
       const [zoom, setZoom] = React.useState((GRAIN_LEVELS[initialRange] || GRAIN_LEVELS.day).base)
       const [selected, setSelected] = React.useState(null)
 
@@ -4234,17 +4282,19 @@ window.__ModuleLoader__.load({
         setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
       }
 
-      // Panning a range back past the loaded window fetches just that slice.
-      React.useEffect(function () {
-        ensureHistory(windowBounds(range, anchor, grain).from.getTime())
-      }, [range, anchor, grain, HISTORY_FROM, FIRST_START])
+      const bounds = windowBounds(range, currentAnchor, grain)
 
-      const bounds = windowBounds(range, anchor, grain)
+      // Panning a range back past the loaded window fetches just that slice.
+      const windowFrom = bounds.from.getTime()
+      React.useEffect(function () {
+        ensureHistory(windowFrom)
+      }, [windowFrom, HISTORY_FROM, FIRST_START])
+
       const rangeSessions = sessionsInRange(game.id, bounds.from, bounds.to, allowedPlatforms(game))
       const rangeTotal = secondsInRange(rangeSessions, bounds.from, bounds.to)
       const average = rangeSessions.length > 0 ? rangeTotal / rangeSessions.length : 0
-      const points = seriesFor(game.id, range, anchor, null, grain)
-      const breakdown = platformBreakdown(game.id, range, anchor, grain)
+      const points = seriesFor(game.id, range, currentAnchor, null, grain)
+      const breakdown = platformBreakdown(game.id, range, currentAnchor, grain)
       const groupName = groupNameOf(game)
       const duplicate = duplicateMap().get(game.id)
       const totalAll = totalsFor(game.id, 'all', NOW)
@@ -4255,23 +4305,23 @@ window.__ModuleLoader__.load({
       })
       const activePlatform = activeEntry ? activeEntry.platformId : null
 
-      const alignedAnchor = clampAnchor(range, anchor, grain)
+      const alignedAnchor = clampAnchor(range, currentAnchor, grain)
       const prevDisabled = panAnchor(range, alignedAnchor, -1, grain).getTime() === alignedAnchor.getTime()
       const nextDisabled = panAnchor(range, alignedAnchor, 1, grain).getTime() === alignedAnchor.getTime()
 
-      const rows = range === 'day' ? [] : daysInRange(game.id, range, anchor, grain)
+      const rows = range === 'day' ? [] : daysInRange(game.id, range, currentAnchor, grain)
       const segments = range === 'day' ? segmentsBetween(game.id, bounds.from, bounds.to) : []
 
-      const rangeLabel = rangeLabelOf(range, anchor, grain)
+      const rangeLabel = rangeLabelOf(range, currentAnchor, grain)
 
       const shift = function (direction) {
-        setAnchor(panAnchor(range, anchor, direction, grain))
+        setAnchor(panAnchor(range, currentAnchor, direction, grain))
         setSelected(null)
       }
 
       const pickRange = function (next) {
         setRange(next)
-        setAnchor(defaultAnchor(next))
+        setAnchor(null)
         setZoom((GRAIN_LEVELS[next] || GRAIN_LEVELS.day).base)
         setSelected(null)
       }
@@ -6358,7 +6408,7 @@ window.__ModuleLoader__.load({
                           return sum + (item.seconds || 0)
                         }, 0),
                         t
-                      ) + ' · ' + formatDuration(ACTIVE.reduce(function (sum, item) { return sum + (item.seconds || 0) }, 0), t)
+                      )
                   )
                 : null,
               h('span', { className: 'gt-demo' }, LIVE ? t('live.badge') : t('demo'))
@@ -6418,6 +6468,7 @@ window.__ModuleLoader__.load({
         SESSIONS: SESSIONS,
         SETTINGS: SETTINGS,
         NOW: NOW,
+        setNow: setNow,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
         seriesFor: seriesFor,
