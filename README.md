@@ -24,6 +24,13 @@
 
 ## 安装（DSH 插件）
 
+**直接下载 zip（不需要 npm）**
+
+- 插件包：[dsh-plugin-game-time.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/dsh-plugin-game-time.zip) → 解压，然后按下面「从目录安装」添加。
+- 独立网页版：[game-time-web.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/game-time-web.zip) → 解压，双击 `start.cmd`。
+
+这两个链接永远指向**最新版**（文件名不带版本号，所以不会随发版失效）。
+
 **从 npm 安装（推荐）**
 
 - 桌面端：DSH → 设置 → 插件 → 搜索 `dsh-plugin-game-time` → 安装 → 重启 DSH。
@@ -40,7 +47,7 @@
 
 ## 独立网页版（不装 DSH）
 
-网页版是**另一个包**（`game-time-web-<版本>.zip`），和 DSH 插件包分开解压、分开存放，互不覆盖。
+网页版是**另一个包**（Release 里的 `game-time-web.zip`，老版本叫 `game-time-web-<版本>.zip`），和 DSH 插件包分开解压、分开存放，互不覆盖。
 
 1. **先解除锁定**，否则 Windows 会弹「此文件来自其他计算机」：右键 zip → 属性 → 勾「解除锁定」→ 确定，然后再解压。已经解压过的，可以对 zip 运行 `Unblock-File .\game-time-web-0.2.1.zip` 后重新解压。
 
