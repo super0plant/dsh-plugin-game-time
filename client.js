@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.13.0'
+    const VERSION = '0.14.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -34,6 +34,7 @@ window.__ModuleLoader__.load({
       'today.col.total': '总计',
       'today.trend': '趋势图',
       'today.trend.hint': '左 24 小时 · 右 7/30 天，滚轮切换',
+      'today.hours': '今日时段',
       'today.byDay': '按天',
       'today.byWeek': '按周',
       'search': '搜索游戏…',
@@ -61,7 +62,7 @@ window.__ModuleLoader__.load({
       'chart.bar': '柱状',
       'chart.line': '曲线',
       'chart.avg': '平均',
-      'chart.other': '其他',
+      'chart.other': '其他游戏',
       'chart.more': '其他 {n} 项',
       'chart.unit': '{title}（{unit}）',
       'chart.reset': '恢复默认',
@@ -280,6 +281,7 @@ window.__ModuleLoader__.load({
       'today.col.total': 'Total',
       'today.trend': 'Trend',
       'today.trend.hint': 'Left 24 hours · right 7/30 days, wheel to switch',
+      'today.hours': 'Today by hour',
       'today.byDay': 'By day',
       'today.byWeek': 'By week',
       'search': 'Search games…',
@@ -307,7 +309,7 @@ window.__ModuleLoader__.load({
       'chart.bar': 'Bars',
       'chart.line': 'Line',
       'chart.avg': 'avg',
-      'chart.other': 'Other',
+      'chart.other': 'Other games',
       'chart.more': '{n} more',
       'chart.unit': '{title} ({unit})',
       'chart.reset': 'Reset',

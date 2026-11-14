@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 /**
- * Builds the two distribution bundles from ONE source tree.
+ * Builds the DSH plugin bundle.
  *
  *   dist/dsh-plugin-game-time-<version>.zip   DSH plugin (host + client + tests)
- *   dist/game-time-web-<version>.zip          standalone web build (no DSH)
  *
- * Both bundles read the same `client.js` and `src/host/*`; only the shell and
- * the shipped extras differ. Nothing is generated into the source tree.
+ * Nothing is generated into the source tree.
  *
  * Usage: node scripts/build.mjs [--keep-staging]
  */
@@ -24,13 +22,8 @@ const version = pkg.version
 const SHARED = ['client.js', 'src', 'README.md', 'LICENSE', 'CHANGELOG.md']
 /* DSH-only shell: manifest, host entry, dictionaries, plugin icon, tests, handoff. */
 const DSH = ['index.js', 'package.json', 'cordis.patch.yml', 'locale', 'icon.svg', 'tests', 'HANDOFF.md']
-/* Web-only shell: the entry that boots the host without DSH, plus app icons.
- * It also ships the one test that applies to it. */
-const WEB = ['standalone', 'icon.png', 'icon.ico', 'tests/standalone-check.mjs']
-
 const bundles = [
   { folder: 'dsh-plugin-game-time', zip: 'dsh-plugin-game-time-' + version + '.zip', files: SHARED.concat(DSH) },
-  { folder: 'game-time-web', zip: 'game-time-web-' + version + '.zip', files: SHARED.concat(WEB) },
 ]
 
 function copyInto(staging, bundle) {
@@ -74,19 +67,12 @@ function zipBundle(staging, bundle) {
 
 mkdirSync(DIST, { recursive: true })
 
-/* Windows PowerShell 5.1 reads a BOM-less .ps1 as ANSI: the Chinese tray labels
- * turn into mojibake and the script fails to parse. Guard the artifact. */
-const launcherBytes = readFileSync(join(ROOT, 'standalone', 'launcher.ps1'))
-if (launcherBytes[0] !== 0xef || launcherBytes[1] !== 0xbb || launcherBytes[2] !== 0xbf) {
-  throw new Error('standalone/launcher.ps1 must be saved as UTF-8 with BOM')
-}
 const staging = join(DIST, '.staging-' + process.pid)
 rmSync(staging, { recursive: true, force: true })
 
 try {
   for (const bundle of bundles) {
     const folder = copyInto(staging, bundle)
-    if (bundle.folder === 'game-time-web') writeWebManifest(folder)
     const zipPath = zipBundle(staging, bundle)
     console.log(bundle.zip + '  ' + Math.round(statSync(zipPath).size / 1024) + ' KB')
   }

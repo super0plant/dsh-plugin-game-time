@@ -4,7 +4,7 @@
 
 在 DSH 侧边栏里按游戏统计每天、每周、每月和累计游玩时长。数据全部留在本机，不联网。
 
-作者：**super0plant**（茄子超人） · MIT
+作者：**super0plant** · MIT
 
 ---
 
@@ -27,7 +27,6 @@
 **直接下载 zip（不需要 npm）**
 
 - 插件包：[dsh-plugin-game-time.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/dsh-plugin-game-time.zip) → 解压，然后按下面「从目录安装」添加。
-- 独立网页版：[game-time-web.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/game-time-web.zip) → 解压，双击 `start.cmd`。
 
 这两个链接永远指向**最新版**（文件名不带版本号，所以不会随发版失效）。
 
@@ -45,7 +44,6 @@
 
 > 目录可以放在任何位置，但**不要删除或移动**：DSH 的 profile 里记录的是这个路径的链接。
 
-> 仓库里的 `standalone/` 是**已暂停维护的网页版**外壳，和 DSH 插件无关，可以忽略；想复活看 `docs/WEB-FROZEN.md`。
 
 ## 首次使用
 
@@ -124,7 +122,6 @@ node tests/render-check.mjs    # 假 React 渲染全部视图（约 60 条路径
 node tests/host-check.mjs      # 路由、迁移、归属、配置读写、一次完整 tick
 node tests/exit-check.mjs      # 关一局的防抖落盘 + process.exit 时同步落盘
 node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe
-node tests/standalone-check.mjs # 网页版外壳（已冻结，保留回归）
 node scripts/build.mjs         # 打包：dist/dsh-plugin-game-time-*.zip（网页包仍在，只是不宣传）
 ```
 
@@ -132,4 +129,4 @@ node scripts/build.mjs         # 打包：dist/dsh-plugin-game-time-*.zip（网�
 
 ---
 
-作者：super0plant（茄子超人） · MIT
+作者：super0plant · MIT
