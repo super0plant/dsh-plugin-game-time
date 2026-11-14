@@ -212,7 +212,9 @@ export function sanitizeConfig(input) {
     version: 3,
     settings: {
       intervalSec: Number.isFinite(intervalNumber) ? Math.min(300, Math.max(2, Math.round(intervalNumber))) : 10,
-      foregroundOnly: bool(settings.foregroundOnly, true),
+      // foregroundOnly：「仅前台计时」从未实现，0.4.0 起从界面移除。
+      // 字段先留着（写进配置也无害），替代方案见 HANDOFF §10：按游戏的后台暂停 + 全局统一管理。
+      // foregroundOnly: bool(settings.foregroundOnly, true),
       autostart: bool(settings.autostart, true),
       density: settings.density === 'compact' ? 'compact' : 'comfortable',
       historyDays: clampRange(settings.historyDays, HISTORY_DAYS_MIN, HISTORY_DAYS_MAX, HISTORY_DAYS),

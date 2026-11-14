@@ -162,7 +162,10 @@ const cleaned = testApi.sanitizeConfig({
 })
 
 assert.equal(cleaned.settings.intervalSec, 2)
-assert.equal(cleaned.settings.foregroundOnly, true)
+// foregroundOnly was removed in 0.4.0: it never had an implementation, so the
+// sanitised settings no longer carry the key. Restore this check if the
+// per-game background pause lands and brings a real field with it.
+assert.equal(cleaned.settings.foregroundOnly, undefined)
 assert.equal(cleaned.settings.autostart, true, 'autostart defaults to on')
 assert.equal(
   testApi.sanitizeConfig({ version: 3, settings: { autostart: false }, games: [] }).settings.autostart,

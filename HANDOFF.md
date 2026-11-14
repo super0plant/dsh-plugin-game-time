@@ -16,7 +16,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.4.0（进行中：网页版暂停维护 + 页脚署名 + 删掉 `foregroundOnly` 空开关，见 §1）；**独立网页版已冻结**，主线只有 DSH 插件；已出包的是 0.3.2（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化（已冻结）、MOTW 分发说明进 README（已冻结）、双采集器硬互斥、自动发现（§11）、`foregroundOnly` 的替代方案（按游戏暂停，见 §10）。
+**当前状态**：源码 0.4.0（网页版冻结 + 隐藏开机自启 + 移除 `foregroundOnly` 空开关 + 页脚署名，见 §1）；**独立网页版已冻结**，主线只有 DSH 插件，网页版文档全在 `docs/WEB-FROZEN.md`。已出包的是 0.4.0（只有 DSH 插件包）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：双采集器硬互斥、自动发现（§11）、按游戏的后台暂停（替代 §10 #5）。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -26,6 +26,8 @@
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-14 · 0.4.0 线（批 2/2）：删空开关、藏起宿主专用入口、把网页版文档收进一个档案**：① 设置里的「仅前台计时」整块删掉（[client.js](client.js) 里的 Field 换成一行说明），两条 `settings.foreground*` 文案键一并删除，宿主 `config.js` 的白名单行与 `constants.js` 默认值改成注释/删除——**字段留着也不会被读取**；② 「开机自启」的设置块**整块注释**（`/* 冻结（0.4.0）… */`），恢复只需取消注释，`settings.autostart*` 文案键和宿主接口 `/api/game-time/autostart` 全部保留；③ 网页版相关的所有文档（原 README 一章 + 构建/托盘/自启/MOTW 的坑 + 恢复步骤）收进 **`docs/WEB-FROZEN.md`**，README 只留一行「`standalone/` 是暂停维护的网页版遗留，可以忽略」；④ 页脚从品牌标语改成产品署名 `游戏时长 v0.4.0 · super0plant`（英文 `Game Time v0.4.0 · super0plant`），用户看不懂「local-first tools for DSH」那种定位语。验证：五套测试全绿 + 重新打包。
 
 - **2026-11-14 · 0.4.0 线开张（批 1/2）**：① 打了回退锚点 `v0.3.2-final`（本地 + 远端都有），0.4.0 做坏时 `git reset --hard v0.3.2-final` 就回到现在的样子；② 版本号 → **0.4.0**（删设置项属于行为变化，按 semver 走 minor）；③ **独立网页版暂停维护**：代码留在 `standalone/`，README 那一节加了「暂停维护」说明，不再宣传、不再测试（`npm test` 里仍会跑 `standalone-check`，它只在包内缺 `standalone/` 时跳过——**下个版本考虑把它摘出默认测试**）；④ 设置页页脚从「作者：super0plant」改成开发者署名式 `super0plant — local-first tools for DSH · v0.4.0`，版本号由 `client.js` 里的 `VERSION` 常量提供（以后发版只改这一处 + `package.json`）。批 2 是删掉 `foregroundOnly` 空开关。
 
@@ -120,7 +122,7 @@ plugins/game-time/
     scripts.js        PowerShell：exe 图标、选文件、目录浏览
   client.js           前端：全部 UI（约 6.4k 行，未拆；内部分层见 §7）
   icon.png / icon.ico 作者提供的应用图标（1024 PNG；.ico 含 16–256 七档）；插件列表仍读 icon.svg
-  standalone/
+  standalone/        **已冻结（0.4.0）**：网页版外壳，详细说明全部搬到 docs/WEB-FROZEN.md
     server.mjs        独立版入口：假 ctx 复用 apply()、静态白名单、固定 45917、单实例、退出落盘、POST shutdown
     launcher.ps1      桌面外壳：隐藏起服务 + Edge --app 窗口 + 托盘（打开/自启/退出），互斥量防多托盘
     start.cmd         双击入口：隐藏启动 launcher.ps1（不留黑框）
@@ -129,6 +131,7 @@ plugins/game-time/
     loader.js         __ModuleLoader__ shim：locale / slots(effect) / main 挂载
     icon-256.png      独立版 favicon / 触屏图标
     vendor/           react.production.min.js + react-dom.production.min.js（18.3.1 UMD, MIT）
+  docs/WEB-FROZEN.md  网页版的全部文档：冻结原因、文件清单、恢复步骤、历史坑
   locale/zh.json      插件管理器显示的名称/描述
   locale/en.json
   icon.svg            插件图标
@@ -191,7 +194,8 @@ plugins/game-time/
 
 ```js
 {
-  intervalSec, foregroundOnly, autostart, density,   // foregroundOnly 还没实现；autostart 仅独立版可写
+  intervalSec, autostart, density,               // autostart 只服务已冻结的网页版（界面 0.4.0 起注释掉）
+  // foregroundOnly 已废弃（0.4.0）：从未实现过逻辑，设置界面已移除，宿主白名单里的那行也注释了
   historyDays,                                   // 懒加载窗口，默认 365，范围 30–1825
   background, backgroundFit, backgroundOpacity,
   backgroundMask, backgroundMaskOpacity,
@@ -493,15 +497,15 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 **功能**
 
 4. **双采集器互斥**：网页版启动时只会检测 `DeepSeek Harness.exe` 打警告；没有硬锁，两版同时开仍会各写一份会话。要硬锁得让宿主定期写一个带 pid/端口的心跳，双方都读。
-5. `foregroundOnly`（仅前台计时）目前只有开关，没有实现
+5. `foregroundOnly`（仅前台计时）**0.4.0 已在界面上移除**（从未实现）。替代方案：游戏设置里单游戏「后台暂停」+ 设置里全局开关，实现要点是 `GetForegroundWindow` 取前台进程名、与游戏 exe 比对，**并进现有 tasklist 脚本一次调用**，别每 tick 多起一次 PowerShell
 6. 图标裁剪已接到图标；可考虑给平台图标也用同一裁剪器
 7. 归档目前只折叠、不停止计时；「归档即停表」是另一个开关，没做（容易误停）
 8. 平台支持更多进程别名（目前已支持数组，UI 是逗号分隔输入）
 
 **工程**
 
-9. **自启 launcher 化**（下次第一件）：独立版拦截 `POST /api/game-time/autostart`，注册表写 `powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<目录>\launcher.ps1" -NoWindow`；否则登录时黑框常驻。DSH 侧保持只读。
-10. **README 补 MOTW 分发说明**：解除锁定（只对当次解压）、7-Zip、微信/QQ 传 zip 通常不带标记、本地快捷方式替代 `.cmd`。
+9. ~~**自启 launcher 化**（下次第一件）~~ **已冻结（0.4.0）**：只服务网页版，随网页版一起冻结，细节见 `docs/WEB-FROZEN.md`。
+10. ~~**README 补 MOTW 分发说明**~~ **已冻结（0.4.0）**：MOTW 是网页版 zip 的问题，说明已搬进 `docs/WEB-FROZEN.md`。
 11. 抽设计令牌（颜色/字号/间距）到一个地方
 12. `client.js` 加 JSDoc + `tsc --checkJs`，消灭未定义变量类问题
 13. 渲染快照测试（DOM 序列化比对），减少「靠人眼看」的次数；**顺便解决 i18n 缺 key 测不出来**的问题（现在 `t` 是恒等函数）

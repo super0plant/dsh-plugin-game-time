@@ -91,8 +91,6 @@ window.__ModuleLoader__.load({
       'settings.history.hint': '启动时只加载最近这段记录；往回翻时按需加载更早的，总计不受影响。',
       'settings.history.months': '{n} 个月',
       'settings.history.years': '{n} 年',
-      'settings.foreground': '仅在游戏窗口位于前台时计时',
-      'settings.foreground.hint': '防止挂机刷时长；切到桌面时暂停累计。',
       'settings.startup': '启动',
       'settings.autostart': '开机自启',
       'settings.autostart.hint': '登录 Windows 后自动启动，从开机第一局开始计时。',
@@ -118,7 +116,7 @@ window.__ModuleLoader__.load({
       'settings.data.retention': '历史永久保留；默认加载最近 1 年，更早的记录按需加载',
       'settings.data.later': '导入 / 导出 / 清空在接入采集后提供',
       'settings.note': '本轮为演示状态，改动不会保存；接入采集后这些设置会落盘。',
-      'settings.credit': 'super0plant — local-first tools for DSH · v{v}',
+      'settings.credit': '游戏时长 v{v} · super0plant',
       'game.platforms': '平台',
       'game.platforms.hint': '关掉的平台会从徽标、详情统计和总时长里隐藏。',
       'game.runs': '启动方式',
@@ -313,8 +311,6 @@ window.__ModuleLoader__.load({
       'settings.history.hint': 'Loads only this much history at startup; older records load on demand. Totals stay complete.',
       'settings.history.months': '{n} months',
       'settings.history.years': '{n} years',
-      'settings.foreground': 'Only count while the game window is in front',
-      'settings.foreground.hint': 'Stops idle and background time from inflating totals.',
       'settings.startup': 'Startup',
       'settings.autostart': 'Start with Windows',
       'settings.autostart.hint': 'Launches at login so play time is counted from the first game after boot.',
@@ -340,7 +336,7 @@ window.__ModuleLoader__.load({
       'settings.data.retention': 'Sessions kept forever; the last year loads by default, older pages on demand',
       'settings.data.later': 'Import, export and reset arrive with the collector',
       'settings.note': 'Demo state — changes are not saved. They persist once the collector is wired.',
-      'settings.credit': 'super0plant — local-first tools for DSH · v{v}',
+      'settings.credit': 'Game Time v{v} · super0plant',
       'game.platforms': 'Platforms',
       'game.platforms.hint': 'Disabled platforms disappear from badges, the breakdown and the totals.',
       'game.runs': 'Launch entries',
@@ -955,7 +951,7 @@ window.__ModuleLoader__.load({
     }
     const SETTINGS = {
       intervalSec: 10,
-      foregroundOnly: true,
+      // foregroundOnly 已废弃（0.4.0）：没有实现，见 HANDOFF §10 的替代方案。
       autostart: true,
       density: 'comfortable',
       historyDays: 365,
@@ -5252,19 +5248,13 @@ window.__ModuleLoader__.load({
                 },
               })
             ),
-            h(
-              Field,
-              { label: t('settings.foreground'), hint: t('settings.foreground.hint') },
-              h('input', {
-                className: 'gt-check',
-                type: 'checkbox',
-                checked: SETTINGS.foregroundOnly,
-                onChange: function (event) {
-                  setSetting('foregroundOnly', event.target.checked)
-                },
-              })
-            )
+            // 已移除（0.4.0）：「仅前台计时」从来没实现过逻辑，留着只会让人以为
+            // 开着就只算前台。替代方案见 HANDOFF §10 —— 按游戏的后台暂停 + 全局统一管理。
           ),
+          // 冻结（0.4.0）：开机自启只对已暂停的独立网页版有意义（DSH 里插件由宿主
+          // 自己启动，写系统自启等于「让 DSH 随登录启动」）。恢复时取消下面注释即可，
+          // 文案键 settings.autostart* 与宿主接口都还在。
+          /*
           h(
             'div',
             { className: 'gt-group' },
@@ -5296,6 +5286,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'gt-note', style: { paddingBottom: 6 } }, t('settings.autostart.why')),
             h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.autostart.off'))
           ),
+          */
           h(
             'div',
             { className: 'gt-group' },

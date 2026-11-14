@@ -118,7 +118,9 @@ render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView')
 render(testApi.AllView, { t, onOpenGame() {} }, 'AllView')
 const settingsTree = render(testApi.GlobalSettings, { t, onBack() {}, touch() {} }, 'GlobalSettings')
 
-// --- autostart switch (DSH: disabled + explained) -------------------------
+// --- autostart switch: frozen in 0.4.0 (web build only) -------------------
+// The block lives commented out in client.js; when it comes back, restore the
+// old assertions: one disabled checkbox + settings.autostart.dsh / .why / .off.
 
 const settingsNodes = []
 ;(function walkSettings(node) {
@@ -138,11 +140,9 @@ const settingsNodes = []
   walkSettings(node.children)
 })(settingsTree)
 
-if (settingsNodes.indexOf('disabled-check') < 0) throw new Error('autostart switch must be disabled inside DSH')
-if (settingsNodes.indexOf('settings.autostart.dsh') < 0) throw new Error('DSH explanation missing')
-if (settingsNodes.indexOf('settings.autostart.why') < 0) throw new Error('autostart rationale missing')
-if (settingsNodes.indexOf('settings.autostart.off') < 0) throw new Error('autostart opt-out note missing')
-if (settingsNodes.indexOf('settings.credit') < 0) throw new Error('author credit missing from the settings page')
+assert.equal(settingsNodes.includes('settings.autostart'), false, 'the frozen autostart switch must not render')
+assert.equal(settingsNodes.includes('settings.foreground'), false, 'the removed foreground switch must not render')
+assert.ok(settingsNodes.indexOf('settings.credit') >= 0, 'author credit missing from the settings page')
 
 for (const game of testApi.GAMES) {
   for (const range of ['day', 'week', 'month', 'all']) {
