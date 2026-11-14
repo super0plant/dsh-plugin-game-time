@@ -8,7 +8,7 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.12.0；GitHub 已发布到 v0.12.0；**npm 尚未发布**（账号注册卡住）。
+- **版本**：0.13.0；GitHub 已发布到 v0.13.0；**npm 尚未发布**（账号注册卡住）。
 - **形态**：只有 DSH 插件。独立网页版已冻结，文档在 `docs/WEB-FROZEN.md`。
 - **测试**：五套（render / host / exit / restore / standalone），`npm test` 一条命令；**一定看退出码**。
 - **今日页**：统计卡 → 今天玩过 → 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
@@ -43,6 +43,9 @@
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-14 · 0.13.0 拖拽添加 + 确认弹窗 + 默认「其他」平台 + 检查更新 + 英文 README**：① `DropSurface`（今日/全部/详情三处根节点）接页面级拖放，遮罩提示后弹 `AddGameDialog`（可改名称、选平台，默认 `other`，重复 exe 只提示）；数据来自新函数 `draftGameFromResolved` → 确认后 `commitGameDraft`，与设置页那套共存。② `DEFAULT_PLATFORMS` 加 `other`（无启动器路径），`PRESETS_VERSION` 1→2，老配置启动时自动补上；新游戏 platform 兜底改为 `other`。③ 空状态文案改成「当前没有进程在计时 + 拖入提示」。④ 设置页「关于」+ `UpdateCheck`（GitHub Releases API，只读，`compareVersion` 比较后提示/给下载链接）。⑤ `README.en.md` 精简英文版 + 中文 README 顶部切换。⑥ 修 AllView 默认 `range='week'`（该选项已被 last7/last30 取代）导致选择器无高亮的 bug。验证：新增 draft/confirm/duplicate 三条断言 + 五套全绿。**宿主预置变了 → 重启 DSH。**
+
 
 - **2026-11-14 · 0.12.0 语言设置（跟随系统 / 中文 / English）**：`settings.language`（auto|zh|en）进宿主白名单 + `constants.js` 默认 `auto`；客户端 `t()` 改成「auto → 直接用 DSH 的 `ctx.locale.bind` 结果（DSH 自己会跟随系统并兜底），zh/en → 取本插件字典」。设置页「界面」组多了语言下拉。注意：**不要在 `t()` 里自己判断 navigator.language 覆盖 auto**——第一次写成那样，测试里 `t` 是恒等函数、而真实环境会返回字典值，导致两套行为；现在 auto 完全交给 DSH。踩坑：用脚本按行号替换 `apply` 块时多留了一个 `)` 和一份重复的 `sidebar.panellist` 注册，`node --check` 直接报错，靠它发现。宿主白名单变了 → 重启 DSH。
 

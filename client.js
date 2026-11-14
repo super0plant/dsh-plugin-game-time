@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.12.0'
+    const VERSION = '0.13.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -133,6 +133,13 @@ window.__ModuleLoader__.load({
       'settings.data.retention': '历史永久保留；默认加载最近 1 年，更早的记录按需加载',
       'settings.data.later': '数据文件',
       'settings.data.path': '全部数据在 %USERPROFILE%\\.dsh\\storages\\game-time\\：config.json 是设置，sessions.json 是全部会话。导入 / 导出暂未提供。',
+      'settings.about': '关于',
+      'settings.version': '当前版本 v{v}',
+      'settings.checkUpdate': '检查更新',
+      'settings.update.checking': '检查中…',
+      'settings.update.latest': '已经是最新版',
+      'settings.update.found': '有新版本 v{v}，点此下载',
+      'settings.update.error': '检查失败，稍后再试',
       'settings.credit': '游戏时长 v{v} · super0plant',
       'game.platforms': '平台',
       'game.platforms.hint': '关掉的平台会从徽标、详情统计和总时长里隐藏。',
@@ -372,6 +379,13 @@ window.__ModuleLoader__.load({
       'settings.data.retention': 'Sessions kept forever; the last year loads by default, older pages on demand',
       'settings.data.later': 'Data files',
       'settings.data.path': 'Everything lives in %USERPROFILE%\\.dsh\\storages\\game-time\\: config.json holds settings, sessions.json holds every session. Import and export are not available yet.',
+      'settings.about': 'About',
+      'settings.version': 'Version v{v}',
+      'settings.checkUpdate': 'Check for updates',
+      'settings.update.checking': 'Checking…',
+      'settings.update.latest': 'You are up to date',
+      'settings.update.found': 'v{v} is available - open the download',
+      'settings.update.error': 'Check failed, try again later',
       'settings.credit': 'Game Time v{v} · super0plant',
       'game.platforms': 'Platforms',
       'game.platforms.hint': 'Disabled platforms disappear from badges, the breakdown and the totals.',
@@ -2092,6 +2106,8 @@ window.__ModuleLoader__.load({
       '.gt-btn:hover{background:rgba(128,128,128,.12);}',
       '.gt-btn.danger{background:#e5484d;border-color:#e5484d;color:#fff;}',
       '.gt-btn.primary{background:#3d7dff;border-color:#3d7dff;color:#fff;}',
+      '.gt-update{display:flex;flex-direction:column;gap:6px;}',
+      '.gt-update-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}',
       '.gt-drop-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(11,11,12,.72);border:2px dashed rgba(120,170,255,.6);color:#fff;font-size:13px;pointer-events:none;}',
       '.gt-modal-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}',
       '.gt-modal{width:min(420px,90vw);border-radius:12px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,#17181a);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 48px rgba(0,0,0,.4);}',
@@ -5421,6 +5437,81 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /** Compare the shipped version with the newest GitHub release (read-only). */
+    function compareVersion(left, right) {
+      const a = String(left).split('.').map(Number)
+      const b = String(right).split('.').map(Number)
+      for (let index = 0; index < 3; index += 1) {
+        const x = a[index] || 0
+        const y = b[index] || 0
+        if (x !== y) return x > y ? 1 : -1
+      }
+      return 0
+    }
+
+    function UpdateCheck({ t }) {
+      const [state, setState] = React.useState('idle')
+      const [latest, setLatest] = React.useState('')
+      const check = function () {
+        if (typeof fetch !== 'function') {
+          setState('error')
+          return
+        }
+        setState('checking')
+        fetch('https://api.github.com/repos/super0plant/dsh-plugin-game-time/releases/latest', {
+          headers: { accept: 'application/vnd.github+json' },
+        })
+          .then(function (response) {
+            return response && response.ok ? response.json() : null
+          })
+          .then(function (payload) {
+            const tag = payload && payload.tag_name ? String(payload.tag_name).replace(/^v/i, '') : ''
+            if (!tag) {
+              setState('error')
+              return
+            }
+            setLatest(tag)
+            setState(compareVersion(tag, VERSION) > 0 ? 'found' : 'latest')
+          })
+          .catch(function () {
+            setState('error')
+          })
+      }
+      return h(
+        'div',
+        { className: 'gt-update' },
+        h('div', { className: 'gt-muted' }, t('settings.version').replace('{v}', VERSION)),
+        h(
+          'div',
+          { className: 'gt-update-row' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-btn',
+              disabled: state === 'checking',
+              onClick: check,
+            },
+            state === 'checking' ? t('settings.update.checking') : t('settings.checkUpdate')
+          ),
+          state === 'latest' ? h('span', { className: 'gt-muted' }, t('settings.update.latest')) : null,
+          state === 'found'
+            ? h(
+                'a',
+                {
+                  className: 'gt-link',
+                  href: 'https://github.com/super0plant/dsh-plugin-game-time/releases/latest',
+                  target: '_blank',
+                  rel: 'noreferrer',
+                },
+                t('settings.update.found').replace('{v}', latest)
+              )
+            : null,
+          state === 'error' ? h('span', { className: 'gt-muted' }, t('settings.update.error')) : null
+        )
+      )
+    }
+
     function GlobalSettings({ t, onBack, touch, onEditGame }) {
       const [newPlatformName, setNewPlatformName] = React.useState('')
       const [newPlatformPath, setNewPlatformPath] = React.useState('')
@@ -6266,6 +6357,12 @@ window.__ModuleLoader__.load({
             h('div', { className: 'gt-group-title' }, t('settings.data')),
             h(Field, { label: t('settings.data.retention') }),
             h(Field, { label: t('settings.data.later'), hint: t('settings.data.path') })
+          ),
+          h(
+            'div',
+            { className: 'gt-group' },
+            h('div', { className: 'gt-group-title' }, t('settings.about')),
+            h(UpdateCheck, { t: t })
           ),
           h('div', { className: 'gt-credit' }, t('settings.credit').replace('{v}', VERSION))
         ),
