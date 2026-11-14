@@ -215,6 +215,7 @@ export function sanitizeConfig(input) {
       // foregroundOnly: bool(settings.foregroundOnly, true),
       autostart: bool(settings.autostart, true),
       density: settings.density === 'compact' ? 'compact' : 'comfortable',
+      language: settings.language === 'zh' || settings.language === 'en' ? settings.language : 'auto',
       // Today page trend preferences, persisted so a restart keeps them.
       // One field per card: the 24-hour chart and the 7/30-day chart remember
       // their own bar/line choice.

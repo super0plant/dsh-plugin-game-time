@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.6'
+    const VERSION = '0.12.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -111,6 +111,9 @@ window.__ModuleLoader__.load({
       'settings.density.comfortable': '舒适',
       'settings.density.compact': '紧凑',
       'settings.density.hint': '紧凑会收紧行距、字号和内边距，一屏能多看一行。',
+      'settings.language': '语言',
+      'settings.language.hint': '默认跟随系统；这里只影响这个面板。',
+      'language.auto': '跟随系统',
       'settings.platforms': '启动平台',
       'settings.platforms.hint': '拖 exe / 快捷方式到地址框可直接填入；详情页的平台分布按这里的清单聚合。',
       'settings.addPlatform': '添加平台',
@@ -341,6 +344,9 @@ window.__ModuleLoader__.load({
       'settings.density.comfortable': 'Comfortable',
       'settings.density.compact': 'Compact',
       'settings.density.hint': 'Compact tightens rows, type and padding so one more line fits on screen.',
+      'settings.language': 'Language',
+      'settings.language.hint': 'Follows the system by default; this only affects this panel.',
+      'language.auto': 'System',
       'settings.platforms': 'Platforms',
       'settings.platforms.hint': 'Drop an exe or a shortcut onto the path box to fill it; the per-game platform breakdown aggregates over this list.',
       'settings.addPlatform': 'Add platform',
@@ -991,6 +997,7 @@ window.__ModuleLoader__.load({
       // foregroundOnly 已废弃（0.4.0）：没有实现，见 HANDOFF §10 的替代方案。
       autostart: true,
       density: 'comfortable',
+      language: 'auto',
       historyDays: 365,
       baseColor: '#0b0b0c',
       imageOpacity: 1,
@@ -5823,6 +5830,22 @@ window.__ModuleLoader__.load({
                   setSetting('density', value)
                 },
               })
+            ),
+            h(
+              Field,
+              { label: t('settings.language'), hint: t('settings.language.hint') },
+              h(Dropdown, {
+                value: SETTINGS.language || 'auto',
+                minWidth: 120,
+                options: [
+                  { value: 'auto', label: t('language.auto') },
+                  { value: 'zh', label: '中文' },
+                  { value: 'en', label: 'English' },
+                ],
+                onChange: function (value) {
+                  setSetting('language', value)
+                },
+              })
             )
           ),
           h(
@@ -7108,7 +7131,14 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         CLIENT_CTX = ctx
         ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'game-time: dictionaries')
-        const t = ctx.locale.bind(NS)
+        const boundT = ctx.locale.bind(NS)
+        // 'auto' is DSH's own choice (it already follows the system language,
+        // with its own fallback). zh / en override it for this panel only.
+        const t = function (key) {
+          if (SETTINGS.language !== 'zh' && SETTINGS.language !== 'en') return boundT(key)
+          const value = (SETTINGS.language === 'zh' ? zh : en)[key]
+          return value === undefined ? boundT(key) : value
+        }
 
         ctx.slots.inject('main', () =>
           ctx.slots.register({ name: 'main', key: PANEL_ID, locale: NS, inject: () => ({ t }) }, Page)
@@ -7120,6 +7150,7 @@ window.__ModuleLoader__.load({
             Glyph
           )
         )
+
       },
     }
   },
