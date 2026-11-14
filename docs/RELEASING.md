@@ -50,3 +50,29 @@
 - 整版回退：`git reset --hard vX.Y.Z`（本地立即生效；远端需强推，慎重）
 - 单次改动回退：`git revert <commit>`
 - 数据回退：`backup.cmd` / `restore.cmd`（`backups/` 已 gitignore，不会进仓库）
+
+## 6. CI（在网页上启用，不需要本地权限）
+
+GitHub 的 OAuth token 缺少 `workflow` scope 时，命令行推不动 `.github/workflows`。在网页上添加即可：
+
+1. 打开 <https://github.com/super0plant/dsh-plugin-game-time/new/main?filename=.github/workflows/test.yml>
+2. 粘贴：
+
+```yaml
+name: test
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+```
+
+3. Commit → 之后每次 push 自动跑四套测试，README 可加徽章。
