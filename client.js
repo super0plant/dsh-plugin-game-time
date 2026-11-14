@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.1'
+    const VERSION = '0.11.2'
 
     const zh = {
       'panel': '游戏时长',
@@ -32,6 +32,8 @@ window.__ModuleLoader__.load({
       'today.col.day': '本日',
       'today.col.week': '本周',
       'today.col.total': '总计',
+      'today.trend': '趋势图',
+      'today.trend.hint': '左：今日 24 小时 · 右：近 7 天（滚轮切近 30 天）',
       'today.byDay': '按天',
       'today.byWeek': '按周',
       'search': '搜索游戏…',
@@ -260,6 +262,8 @@ window.__ModuleLoader__.load({
       'today.col.day': 'Today',
       'today.col.week': 'Week',
       'today.col.total': 'Total',
+      'today.trend': 'Trend',
+      'today.trend.hint': 'Left: today by hour - right: last 7 days (wheel switches to 30)',
       'today.byDay': 'By day',
       'today.byWeek': 'By week',
       'search': 'Search games…',
@@ -1849,6 +1853,7 @@ window.__ModuleLoader__.load({
       '.gt-tab:hover{opacity:.85;}',
       '.gt-tab[data-active="true"]{background:rgba(128,128,128,.20);opacity:1;}',
       '.gt-root{display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;padding:14px 22px 22px;gap:14px;overflow:auto;color:inherit;font:inherit;}',
+      '.gt-trend-module{display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(128,128,128,.26);}',
       '.gt-trend-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;}',
       '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}',
       '.gt-trend-seg{align-self:flex-end;}',
@@ -3303,7 +3308,11 @@ window.__ModuleLoader__.load({
      * along. `switchable` turns the wheel into a 7-day / 30-day switch.
      */
     function TodayTrend({ t, initialRange, switchable, grain }) {
-      const [range, setRange] = React.useState(initialRange)
+      // The 7 / 30 day choice sticks between sessions; anything unexpected
+      // falls back to the seven-day window.
+      const savedWindow = switchable ? storedPref('gt-today-window', 'last7') : 'last7'
+      const startRange = switchable ? (savedWindow === 'last30' ? 'last30' : 'last7') : initialRange
+      const [range, setRange] = React.useState(startRange)
       const [anchor, setAnchor] = React.useState(null)
       const [selected, setSelected] = React.useState(null)
       const wheelLock = React.useRef(0)
@@ -3319,7 +3328,9 @@ window.__ModuleLoader__.load({
                 const now = Date.now()
                 if (now - wheelLock.current < 280) return
                 wheelLock.current = now
-                setRange(range === 'last7' ? 'last30' : 'last7')
+                const nextRange = range === 'last7' ? 'last30' : 'last7'
+                setRange(nextRange)
+                setStoredPref('gt-today-window', nextRange)
                 setAnchor(null)
                 setSelected(null)
                 if (event.preventDefault) event.preventDefault()
@@ -3333,6 +3344,8 @@ window.__ModuleLoader__.load({
           note: rangeLabelOf(range, currentAnchor, grain),
           points: points,
           selectedKey: selected,
+          defaultType: 'line',
+          prefKey: 'gt-today-chart',
           onPan: function (delta) {
             setAnchor(panAnchor(range, currentAnchor, delta, grain))
           },
@@ -3427,9 +3440,19 @@ window.__ModuleLoader__.load({
             ),
         h(
           'div',
-          { className: 'gt-trend-row' },
-          h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1 }),
-          h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1 })
+          { className: 'gt-trend-module' },
+          h(
+            'div',
+            { className: 'gt-section' },
+            h('div', { className: 'gt-section-title' }, t('today.trend')),
+            h('div', { className: 'gt-muted' }, t('today.trend.hint'))
+          ),
+          h(
+            'div',
+            { className: 'gt-trend-row' },
+            h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1 }),
+            h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1 })
+          )
         )
       )
     }
@@ -4441,8 +4464,27 @@ window.__ModuleLoader__.load({
      * Shared cards — detail and overview render the same pieces
      * ------------------------------------------------------------------ */
 
-    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset }) {
-      const [chartType, setChartType] = React.useState('bar')
+    /** Small localStorage wrapper: preferences survive a reload, failures do not hurt. */
+    function storedPref(key, fallback) {
+      try {
+        if (typeof localStorage === 'undefined') return fallback
+        const value = localStorage.getItem(key)
+        return value === null || value === '' ? fallback : value
+      } catch (error) {
+        return fallback
+      }
+    }
+
+    function setStoredPref(key, value) {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(key, value)
+      } catch (error) {
+        /* storage blocked: the choice lasts for this session only */
+      }
+    }
+
+    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset, defaultType, prefKey }) {
+      const [chartType, setChartType] = React.useState(prefKey ? storedPref(prefKey, defaultType || 'bar') : defaultType || 'bar')
       const template = t('chart.unit')
       const heading = unit
         ? template.indexOf('{title}') >= 0
@@ -4487,6 +4529,7 @@ window.__ModuleLoader__.load({
                   'data-active': chartType === key,
                   onClick: function () {
                     setChartType(key)
+                    if (prefKey) setStoredPref(prefKey, key)
                   },
                 },
                 t('chart.' + key)

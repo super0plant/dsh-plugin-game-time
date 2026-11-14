@@ -1501,6 +1501,30 @@ function collectCards(node) {
 }
 collectCards(todayTrendTree)
 assert.equal(todayCards.length, 2, 'today shows two trend cards')
+const todaySegs = []
+function collectSegs(node) {
+  if (!node || typeof node !== 'object') return
+  if (Array.isArray(node)) {
+    node.forEach(collectSegs)
+    return
+  }
+  if (node.type === 'button' && node.props && node.props.className === 'gt-seg-btn') todaySegs.push(node)
+  collectSegs(node.children)
+}
+collectSegs(todayTrendTree)
+const lineOn = todaySegs.filter(function (button) {
+  return button.props['data-active'] === true && String(button.children).indexOf('chart.line') >= 0
+})
+assert.equal(lineOn.length, 2, 'both today charts open on the line view')
+const moduleNode = []
+function collectModule(node) {
+  if (!node || typeof node !== 'object') return
+  if (Array.isArray(node)) { node.forEach(collectModule); return }
+  if (node.props && node.props.className === 'gt-trend-module') moduleNode.push(node)
+  collectModule(node.children)
+}
+collectModule(todayTrendTree)
+assert.equal(moduleNode.length, 1, 'the trend cards sit in one module')
 console.log('  today page: two trend cards')
 // --- background cover rule: never narrower than the image ------------------
 
