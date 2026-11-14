@@ -24,8 +24,8 @@ window.__ModuleLoader__.load({
       'stat.today': '本日',
       'stat.week': '本周',
       'stat.total': '总计',
-      'empty.title': '今天还没有游戏记录',
-      'empty.body': '接入进程监控后，这里会按游戏列出今天的游玩时长。',
+      'empty.title': '当前没有进程在计时',
+      'empty.body': '把游戏 exe 或快捷方式拖到面板里，就会出现在这里。',
       'today.section': '今天玩过',
       'today.count': '{n} 款',
       'today.col.game': '游戏',
@@ -119,6 +119,12 @@ window.__ModuleLoader__.load({
       'settings.addPlatform': '添加平台',
       'settings.expand': '详细设置',
       'settings.collapse': '收起',
+      'addGame.title': '添加游戏？',
+      'addGame.name': '名称',
+      'addGame.platform': '平台',
+      'addGame.confirm': '添加',
+      'addGame.owned': '「{name}」已经在计时这个 exe，没有重复添加',
+      'drop.overlay': '松开即可添加游戏',
       'settings.dropGame.hint': '把 exe 或快捷方式拖到这里，直接添加游戏',
       'settings.dropGame.release': '松开即添加',
       'settings.dropGame.added': '已添加 {n} 个游戏',
@@ -257,8 +263,8 @@ window.__ModuleLoader__.load({
       'stat.today': 'Today',
       'stat.week': 'This week',
       'stat.total': 'Total',
-      'empty.title': 'No play time recorded today',
-      'empty.body': 'Once the process monitor is connected, today\u2019s games will show up here.',
+      'empty.title': 'Nothing is being timed right now',
+      'empty.body': 'Drop a game exe or shortcut on this panel and it will show up here.',
       'today.section': 'Played today',
       'today.count': '{n} games',
       'today.col.game': 'Game',
@@ -352,6 +358,12 @@ window.__ModuleLoader__.load({
       'settings.addPlatform': 'Add platform',
       'settings.expand': 'Details',
       'settings.collapse': 'Collapse',
+      'addGame.title': 'Add this game?',
+      'addGame.name': 'Name',
+      'addGame.platform': 'Platform',
+      'addGame.confirm': 'Add',
+      'addGame.owned': '"{name}" is already timing this exe; nothing was added',
+      'drop.overlay': 'Drop to add the game',
       'settings.dropGame.hint': 'Drop an exe or shortcut here to add a game',
       'settings.dropGame.release': 'Release to add',
       'settings.dropGame.added': 'Added {n} game(s)',
@@ -1516,7 +1528,7 @@ window.__ModuleLoader__.load({
       if (owner) return { state: 'owned', owner: owner }
       const ids = Object.keys(PLATFORMS)
       let platformId = resolved.platformId && PLATFORMS[resolved.platformId] ? resolved.platformId : ''
-      if (!platformId) platformId = ids[0]
+      if (!platformId) platformId = PLATFORMS.other ? 'other' : ids[0]
       const id = 'game-' + String(Date.now()) + '-' + String(GAMES.length)
       const name = resolved.name || t('game.new')
       GAMES.push({
@@ -1547,6 +1559,66 @@ window.__ModuleLoader__.load({
       markConfigChanged()
       return { state: 'added' }
     }
+
+    /**
+     * Preview a dropped file before it becomes a game: the confirm dialog edits
+     * the name and the platform, so nothing lands in the list by accident.
+     */
+    function draftGameFromResolved(t, resolved) {
+      const path = normalizePath(resolved && resolved.path)
+      if (!path || !/\.exe$/i.test(path)) return null
+      const owner = installOwner(path, '')
+      const fallbackPlatform = PLATFORMS.other ? 'other' : Object.keys(PLATFORMS)[0]
+      const platformId =
+        resolved && resolved.platformId && PLATFORMS[resolved.platformId]
+          ? resolved.platformId
+          : fallbackPlatform
+      const name = (resolved && resolved.name) || baseName(path).replace(/\.exe$/i, '') || t('game.new')
+      return { path: path, name: name, platformId: platformId, owned: owner || null }
+    }
+
+    /** Commit a confirmed draft: this is the only place a dropped game is added. */
+    function commitGameDraft(draft) {
+      const path = normalizePath(draft && draft.path)
+      if (!path) return null
+      if (installOwner(path, '')) return null
+      const platformId =
+        draft.platformId && PLATFORMS[draft.platformId]
+          ? draft.platformId
+          : PLATFORMS.other
+            ? 'other'
+            : Object.keys(PLATFORMS)[0]
+      const id = 'game-' + String(Date.now()) + '-' + String(GAMES.length)
+      const name = String(draft.name || '').trim() || baseName(path)
+      GAMES.push({
+        id: id,
+        name: name,
+        glyph: name.charAt(0) || '游',
+        color: COLOR_PRESETS[GAMES.length % COLOR_PRESETS.length],
+        icon: '',
+        background: '',
+        backgroundFit: 'cover',
+        imageOpacity: 1,
+        headerBackground: '',
+        platforms: [platformId],
+        installs: [{ id: id + '-i1', platformId: platformId, path: path }],
+        entries: [],
+      })
+      if (typeof fetch === 'function') {
+        extractIcon(path).then(function (icon) {
+          const game = GAMES.find(function (item) {
+            return item.id === id
+          })
+          if (icon && game && !game.icon) {
+            game.icon = icon
+            if (typeof bumpPage === 'function') bumpPage()
+          }
+        })
+      }
+      markConfigChanged()
+      return id
+    }
+
 
     function DuplicateTag({ t, duplicate }) {
       if (!duplicate) return null
@@ -2019,6 +2091,15 @@ window.__ModuleLoader__.load({
       '.gt-btn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:9px;border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;cursor:pointer;}',
       '.gt-btn:hover{background:rgba(128,128,128,.12);}',
       '.gt-btn.danger{background:#e5484d;border-color:#e5484d;color:#fff;}',
+      '.gt-btn.primary{background:#3d7dff;border-color:#3d7dff;color:#fff;}',
+      '.gt-drop-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(11,11,12,.72);border:2px dashed rgba(120,170,255,.6);color:#fff;font-size:13px;pointer-events:none;}',
+      '.gt-modal-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}',
+      '.gt-modal{width:min(420px,90vw);border-radius:12px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,#17181a);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 48px rgba(0,0,0,.4);}',
+      '.gt-modal-title{font-size:14px;font-weight:600;}',
+      '.gt-modal-path{font-size:11px;opacity:.55;word-break:break-all;}',
+      '.gt-modal-row{display:flex;align-items:center;gap:8px;}',
+      '.gt-modal-label{font-size:12px;opacity:.7;min-width:40px;}',
+      '.gt-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:2px;}',
       '.gt-btn.danger:hover{background:#d93b40;}',
       '.gt-pathfield{display:flex;gap:6px;align-items:center;min-width:0;}',
       '.gt-pathfield .gt-input{flex:1 1 auto;min-width:0;}',
@@ -3390,6 +3471,167 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /**
+     * Page-level drop target. Dropping an exe/shortcut opens a confirm dialog
+     * (name + platform) instead of adding the game silently.
+     */
+    function DropSurface({ t, className, touch, children }) {
+      const [over, setOver] = React.useState(false)
+      const [draft, setDraft] = React.useState(null)
+      const depth = React.useRef(0)
+
+      const hasFiles = function (event) {
+        const types = event.dataTransfer && event.dataTransfer.types
+        if (!types) return false
+        for (let index = 0; index < types.length; index += 1) {
+          if (types[index] === 'Files') return true
+        }
+        return false
+      }
+
+      const settleDrop = function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        depth.current = 0
+        setOver(false)
+        const files =
+          event.dataTransfer && event.dataTransfer.files
+            ? Array.prototype.slice.call(event.dataTransfer.files)
+            : []
+        if (files.length === 0) return
+        Promise.all(files.map(resolveDroppedFile)).then(function (list) {
+          const resolved = list.find(function (item) {
+            return item && item.ok
+          })
+          if (!resolved) {
+            if (typeof bumpPage === 'function') bumpPage()
+            return
+          }
+          const next = draftGameFromResolved(t, resolved)
+          if (next) setDraft(next)
+        })
+      }
+
+      return h(
+        'div',
+        {
+          className: className,
+          onDragEnter: function (event) {
+            if (!hasFiles(event)) return
+            event.preventDefault()
+            event.stopPropagation()
+            depth.current += 1
+            setOver(true)
+          },
+          onDragOver: function (event) {
+            if (!hasFiles(event)) return
+            event.preventDefault()
+            event.stopPropagation()
+            if (!over) setOver(true)
+          },
+          onDragLeave: function (event) {
+            if (!hasFiles(event)) return
+            event.stopPropagation()
+            depth.current = Math.max(0, depth.current - 1)
+            if (depth.current === 0) setOver(false)
+          },
+          onDrop: settleDrop,
+        },
+        children,
+        over ? h('div', { className: 'gt-drop-overlay' }, t('drop.overlay')) : null,
+        draft
+          ? h(AddGameDialog, {
+              t: t,
+              draft: draft,
+              onCancel: function () {
+                setDraft(null)
+              },
+              onConfirm: function (next) {
+                const id = commitGameDraft(next)
+                setDraft(null)
+                if (id && typeof touch === 'function') touch()
+                else if (typeof bumpPage === 'function') bumpPage()
+              },
+            })
+          : null
+      )
+    }
+
+    /** Confirm dialog for a dropped game: name, platform, cancel / add. */
+    function AddGameDialog({ t, draft, onCancel, onConfirm }) {
+      const [name, setName] = React.useState(draft.name)
+      const [platformId, setPlatformId] = React.useState(draft.platformId)
+      const ids = Object.keys(PLATFORMS)
+      if (ids.indexOf(platformId) < 0) ids.unshift(platformId)
+      const close = function (event) {
+        if (event && event.target !== event.currentTarget) return
+        onCancel()
+      }
+      return h(
+        'div',
+        { className: 'gt-modal-backdrop', onMouseDown: close },
+        h(
+          'div',
+          { className: 'gt-modal' },
+          h('div', { className: 'gt-modal-title' }, t('addGame.title')),
+          draft.owned
+            ? h('div', { className: 'gt-note' }, t('addGame.owned').replace('{name}', draft.owned.name))
+            : null,
+          h('div', { className: 'gt-modal-path' }, draft.path),
+          draft.owned
+            ? null
+            : h(
+                'div',
+                { className: 'gt-modal-row' },
+                h('label', { className: 'gt-modal-label' }, t('addGame.name')),
+                h('input', {
+                  className: 'gt-input',
+                  value: name,
+                  onChange: function (event) {
+                    setName(event.target.value)
+                  },
+                })
+              ),
+          draft.owned
+            ? null
+            : h(
+                'div',
+                { className: 'gt-modal-row' },
+                h('label', { className: 'gt-modal-label' }, t('addGame.platform')),
+                h(Dropdown, {
+                  value: platformId,
+                  minWidth: 140,
+                  options: ids.map(function (id) {
+                    return { value: id, label: PLATFORMS[id] ? PLATFORMS[id].name : id }
+                  }),
+                  onChange: function (value) {
+                    setPlatformId(value)
+                  },
+                })
+              ),
+          h(
+            'div',
+            { className: 'gt-modal-actions' },
+            h('button', { type: 'button', className: 'gt-btn', onClick: onCancel }, t('cancel')),
+            draft.owned
+              ? null
+              : h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'gt-btn gt-btn-primary',
+                    onClick: function () {
+                      onConfirm({ path: draft.path, name: name, platformId: platformId })
+                    },
+                  },
+                  t('addGame.confirm')
+                )
+          )
+        )
+      )
+    }
+
+
     function TodayView({ t, onOpenGame, touch }) {
       const duplicates = duplicateMap()
       const rows = GAMES.map(function (game) {
@@ -3403,8 +3645,8 @@ window.__ModuleLoader__.load({
         })
 
       return h(
-        'div',
-        { className: 'gt-root' },
+        DropSurface,
+        { t: t, className: 'gt-root', touch: touch },
         h(
           'div',
           { className: 'gt-stats' },
@@ -3491,13 +3733,13 @@ window.__ModuleLoader__.load({
     function AllView({ t, onOpenGame, touch }) {
       const [query, setQuery] = React.useState('')
       const [sort, setSort] = React.useState('total')
-      const [range, setRange] = React.useState('week')
+      const [range, setRange] = React.useState('last7')
       // `null` means "follow the current period": the window ends at today's
       // midnight (or this week's / month's end) and therefore rolls over on its
       // own. Panning stores a fixed Date and the reset button goes back to null.
       const [anchor, setAnchor] = React.useState(null)
       const currentAnchor = anchor || defaultAnchor(range)
-      const [zoom, setZoom] = React.useState(GRAIN_LEVELS.week.base)
+      const [zoom, setZoom] = React.useState(GRAIN_LEVELS.last7.base)
       const [showArchived, setShowArchived] = React.useState(false)
 
       const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
@@ -3614,8 +3856,8 @@ window.__ModuleLoader__.load({
       }, 0) + archivedTotal
 
       return h(
-        'div',
-        { className: 'gt-root' },
+        DropSurface,
+        { t: t, className: 'gt-root', touch: touch },
         h(
           'div',
           { className: 'gt-toolbar' },
@@ -4927,8 +5169,8 @@ window.__ModuleLoader__.load({
       }
 
       return h(
-        'div',
-        { className: 'gt-root' },
+        DropSurface,
+        { t: t, className: 'gt-root', touch: touch },
         h(
           'div',
           { className: 'gt-detail-head' },
@@ -7068,6 +7310,8 @@ window.__ModuleLoader__.load({
         barTopPath: barTopPath,
         chartColor: chartColor,
         compactDuration: compactDuration,
+        draftGameFromResolved: draftGameFromResolved,
+        commitGameDraft: commitGameDraft,
         tipSegments: tipSegments,
         tipSegments: tipSegments,
         totalsFor: totalsFor,

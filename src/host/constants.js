@@ -11,7 +11,7 @@ export const SESSIONS_PATH = join(DIR, 'sessions.json')
 export const PRESETS_PATH = join(DIR, 'presets.json')
 export const ACTIVE_PATH = join(DIR, 'active.json')
 export const ASSET_DIR = join(DIR, 'assets')
-export const PRESETS_VERSION = 1
+export const PRESETS_VERSION = 2
 
 export const DAY_MS = 86400000
 export const MIN_SESSION_MS = 30000
@@ -31,6 +31,8 @@ export const ACTIVE_HEARTBEAT_MS = 30000
  * Users fill them in (or drop an exe on the path field) once.
  */
 export const DEFAULT_PLATFORMS = {
+  // Tier 1: no launcher, no setup. Anything added without a platform lands here.
+  other: { id: 'other', name: '其他', short: '其', color: '#9199a3', path: '' },
   mihoyo: { id: 'mihoyo', name: '米哈游', short: '米', color: '#4f8ff7', path: '' },
   tencent: { id: 'tencent', name: 'WeGame', short: 'W', color: '#f0a53e', path: '' },
   riot: { id: 'riot', name: 'Riot', short: 'R', color: '#e35c5c', path: '' },

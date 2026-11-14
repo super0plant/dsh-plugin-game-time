@@ -1662,3 +1662,25 @@ assert.equal(testApi.setNow(new Date(2026, 10, 14, 23, 59, 59)), false, '同一�
 testApi.setNow(Date.now())
 assert.equal(testApi.dayKey(testApi.NOW), testApi.dayKey(Date.now()), '时钟恢复')
 console.log('  midnight rollover: 今日 follows the clock across 13th -> 14th -> 15th')
+// --- drag to add: the dialog is fed by a draft, not by the drop itself ------
+
+const draftGame = testApi.draftGameFromResolved(t, {
+  ok: true,
+  path: 'C:\\Games\\Demo\\DemoGame.exe',
+  name: 'DemoGame',
+  platformId: '',
+})
+assert.ok(draftGame, 'a dropped exe becomes a draft')
+assert.equal(draftGame.name, 'DemoGame', 'the draft keeps the resolved name')
+assert.ok(draftGame.platformId, 'the draft always picks a platform')
+assert.equal(draftGame.owned, null, 'a fresh exe is not owned yet')
+
+const beforeCount = testApi.GAMES.length
+const newGameId = testApi.commitGameDraft({ path: 'C:\\Games\\Demo\\DemoGame.exe', name: 'DemoGame', platformId: draftGame.platformId })
+assert.ok(newGameId, 'confirming the draft adds the game')
+assert.equal(testApi.GAMES.length, beforeCount + 1, 'one game was added')
+const addedGame = testApi.GAMES.find(function (game) { return game.id === newGameId })
+assert.ok(addedGame.installs[0].path.toLowerCase().endsWith('demogame.exe'), 'the install path is kept')
+assert.equal(testApi.commitGameDraft({ path: 'C:\\Games\\Demo\\DemoGame.exe', name: 'Again' }), null, 'the same exe cannot be added twice')
+testApi.GAMES.pop()
+console.log('  drag to add: draft, confirm, duplicate guard')
