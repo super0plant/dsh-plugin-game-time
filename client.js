@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.9.0'
+    const VERSION = '0.10.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -28,6 +28,14 @@ window.__ModuleLoader__.load({
       'empty.body': '接入进程监控后，这里会按游戏列出今天的游玩时长。',
       'today.section': '今天玩过',
       'today.count': '{n} 款',
+      'today.live': '正在游玩',
+      'today.live.session': '本次 {d}',
+      'today.live.since': '{time} 开始',
+      'today.hours': '今日时段',
+      'today.week7': '近 7 天',
+      'today.vsYesterday': '比昨天同期',
+      'today.vsLastWeek': '比上周同期',
+      'today.delta.even': '持平',
       'today.col.game': '游戏',
       'today.col.day': '本日',
       'today.col.week': '本周',
@@ -252,6 +260,14 @@ window.__ModuleLoader__.load({
       'empty.body': 'Once the process monitor is connected, today\u2019s games will show up here.',
       'today.section': 'Played today',
       'today.count': '{n} games',
+      'today.live': 'Playing now',
+      'today.live.session': 'this session {d}',
+      'today.live.since': 'since {time}',
+      'today.hours': 'Today by hour',
+      'today.week7': 'Last 7 days',
+      'today.vsYesterday': 'vs yesterday, same time',
+      'today.vsLastWeek': 'vs last week, same time',
+      'today.delta.even': 'even',
       'today.col.game': 'Game',
       'today.col.day': 'Today',
       'today.col.week': 'Week',
@@ -1956,6 +1972,21 @@ window.__ModuleLoader__.load({
       '.gt-tip-row i{margin-top:4px;}',
       '.gt-tip-name{flex:1 1 auto;min-width:0;opacity:.82;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}',
       '.gt-tip-dur{margin-left:auto;flex:0 0 auto;padding-left:4px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:.95;}',
+      '.gt-live-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(60,207,122,.35);background:rgba(60,207,122,.08);}',
+      '.gt-live-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}',
+      '.gt-live-title{font-size:13px;font-weight:600;}',
+      '.gt-live-sub{font-size:11.5px;opacity:.62;}',
+      '.gt-delta{font-size:11px;margin-top:4px;font-variant-numeric:tabular-nums;opacity:.95;}',
+      '.gt-delta.up{color:#e5484d;}',
+      '.gt-delta.down{color:#3ccf7a;}',
+      '.gt-delta.even{opacity:.45;}',
+      '.gt-mini-wrap{display:flex;flex-direction:column;gap:4px;}',
+      '.gt-mini-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}',
+      '.gt-mini-title{font-size:12px;opacity:.7;}',
+      '.gt-mini{display:block;width:100%;height:auto;color:inherit;}',
+      '.gt-mini-bar{transition:opacity .12s ease;}',
+      '.gt-mini-label{fill:currentColor;opacity:.42;font-size:7px;}',
+      '.gt-chart-glyph{font-size:11px;line-height:1;}',
       '.gt-list{display:flex;flex-direction:column;gap:1px;}',
       '.gt-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;font-size:12.5px;}',
       '.gt-list-row:hover{background:rgba(128,128,128,.07);}',
@@ -3176,12 +3207,13 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Stat({ label, value, seconds, t }) {
+    function Stat({ label, value, seconds, t, note }) {
       return h(
         'div',
         { className: 'gt-card' },
         h('div', { className: 'gt-label' }, label),
-        h('div', { className: 'gt-value' }, seconds === undefined ? value : h(Duration, { seconds: seconds, t: t }))
+        h('div', { className: 'gt-value' }, seconds === undefined ? value : h(Duration, { seconds: seconds, t: t })),
+        note ? h('div', { className: 'gt-delta ' + note.className }, note.text) : null
       )
     }
 
@@ -3276,27 +3308,259 @@ window.__ModuleLoader__.load({
      * Today view
      * ------------------------------------------------------------------ */
 
-    function TodayView({ t, onOpenGame }) {
+    /* ------------------------------------------------------------------ *
+     * Today: live card, period comparison, two mini charts, then the list
+     * ------------------------------------------------------------------ */
+
+    const WEEKDAY_SHORT = ['一', '二', '三', '四', '五', '六', '日']
+
+    /** Bar or line, remembered between sessions. */
+    function readChartPref() {
+      try {
+        if (typeof localStorage === 'undefined') return 'bar'
+        return localStorage.getItem('gt-chart-type') === 'line' ? 'line' : 'bar'
+      } catch (error) {
+        return 'bar'
+      }
+    }
+
+    let CHART_TYPE = readChartPref()
+
+    function setChartPref(next) {
+      CHART_TYPE = next === 'line' ? 'line' : 'bar'
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('gt-chart-type', CHART_TYPE)
+      } catch (error) {
+        /* storage blocked: keep the choice in memory */
+      }
+    }
+
+    /**
+     * Difference to the same point of the previous period. Under a minute reads
+     * as "even"; the percentage only exists when the previous period had data.
+     */
+    function deltaInfo(current, previous) {
+      const diff = Math.round((Number(current) || 0) - (Number(previous) || 0))
+      if (Math.abs(diff) < 60) return { dir: 0, diff: diff, pct: null }
+      return {
+        dir: diff > 0 ? 1 : -1,
+        diff: diff,
+        pct: previous > 0 ? Math.round((diff / previous) * 100) : null,
+      }
+    }
+
+    /** One small bar/line strip, used twice on the today page. */
+    function MiniChart({ t, values, labels, kind, labelEvery }) {
+      const width = 240
+      const plotHeight = 44
+      const labelHeight = 12
+      const height = plotHeight + labelHeight
+      const pad = 2
+      const count = Math.max(1, values.length)
+      const max = Math.max(1, Math.max.apply(null, values))
+      const slot = (width - pad * 2) / count
+      const barW = Math.max(1.5, Math.min(9, slot * 0.62))
+      const yOf = function (value) {
+        return pad + (plotHeight - pad * 2) * (1 - value / max)
+      }
+      const points = values.map(function (value, index) {
+        return { x: pad + slot * index + slot / 2, y: yOf(value) }
+      })
+      const color = 'currentColor'
+      const bars = values.map(function (value, index) {
+        const top = yOf(value)
+        const barHeight = Math.max(value > 0 ? 1.5 : 0, plotHeight - pad - top)
+        return h('rect', {
+          key: 'mini-bar-' + index,
+          className: 'gt-mini-bar',
+          x: pad + slot * index + (slot - barW) / 2,
+          y: top,
+          width: barW,
+          height: barHeight,
+          rx: 1.4,
+          fill: color,
+          opacity: value > 0 ? 0.82 : 0.16,
+        })
+      })
+      const lineD = smoothPath(points)
+      const lineBody = [
+        h('path', {
+          key: 'mini-line',
+          d: lineD,
+          fill: 'none',
+          stroke: color,
+          strokeWidth: 1.5,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          opacity: 0.9,
+        }),
+      ].concat(
+        points.map(function (point, index) {
+          if (!(values[index] > 0)) return null
+          return h('circle', { key: 'mini-dot-' + index, cx: point.x, cy: point.y, r: 1.5, fill: color })
+        })
+      )
+      const textLabels = (labels || []).map(function (label, index) {
+        if (labelEvery && index % labelEvery !== 0 && index !== count - 1) return null
+        return h(
+          'text',
+          {
+            key: 'mini-label-' + index,
+            className: 'gt-mini-label',
+            x: pad + slot * index + slot / 2,
+            y: height - 1,
+            textAnchor: 'middle',
+          },
+          label
+        )
+      })
+      const hits = values.map(function (value, index) {
+        return h(
+          'rect',
+          {
+            key: 'mini-hit-' + index,
+            x: pad + slot * index,
+            y: 0,
+            width: slot,
+            height: plotHeight,
+            fill: 'transparent',
+          },
+          h('title', null, (labels && labels[index] ? labels[index] + ' · ' : '') + formatDuration(value, t))
+        )
+      })
+      return h(
+        'svg',
+        { className: 'gt-mini', viewBox: '0 0 ' + width + ' ' + height, role: 'img' },
+        kind === 'line' ? lineBody : bars,
+        textLabels,
+        hits
+      )
+    }
+
+    /** "↑ 15分 (+23%) · 比昨天同期" — red for more, green for less. */
+    function deltaNote(t, delta, label) {
+      if (!delta) return null
+      if (delta.dir === 0) return { text: t('today.delta.even') + ' · ' + label, className: 'even' }
+      const sign = delta.dir > 0 ? '+' : '-'
+      const amount = formatDuration(Math.abs(delta.diff), t)
+      const pct = delta.pct === null || delta.pct === 0 ? '' : ' (' + sign + Math.abs(delta.pct) + '%)'
+      return {
+        text: (delta.dir > 0 ? '↑ ' : '↓ ') + amount + pct + ' · ' + label,
+        className: delta.dir > 0 ? 'up' : 'down',
+      }
+    }
+
+    function TodayView({ t, onOpenGame, touch }) {
       const duplicates = duplicateMap()
+      const nowMs = NOW.getTime()
+      const dayStart = startOfDay(NOW).getTime()
+      const weekStart = startOfWeek(NOW).getTime()
+      const yesterdayStart = startOfDay(new Date(dayStart - DAY_MS)).getTime()
+      const prevWeekStart = weekStart - 7 * DAY_MS
+
+      const sumBetween = function (from, to) {
+        return secondsInRange(SESSIONS, new Date(from), new Date(to))
+      }
+
+      const today = totalsFor(null, 'day', NOW)
+      const week = totalsFor(null, 'week', NOW)
+      const todayDelta = deltaNote(t, deltaInfo(today, sumBetween(yesterdayStart, yesterdayStart + (nowMs - dayStart))), t('today.vsYesterday'))
+      const weekDelta = deltaNote(t, deltaInfo(week, sumBetween(prevWeekStart, prevWeekStart + (nowMs - weekStart))), t('today.vsLastWeek'))
+
+      const hours = []
+      for (let hour = 0; hour < 24; hour += 1) {
+        const from = dayStart + hour * HOUR_MS
+        hours.push(from >= nowMs ? 0 : sumBetween(from, Math.min(from + HOUR_MS, nowMs)))
+      }
+      const hourLabels = hours.map(function (value, index) {
+        return pad2(index) + ':00'
+      })
+
+      const recent = []
+      const recentLabels = []
+      for (let offset = 6; offset >= 0; offset -= 1) {
+        const from = dayStart - offset * DAY_MS
+        recent.push(sumBetween(from, from + DAY_MS))
+        recentLabels.push(WEEKDAY_SHORT[(new Date(from).getDay() + 6) % 7])
+      }
+
+      const live = ACTIVE.map(function (item) {
+        const game = GAMES.find(function (model) {
+          return model.id === item.gameId
+        })
+        if (!game) return null
+        return { game: game, seconds: Number(item.seconds) || 0, start: Number(item.start) || nowMs }
+      }).filter(Boolean)
+
       const rows = GAMES.map(function (game) {
         const day = totalsFor(game.id, 'day', NOW)
         if (day <= 0) return null
-        return { game: game, day: day, week: totalsFor(game.id, 'week', NOW), total: totalsFor(game.id, 'all', NOW) }
+        return { game: game, day: day, week: totalsFor(game.id, 'week', NOW) }
       })
         .filter(Boolean)
-        .sort(function (a, b) {
-          return b.day - a.day
+        .sort(function (left, right) {
+          return right.day - left.day
         })
+
+      const flipChart = function () {
+        setChartPref(CHART_TYPE === 'bar' ? 'line' : 'bar')
+        if (typeof touch === 'function') touch()
+        else if (typeof bumpPage === 'function') bumpPage()
+      }
 
       return h(
         'div',
         { className: 'gt-root' },
+        live.map(function (entry) {
+          return h(
+            'div',
+            { key: 'live-' + entry.game.id, className: 'gt-live-card' },
+            h('span', { className: 'gt-dot' }),
+            h(
+              'div',
+              { className: 'gt-live-main' },
+              h('div', { className: 'gt-live-title' }, entry.game.name),
+              h(
+                'div',
+                { className: 'gt-live-sub' },
+                t('today.live.session').replace('{d}', formatDuration(entry.seconds, t)) +
+                  ' · ' +
+                  t('today.live.since').replace('{time}', clockOf(entry.start))
+              )
+            )
+          )
+        }),
         h(
           'div',
           { className: 'gt-stats' },
-          h(Stat, { label: t('stat.today'), seconds: totalsFor(null, 'day', NOW), t: t }),
-          h(Stat, { label: t('stat.week'), seconds: totalsFor(null, 'week', NOW), t: t }),
-          h(Stat, { label: t('stat.total'), seconds: totalsFor(null, 'all', NOW), t: t })
+          h(Stat, { label: t('stat.today'), seconds: today, t: t, note: todayDelta }),
+          h(Stat, { label: t('stat.week'), seconds: week, t: t, note: weekDelta })
+        ),
+        h(
+          'div',
+          { className: 'gt-mini-wrap' },
+          h(
+            'div',
+            { className: 'gt-mini-head' },
+            h('div', { className: 'gt-mini-title' }, t('today.hours')),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'gt-icon-btn small',
+                title: t(CHART_TYPE === 'bar' ? 'chart.line' : 'chart.bar'),
+                onClick: flipChart,
+              },
+              h('span', { className: 'gt-chart-glyph' }, CHART_TYPE === 'bar' ? '⌁' : '▮')
+            )
+          ),
+          h(MiniChart, { t: t, values: hours, labels: hourLabels, kind: CHART_TYPE, labelEvery: 6 })
+        ),
+        h(
+          'div',
+          { className: 'gt-mini-wrap' },
+          h('div', { className: 'gt-mini-head' }, h('div', { className: 'gt-mini-title' }, t('today.week7'))),
+          h(MiniChart, { t: t, values: recent, labels: recentLabels, kind: CHART_TYPE })
         ),
         rows.length === 0
           ? h(
@@ -3319,8 +3583,7 @@ window.__ModuleLoader__.load({
                 { className: 'gt-grid-head' },
                 h('div', null, t('today.col.game')),
                 h('div', { className: 'gt-num' }, t('today.col.day')),
-                h('div', { className: 'gt-num' }, t('today.col.week')),
-                h('div', { className: 'gt-num' }, t('today.col.total'))
+                h('div', { className: 'gt-num' }, t('today.col.week'))
               ),
               rows.map(function (row) {
                 return h(
@@ -3346,8 +3609,7 @@ window.__ModuleLoader__.load({
                     )
                   ),
                   h('div', { className: 'gt-num' }, h(Duration, { seconds: row.day, t: t })),
-                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t })),
-                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.total, t: t }))
+                  h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t }))
                 )
               })
             )
@@ -6674,7 +6936,7 @@ window.__ModuleLoader__.load({
                 setRoute({ name: route.from === 'all' ? 'all' : 'today' })
               },
             })
-          : h(TodayView, { t: t, onOpenGame: openGame })
+          : h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       } else if (route.name === 'settings') {
         body = h(GlobalSettings, {
           t: t,
@@ -6698,11 +6960,11 @@ window.__ModuleLoader__.load({
               onSettings: openGameSettings,
               touch: touch,
             })
-          : h(TodayView, { t: t, onOpenGame: openGame })
+          : h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       } else if (route.name === 'all') {
         body = h(AllView, { t: t, onOpenGame: openGame, touch: touch })
       } else {
-        body = h(TodayView, { t: t, onOpenGame: openGame })
+        body = h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       }
 
       const showTabs = route.name === 'today' || route.name === 'all'
@@ -6852,6 +7114,8 @@ window.__ModuleLoader__.load({
         normalizePath: normalizePath,
         backgroundWidth: backgroundWidth,
         smoothPath: smoothPath,
+        deltaInfo: deltaInfo,
+        setChartPref: setChartPref,
         barTopPath: barTopPath,
         chartColor: chartColor,
         tipSegments: tipSegments,

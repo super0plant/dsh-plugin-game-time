@@ -82,6 +82,15 @@
 - **不联网、无遥测、无账号**。所有统计都在本机完成。
 - 删除 `game-time` 目录即可清空全部数据；卸载插件不会自动删数据。
 
+## 备份与还原
+
+改设置、升级版本前先备份，出问题一条命令回去：
+
+- **备份**：双击 `backup.cmd`（或 `powershell -File scripts\backup.ps1`）
+  会把 `config.json / sessions.json / active.json / presets.json` 复制到 `backups\<时间>\`，并给当前代码打一个 `backup-<时间>` 的 git tag。
+- **还原**：双击 `restore.cmd`，按提示输入时间（直接回车 = 最近一次）
+  会**先把当前数据另存**再覆盖，然后把代码 `git reset --hard` 回那个 tag；宿主代码变了要重启 DSH。
+- 只想回退某一版代码：`git checkout v0.9.0 -- client.js`，或从 GitHub Releases 下载对应版本。
 ## 已知限制
 
 - 仅 Windows。

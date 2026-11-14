@@ -1427,6 +1427,37 @@ assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
 
+// --- today page: deltas and the two mini strips ----------------------------
+
+const up = testApi.deltaInfo(3600, 2700)
+assert.equal(up.dir, 1, 'more than yesterday reads as up')
+assert.equal(up.diff, 900, 'the delta is the difference in seconds')
+assert.equal(up.pct, 33, 'the percentage is rounded')
+const down = testApi.deltaInfo(1200, 1800)
+assert.equal(down.dir, -1, 'less than yesterday reads as down')
+assert.equal(down.pct, -33, 'a drop keeps its sign')
+assert.equal(testApi.deltaInfo(0, 0).dir, 0, 'nothing to nothing is even')
+assert.equal(testApi.deltaInfo(1800, 0).pct, null, 'no percentage without a baseline')
+assert.equal(testApi.deltaInfo(3600, 3570).dir, 0, 'under a minute counts as even')
+
+const todayTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(rich)')
+const todayMinis = []
+const todayLabels = []
+function collectToday(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectToday)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.type === 'svg' && node.props.className === 'gt-mini') todayMinis.push(node)
+  if (node.type === 'text' && node.props.className === 'gt-mini-label') todayLabels.push(node)
+  collectToday(node.children)
+}
+collectToday(todayTree)
+assert.equal(todayMinis.length, 2, 'today shows the hour strip and the 7-day strip')
+assert.ok(todayLabels.length >= 7, 'the strips carry labels')
+console.log('  today page: two mini strips and period deltas')
 // --- chart drawing helpers: smoothing, rounded bars, lifted colours ---------
 
 const curve = testApi.smoothPath([
