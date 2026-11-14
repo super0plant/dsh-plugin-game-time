@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.8.0'
+    const VERSION = '0.9.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -4088,69 +4088,118 @@ window.__ModuleLoader__.load({
         return Math.max(0, Math.min(points.length - 1, Math.floor((xView - pad.left) / slot)))
       }
 
-      const marks =
-        chartType === 'line'
-          ? [
+      // Line charts stack the same slices as the bars: one filled band per
+      // slice, in the same order and colours, with a thin total line on top.
+      let lowerValues = points.map(function () {
+        return 0
+      })
+      const bands = order.map(function (id) {
+        const upperValues = lowerValues.map(function (value, index) {
+          const part = (points[index].parts || []).find(function (item) {
+            return item.id === id
+          })
+          return value + (part ? part.seconds : 0)
+        })
+        const band = { id: id, lower: lowerValues.slice(), upper: upperValues.slice() }
+        lowerValues = upperValues
+        return band
+      }).filter(function (band) {
+        return band.upper.some(function (value, index) {
+          return value > band.lower[index]
+        })
+      })
+
+      const bandPath = function (lower, upper) {
+        const up = points.map(function (point, index) {
+          return { x: cx(index), y: yOf(upper[index]) }
+        })
+        const low = points.map(function (point, index) {
+          return { x: cx(index), y: yOf(lower[index]) }
+        })
+        const upD = smoothPath(up)
+        const lowReversed = low.slice().reverse()
+        const lowD = smoothPath(lowReversed)
+        if (!upD || !lowD) return ''
+        return upD + ' L ' + lowReversed[0].x + ' ' + lowReversed[0].y + lowD.slice(lowD.indexOf(' C')) + ' Z'
+      }
+
+      const areaMarks = bands.length > 1
+        ? bands.map(function (band) {
+            const d = bandPath(band.lower, band.upper)
+            if (!d) return null
+            return h('path', {
+              key: 'band-' + band.id,
+              className: 'gt-area-band',
+              d: d,
+              fill: sliceColor(band.id),
+              opacity: 0.82,
+            })
+          }).filter(Boolean)
+        : [
+            h(
+              'defs',
+              { key: 'defs' },
               h(
-                'defs',
-                { key: 'defs' },
-                h(
-                  'linearGradient',
-                  { id: gradientId, x1: 0, y1: 0, x2: 0, y2: 1 },
-                  h('stop', { offset: '0%', stopColor: stroke, stopOpacity: 0.24 }),
-                  h('stop', { offset: '100%', stopColor: stroke, stopOpacity: 0 })
-                )
-              ),
-              areaD ? h('path', { key: 'area', d: areaD, fill: 'url(#' + gradientId + ')' }) : null,
-              h('path', {
-                key: 'line-under',
-                d: lineD,
-                fill: 'none',
-                stroke: stroke,
-                strokeWidth: 4,
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-                opacity: 0.16,
-              }),
-              h('path', {
-                key: 'line',
-                d: lineD,
-                fill: 'none',
-                stroke: lineColor,
-                strokeWidth: 1.7,
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-              }),
-            ]
-              .filter(Boolean)
-              .concat(
-                showDots
-                  ? pointXY.map(function (xy, index) {
-                      const point = points[index]
-                      const active = index === hoverIndex || selectedKey === point.key
-                      const dim = point.seconds <= 0
-                      return h(
-                        'g',
-                        { key: 'dot-' + point.key },
-                        h('circle', {
-                          cx: xy.x,
-                          cy: xy.y,
-                          r: active ? 5.4 : 3.6,
-                          fill: stroke,
-                          opacity: dim ? 0.08 : active ? 0.26 : 0.16,
-                        }),
-                        h('circle', {
-                          cx: xy.x,
-                          cy: xy.y,
-                          r: active ? 2.8 : 2,
-                          fill: lineColor,
-                          opacity: dim ? 0.25 : 1,
-                        })
-                      )
-                    })
-                  : []
+                'linearGradient',
+                { id: gradientId, x1: 0, y1: 0, x2: 0, y2: 1 },
+                h('stop', { offset: '0%', stopColor: stroke, stopOpacity: 0.24 }),
+                h('stop', { offset: '100%', stopColor: stroke, stopOpacity: 0 })
               )
-          : bars
+            ),
+            areaD ? h('path', { key: 'area', d: areaD, fill: 'url(#' + gradientId + ')' }) : null,
+          ].filter(Boolean)
+
+      const lineMarks = [
+        h('path', {
+          key: 'line-under',
+          d: lineD,
+          fill: 'none',
+          stroke: stroke,
+          strokeWidth: 3,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          opacity: bands.length > 1 ? 0.1 : 0.14,
+        }),
+        h('path', {
+          key: 'line',
+          className: 'gt-chart-line',
+          d: lineD,
+          fill: 'none',
+          stroke: lineColor,
+          strokeWidth: 1.2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+      ]
+
+      const dotMarks = showDots
+        ? pointXY.map(function (xy, index) {
+            const point = points[index]
+            const active = index === hoverIndex || selectedKey === point.key
+            const dim = point.seconds <= 0
+            return h(
+              'g',
+              { key: 'dot-' + point.key },
+              h('circle', {
+                cx: xy.x,
+                cy: xy.y,
+                r: active ? 4.6 : 3,
+                fill: stroke,
+                opacity: dim ? 0.08 : active ? 0.24 : 0.14,
+              }),
+              h('circle', {
+                cx: xy.x,
+                cy: xy.y,
+                r: active ? 2.4 : 1.7,
+                fill: lineColor,
+                opacity: dim ? 0.25 : 1,
+              })
+            )
+          })
+        : []
+
+      const marks =
+        chartType === 'line' ? [].concat(areaMarks, lineMarks, dotMarks) : bars
 
       const guide = hoverPoint
         ? h('line', {

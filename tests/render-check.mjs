@@ -224,6 +224,47 @@ for (const bar of chartBars) {
   if (!d.endsWith('Z')) throw new Error('a bar path must close')
 }
 
+// --- line chart: one stacked band per slice, thin total line --------------
+
+const lineTree = render(
+  testApi.Chart,
+  { t, points: stackedPoints, chartType: 'line', selectedKey: null, onSelect() {} },
+  'Chart(line stacked)'
+)
+const lineBands = []
+const lineStrokes = []
+function collectLine(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectLine)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.type === 'path' && node.props.className === 'gt-area-band') lineBands.push(node)
+  if (node.type === 'path' && node.props.className === 'gt-chart-line') lineStrokes.push(node)
+  collectLine(node.children)
+}
+collectLine(lineTree)
+const visibleSlices = Object.keys(
+  stackedPoints.reduce(function (map, point) {
+    (point.parts || []).forEach(function (part) {
+      if (part.seconds > 0) map[part.id] = true
+    })
+    return map
+  }, {})
+).length
+assert.ok(visibleSlices > 1, 'the fixture needs several slices to exercise bands')
+assert.equal(lineBands.length, visibleSlices, 'one band per visible slice')
+for (const band of lineBands) {
+  const d = band.props.d
+  assert.ok(typeof d === 'string' && d.indexOf('M ') === 0, 'a band path starts at the first point')
+  assert.ok(d.endsWith('Z'), 'a band path closes back to the baseline')
+  assert.ok(d.indexOf('NaN') === -1, 'no NaN in a band path')
+}
+assert.equal(lineStrokes.length, 1, 'exactly one total line sits on top')
+assert.ok(lineStrokes[0].props.strokeWidth <= 1.3, 'the total line stays thin')
+console.log('  line chart: stacked slice bands with a thin total line')
+
 // --- y axis --------------------------------------------------------------
 // Real translations here: the width estimate below assumes the shipped glyphs,
 // not the "minute"/"hour" keys the generic harness returns.
