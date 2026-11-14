@@ -11,6 +11,8 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
+    const VERSION = '0.4.0'
+
     const zh = {
       'panel': '游戏时长',
       'title': '游戏时长',
@@ -116,7 +118,7 @@ window.__ModuleLoader__.load({
       'settings.data.retention': '历史永久保留；默认加载最近 1 年，更早的记录按需加载',
       'settings.data.later': '导入 / 导出 / 清空在接入采集后提供',
       'settings.note': '本轮为演示状态，改动不会保存；接入采集后这些设置会落盘。',
-      'settings.credit': '作者：super0plant',
+      'settings.credit': 'super0plant — local-first tools for DSH · v{v}',
       'game.platforms': '平台',
       'game.platforms.hint': '关掉的平台会从徽标、详情统计和总时长里隐藏。',
       'game.runs': '启动方式',
@@ -338,7 +340,7 @@ window.__ModuleLoader__.load({
       'settings.data.retention': 'Sessions kept forever; the last year loads by default, older pages on demand',
       'settings.data.later': 'Import, export and reset arrive with the collector',
       'settings.note': 'Demo state — changes are not saved. They persist once the collector is wired.',
-      'settings.credit': 'Created by super0plant',
+      'settings.credit': 'super0plant — local-first tools for DSH · v{v}',
       'game.platforms': 'Platforms',
       'game.platforms.hint': 'Disabled platforms disappear from badges, the breakdown and the totals.',
       'game.runs': 'Launch entries',
@@ -5482,7 +5484,7 @@ window.__ModuleLoader__.load({
             h(Field, { label: t('settings.data.retention') }),
             h(Field, { label: t('settings.data.later'), hint: t('settings.note') })
           ),
-          h('div', { className: 'gt-credit' }, t('settings.credit'))
+          h('div', { className: 'gt-credit' }, t('settings.credit').replace('{v}', VERSION))
         ),
         pendingGame
           ? h(Confirm, {

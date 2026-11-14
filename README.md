@@ -47,6 +47,8 @@
 
 ## 独立网页版（不装 DSH）
 
+> ⏸ **暂停维护（0.4.0 起）**：这一节保留做参考，代码还在 `standalone/`，但不再随版本更新、不再进 npm 包、也不再测试。主线是 DSH 插件。想复活的话见 `HANDOFF.md`（`server.mjs` + `launcher.ps1` 都还在，不是重写）。
+
 网页版是**另一个包**（Release 里的 `game-time-web.zip`，老版本叫 `game-time-web-<版本>.zip`），和 DSH 插件包分开解压、分开存放，互不覆盖。
 
 1. **先解除锁定**，否则 Windows 会弹「此文件来自其他计算机」：右键 zip → 属性 → 勾「解除锁定」→ 确定，然后再解压。已经解压过的，可以对 zip 运行 `Unblock-File .\game-time-web-0.2.1.zip` 后重新解压。

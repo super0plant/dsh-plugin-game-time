@@ -16,7 +16,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.3.2（修「面板开着过夜今日不翻页」，见 §1；上一版 0.3.1 修「后台启动器抢归属」，见 §6）；已出包的是 0.3.0（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化、MOTW 分发说明进 README、双采集器硬互斥、自动发现（§11）、`foregroundOnly`。
+**当前状态**：源码 0.4.0（进行中：网页版暂停维护 + 页脚署名 + 删掉 `foregroundOnly` 空开关，见 §1）；**独立网页版已冻结**，主线只有 DSH 插件；已出包的是 0.3.2（DSH 插件包 + 网页包，含历史永久保留 + 懒加载，见 §1/§7/§8）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：自启 launcher 化（已冻结）、MOTW 分发说明进 README（已冻结）、双采集器硬互斥、自动发现（§11）、`foregroundOnly` 的替代方案（按游戏暂停，见 §10）。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -26,6 +26,8 @@
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-14 · 0.4.0 线开张（批 1/2）**：① 打了回退锚点 `v0.3.2-final`（本地 + 远端都有），0.4.0 做坏时 `git reset --hard v0.3.2-final` 就回到现在的样子；② 版本号 → **0.4.0**（删设置项属于行为变化，按 semver 走 minor）；③ **独立网页版暂停维护**：代码留在 `standalone/`，README 那一节加了「暂停维护」说明，不再宣传、不再测试（`npm test` 里仍会跑 `standalone-check`，它只在包内缺 `standalone/` 时跳过——**下个版本考虑把它摘出默认测试**）；④ 设置页页脚从「作者：super0plant」改成开发者署名式 `super0plant — local-first tools for DSH · v0.4.0`，版本号由 `client.js` 里的 `VERSION` 常量提供（以后发版只改这一处 + `package.json`）。批 2 是删掉 `foregroundOnly` 空开关。
 
 - **2026-11-14 · 品牌定名 super0plant（发布准备）**：包名仍是 `dsh-plugin-game-time`（npm 上查过未占用；社区惯例比 scope 更好搜）。`package.json` 的 `author` / `repository` / `homepage` / `bugs` 从 `OWNER` 占位换成 `super0plant`，`keywords` 补 `deepseek-harness` / `playtime-tracker` / `game-tracker` / `local-first`；MIT 版权行、README、两个 locale 的 `meta.description`、设置页署名（`settings.credit`）统一成 `super0plant（茄子超人）`。`publish/` 的收录条目按规范改名成 `data-plugins-super0plant__dsh-plugin-game-time.yml`，**分类从 `usage` 改成 `fun`**（`usage` 在 awesome 里是「用量与计费」，游戏时长属于「🎮 娱乐」）。验证：五套测试全绿 + 重新打包 0.3.2。纯文案/元数据，**不用重启 DSH**。
   - 2026-11-14 补充：GitHub 账号确认是**主号改名**（id 90775956、注册于 2021-09-15），不是新号，ToS 上没问题。本地 10 个 commit 的作者从 `yjs <1060143199@qq.com>` 统一重写成 `super0plant <90775956+super0plant@users.noreply.github.com>`（用 `git commit-tree` 重建，因为沙箱里 `rebase --exec` / `filter-branch` 要启 sh，会被管道限制打断）；仓库还没 remote，改写后 hash 全变但树一致、工作区干净。新增 `assets/icon-460.png`（GitHub 头像用）和 `assets/icon-180.png`（市场卡片用）；npm 包 `files` 去掉 `icon.png`（555 KB，运行时不引用，包体积 840 KB → 约 285 KB），`icon.ico` 必须留（独立版 launcher 和 index.html 都读它）。
