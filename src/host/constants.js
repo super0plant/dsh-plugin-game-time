@@ -41,7 +41,7 @@ export const DEFAULT_PLATFORMS = {
 
 export const DEFAULT_CONFIG = {
   version: 3,
-  settings: { intervalSec: 10, autostart: true, density: 'comfortable', historyDays: HISTORY_DAYS },
+  settings: { intervalSec: 10, autostart: true, density: 'comfortable', historyDays: HISTORY_DAYS, baseColor: '#0b0b0c' },
   platforms: DEFAULT_PLATFORMS,
   games: [],
 }

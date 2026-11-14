@@ -184,9 +184,7 @@ export function sanitizeConfig(input) {
       icon: iconOf(item.icon),
       background: assetRef(item.background),
       backgroundFit: item.backgroundFit === 'tile' ? 'tile' : 'cover',
-      backgroundOpacity: clamp01(item.backgroundOpacity, 0.18),
-      backgroundMask: colorOf(item.backgroundMask, '#000000'),
-      backgroundMaskOpacity: clamp01(item.backgroundMaskOpacity, 0.25),
+      imageOpacity: clamp01(item.imageOpacity, 1),
       headerBackground: assetRef(item.headerBackground),
       platforms: used,
       installs: rawInstalls.map((install) => ({
@@ -224,12 +222,13 @@ export function sanitizeConfig(input) {
         value: clampRange(rawArchive.value, 1, archiveMax, archiveUnit === 'month' ? 2 : 60),
         unit: archiveUnit,
       },
+      // Opaque panel base: DSH's own custom colours must not bleed through the
+      // plugin, so the background is a solid colour with the image on top.
+      baseColor: colorOf(settings.baseColor, '#0b0b0c'),
       background: assetRef(settings.background),
       backgroundFit: settings.backgroundFit === 'tile' ? 'tile' : 'cover',
-      backgroundOpacity: clamp01(settings.backgroundOpacity, 0.18),
-      backgroundMask: colorOf(settings.backgroundMask, '#000000'),
+      imageOpacity: clamp01(settings.imageOpacity, 1),
       surfaceColor: colorOf(settings.surfaceColor, '#000000'),
-      backgroundMaskOpacity: clamp01(settings.backgroundMaskOpacity, 0.25),
       headerBackground: assetRef(settings.headerBackground),
       headerHeight: clampRange(settings.headerHeight, 80, 900, 300),
       headerFade: clampRange(settings.headerFade, 0, 95, 52),

@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.4.1'
+    const VERSION = '0.4.2'
 
     const zh = {
       'panel': '游戏时长',
@@ -103,6 +103,7 @@ window.__ModuleLoader__.load({
       'settings.density': '界面密度',
       'settings.density.comfortable': '舒适',
       'settings.density.compact': '紧凑',
+      'settings.density.hint': '紧凑会收紧行距、字号和内边距，一屏能多看一行。',
       'settings.platforms': '启动平台',
       'settings.platforms.hint': '详情页的平台分布按这里的清单聚合。',
       'settings.addPlatform': '添加平台',
@@ -114,13 +115,13 @@ window.__ModuleLoader__.load({
       'settings.dropGame.owned': '「{name}」已经在计时这个 exe，没有重复添加',
       'settings.data': '数据',
       'settings.data.retention': '历史永久保留；默认加载最近 1 年，更早的记录按需加载',
-      'settings.data.later': '导入 / 导出 / 清空在接入采集后提供',
-      'settings.note': '本轮为演示状态，改动不会保存；接入采集后这些设置会落盘。',
+      'settings.data.later': '数据文件',
+      'settings.data.path': '全部数据在 %USERPROFILE%\\.dsh\\storages\\game-time\\：config.json 是设置，sessions.json 是全部会话。导入 / 导出暂未提供。',
       'settings.credit': '游戏时长 v{v} · super0plant',
       'game.platforms': '平台',
       'game.platforms.hint': '关掉的平台会从徽标、详情统计和总时长里隐藏。',
       'game.runs': '启动方式',
-      'game.runs.hint': '一个游戏可以有多个启动入口，时长合并到同一个游戏。',
+      'game.runs.hint': '一个游戏可以有多个启动入口，时长合并。',
       'game.run.add': '添加启动方式',
       'game.run.path': '启动文件或启动器路径',
       'game.name': '名称',
@@ -132,7 +133,7 @@ window.__ModuleLoader__.load({
       'game.delete.body': '「{name}」及其全部历史记录会被删除，无法恢复。',
       'game.path': '游戏路径',
       'game.path.placeholder': '游戏本体 exe，例如 D:\\...\\ZenlessZoneZero.exe',
-      'game.path.hint': '填游戏本体：监控进程会从它自动识别，不需要手打。',
+      'game.path.hint': '游戏本体的 exe；进程名从它自动识别。',
       'game.watch.dir': '限定目录：{dir}',
       'pick': '选择文件',
       'reveal': '打开所在位置',
@@ -145,21 +146,21 @@ window.__ModuleLoader__.load({
       'icon.pick': '更换图标',
       'icon.reset': '移除图标',
       'game.icon': '图标',      'game.background': '背景图',
-      'game.background.hint': '显示在详情页顶部，底部渐变淡出。',
+      'game.background.hint': '只在这个游戏的页面显示；这里不设，就用全局的底色。',
       'settings.background': '主界面背景',
-      'settings.background.hint': '铺在面板最底层，半透明，不影响阅读。',
-      'bg.surface': '区块透明度',
+      'settings.background.hint': '纯色打底、图片叠加：底色不透明，DSH 自己的配色透不上来；图片浓淡由下面的滑杆调。',
+      'bg.base': '底色',
+      'bg.base.hint': '面板最底层的纯色，完全不透明。',
       'settings.headerBackground': '标题背景',
       'settings.surfaceColor': '模块背景色',
-      'settings.surfaceColor.hint': '所有卡片和面板的底色，默认黑色。',
+      'settings.surfaceColor.hint': '卡片和面板的底色，会和底色叠出层次。',
       'game.headerBackground': '标题背景',
       'game.headerBackground.hint': '只在这个游戏的页面生效，留空则用总设置的标题背景。',
-      'settings.headerBackground.hint': '只铺在顶部标题栏，向下淡出。',
+      'settings.headerBackground.hint': '只铺在顶部标题栏，向下渐隐。',
       'settings.headerHeight': '高度 (px)',
       'settings.headerFade': '渐变起点 (%)',
-      'bg.opacity': '图片透明度',
-      'bg.mask': '蒙版颜色',
-      'bg.maskOpacity': '蒙版浓度',      'crop.zoom': '缩放',
+      'bg.imageOpacity': '图片透明度',
+      'crop.zoom': '缩放',
       'crop.apply': '确定',
       'crop.hint': '拖动调整位置',
       'image.choose': '选择图片',
@@ -169,7 +170,7 @@ window.__ModuleLoader__.load({
       'fit.cover': '铺满',
       'fit.tile': '平铺',      'game.installs': '安装位置',
       'game.installs.add': '添加安装位置',
-      'game.installs.hint': '一行 = 一个平台的一份安装。填游戏本体 exe，进程名自动识别，空着就不计时。',
+      'game.installs.hint': '一行 = 一个平台的一份安装；留空则该行不计时。',
       'drop.hint': '可以把 exe 或快捷方式拖到这里，自动解析路径和名称',
       'drop.hintBrowser': '网页版可以直接拖 .url / .lnk；exe 拿不到路径，请点右侧文件夹按钮选择',
       'drop.release': '松开即可添加',
@@ -324,6 +325,7 @@ window.__ModuleLoader__.load({
       'settings.density': 'Density',
       'settings.density.comfortable': 'Comfortable',
       'settings.density.compact': 'Compact',
+      'settings.density.hint': 'Compact tightens rows, type and padding so one more line fits on screen.',
       'settings.platforms': 'Platforms',
       'settings.platforms.hint': 'The per-game platform breakdown aggregates over this list.',
       'settings.addPlatform': 'Add platform',
@@ -335,13 +337,13 @@ window.__ModuleLoader__.load({
       'settings.dropGame.owned': '"{name}" already times this exe; nothing was added',
       'settings.data': 'Data',
       'settings.data.retention': 'Sessions kept forever; the last year loads by default, older pages on demand',
-      'settings.data.later': 'Import, export and reset arrive with the collector',
-      'settings.note': 'Demo state — changes are not saved. They persist once the collector is wired.',
+      'settings.data.later': 'Data files',
+      'settings.data.path': 'Everything lives in %USERPROFILE%\\.dsh\\storages\\game-time\\: config.json holds settings, sessions.json holds every session. Import and export are not available yet.',
       'settings.credit': 'Game Time v{v} · super0plant',
       'game.platforms': 'Platforms',
       'game.platforms.hint': 'Disabled platforms disappear from badges, the breakdown and the totals.',
       'game.runs': 'Launch entries',
-      'game.runs.hint': 'One game may have several launch entry points; play time merges into the game.',
+      'game.runs.hint': 'Several launch entries merge their time into one game.',
       'game.run.add': 'Add launch entry',
       'game.run.path': 'Launcher or game executable path',
       'game.name': 'Name',
@@ -353,7 +355,7 @@ window.__ModuleLoader__.load({
       'game.delete.body': '“{name}” and all of its recorded history will be removed. This cannot be undone.',
       'game.path': 'Game path',
       'game.path.placeholder': 'Game executable, e.g. D:\\...\\ZenlessZoneZero.exe',
-      'game.path.hint': 'Point at the game itself; the watched process is derived from it.',
+      'game.path.hint': 'The game exe itself; the process name is read from it.',
       'game.watch.dir': 'Limited to {dir}',
       'pick': 'Choose file',
       'reveal': 'Show in folder',
@@ -366,21 +368,21 @@ window.__ModuleLoader__.load({
       'icon.pick': 'Change icon',
       'icon.reset': 'Remove icon',
       'game.icon': 'Icon',      'game.background': 'Background',
-      'game.background.hint': 'Shown behind the detail header, fading out at the bottom.',
+      'game.background.hint': 'Only on this game page; empty keeps the global base colour.',
       'settings.background': 'Panel background',
-      'settings.background.hint': 'Painted behind the panel at low opacity.',
-      'bg.surface': 'Block opacity',
+      'settings.background.hint': 'Solid colour with the image on top: the base is opaque, so DSH colours never show through. Use the slider for image strength.',
+      'bg.base': 'Base colour',
+      'bg.base.hint': 'The opaque colour under everything.',
       'settings.headerBackground': 'Header background',
       'settings.surfaceColor': 'Block colour',
-      'settings.surfaceColor.hint': 'Base colour of cards and panels; black by default.',
+      'settings.surfaceColor.hint': 'Card and panel colour; layers over the base colour.',
       'game.headerBackground': 'Header background',
       'game.headerBackground.hint': 'Only inside this game; empty falls back to the global header image.',
-      'settings.headerBackground.hint': 'Painted behind the top bar only, fading downwards.',
+      'settings.headerBackground.hint': 'Behind the top bar only, fading downwards.',
       'settings.headerHeight': 'Height (px)',
       'settings.headerFade': 'Fade start (%)',
-      'bg.opacity': 'Image opacity',
-      'bg.mask': 'Mask colour',
-      'bg.maskOpacity': 'Mask strength',      'crop.zoom': 'Zoom',
+      'bg.imageOpacity': 'Image opacity',
+      'crop.zoom': 'Zoom',
       'crop.apply': 'Apply',
       'crop.hint': 'Drag to reposition',
       'image.choose': 'Choose image',
@@ -390,7 +392,7 @@ window.__ModuleLoader__.load({
       'fit.cover': 'Cover',
       'fit.tile': 'Tile',      'game.installs': 'Installs',
       'game.installs.add': 'Add install',
-      'game.installs.hint': 'One row per platform install. Point at the game executable; the process is derived. Empty means no timing.',
+      'game.installs.hint': 'One row per platform install; empty rows never count time.',
       'drop.hint': 'Drop an exe or shortcut here to add it automatically',
       'drop.hintBrowser': 'The web build reads .url / .lnk drops; for an exe use the folder button',
       'drop.release': 'Release to add',
@@ -957,6 +959,8 @@ window.__ModuleLoader__.load({
       autostart: true,
       density: 'comfortable',
       historyDays: 365,
+      baseColor: '#0b0b0c',
+      imageOpacity: 1,
       autoArchive: { enabled: false, value: 60, unit: 'day' },
     }
 
@@ -1480,9 +1484,7 @@ window.__ModuleLoader__.load({
         icon: '',
         background: '',
         backgroundFit: 'cover',
-        backgroundOpacity: 0.18,
-        backgroundMask: '#000000',
-        backgroundMaskOpacity: 0.25,
+        imageOpacity: 1,
         headerBackground: '',
         platforms: [platformId],
         installs: [{ id: id + '-i1', platformId: platformId, path: path }],
@@ -1987,10 +1989,11 @@ window.__ModuleLoader__.load({
       '.gt-imagefield-hint{font-size:12px;opacity:.55;}',
       '.gt-bg-controls{display:flex;flex-wrap:wrap;gap:10px 18px;padding:2px 0 10px;}',
       '.gt-bg-control{display:flex;align-items:center;gap:6px;font-size:11.5px;opacity:.75;}',
+      '.gt-bg-value{font-size:11px;opacity:.7;min-width:32px;text-align:right;font-variant-numeric:tabular-nums;}',
       '.gt-bg-control input[type=\"range\"]{width:80px;}',
-      '.gt-bg-mask{position:absolute;inset:0;z-index:0;pointer-events:none;}',      '.gt-banner{height:104px;border-radius:12px;background-size:cover;background-position:center;flex:0 0 auto;-webkit-mask-image:linear-gradient(to bottom,#000 45%,transparent);mask-image:linear-gradient(to bottom,#000 45%,transparent);}',
+      '.gt-banner{height:104px;border-radius:12px;background-size:cover;background-position:center;flex:0 0 auto;-webkit-mask-image:linear-gradient(to bottom,#000 45%,transparent);mask-image:linear-gradient(to bottom,#000 45%,transparent);}',
       '.gt-banner.tile{background-size:auto;background-repeat:repeat;}',
-      '.gt-bg{position:absolute;inset:0;z-index:0;opacity:.16;pointer-events:none;background-position:center top;}',
+      '.gt-bg{position:absolute;inset:0;z-index:0;pointer-events:none;background-position:center top;}',
       '.gt-top{position:relative;z-index:1;}',
       '.gt-header-bg{position:absolute;top:0;left:0;right:0;height:var(--gt-header-height,300px);z-index:0;opacity:.55;pointer-events:none;background-size:cover;background-position:center top;-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 var(--gt-header-fade,52%),transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 var(--gt-header-fade,52%),transparent 100%);}',
       '.gt-head{position:relative;z-index:1;}',      '.gt-drag{cursor:grab;opacity:.4;font-size:13px;line-height:1;user-select:none;flex:0 0 auto;padding:2px 1px;}',
@@ -2053,11 +2056,16 @@ window.__ModuleLoader__.load({
       '.gt-gamepill-dup{width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex:0 0 auto;}',
       '.gt-link{font:inherit;font-size:12.5px;color:inherit;background:transparent;border:0;padding:6px 0;cursor:pointer;opacity:.75;text-decoration:none;}',
       '.gt-link:hover{opacity:1;}',
-      '.gt-compact .gt-root{padding:10px 18px 16px;gap:10px;}',
-      '.gt-compact .gt-row{padding:6px 8px;}',
-      '.gt-compact .gt-value{font-size:21px;}',
-      '.gt-compact .gt-card{padding:10px 12px;}',
-      '.gt-compact .gt-panel-card{padding:10px 12px;}',
+      '.gt-compact .gt-root{padding:8px 14px 12px;gap:8px;}',
+      '.gt-compact .gt-title{font-size:15px;}',
+      '.gt-compact .gt-tab{padding:5px 10px;font-size:12px;}',
+      '.gt-compact .gt-row{padding:4px 7px;}',
+      '.gt-compact .gt-name{font-size:12px;}',
+      '.gt-compact .gt-value{font-size:18px;margin-top:3px;}',
+      '.gt-compact .gt-card{padding:8px 10px;}',
+      '.gt-compact .gt-panel-card{padding:8px 10px;}',
+      '.gt-compact .gt-list-row{padding:4px 7px;font-size:12px;}',
+      '.gt-compact .gt-section-title{font-size:12px;}',
     ].join('')
 
     /* ------------------------------------------------------------------ *
@@ -2677,53 +2685,29 @@ window.__ModuleLoader__.load({
         })
     }
 
+    /**
+     * Background image opacity only. The opaque base colour lives one level up
+     * (global settings) because the panel base is shared by every page.
+     */
     function BackgroundControls({ t, value, onChange }) {
-      const opacity = value.opacity === undefined ? 0.18 : value.opacity
-      const mask = value.mask || '#000000'
-      const maskOpacity = value.maskOpacity === undefined ? 0.25 : value.maskOpacity
+      const imageOpacity = value.imageOpacity === undefined ? 1 : value.imageOpacity
       return h(
         'div',
         { className: 'gt-bg-controls' },
         h(
           'label',
           { className: 'gt-bg-control' },
-          h('span', null, t('bg.surface')),
-          h('input', {
-            type: 'range',
-            min: 0,
-            max: 80,
-            value: Math.round(opacity * 100),
-            onChange: function (event) {
-              onChange({ opacity: Number(event.target.value) / 100 })
-            },
-          })
-        ),
-        h(
-          'label',
-          { className: 'gt-bg-control' },
-          h('span', null, t('bg.mask')),
-          h('input', {
-            type: 'color',
-            className: 'gt-color',
-            value: mask,
-            onChange: function (event) {
-              onChange({ mask: event.target.value })
-            },
-          })
-        ),
-        h(
-          'label',
-          { className: 'gt-bg-control' },
-          h('span', null, t('bg.maskOpacity')),
+          h('span', null, t('bg.imageOpacity')),
           h('input', {
             type: 'range',
             min: 0,
             max: 100,
-            value: Math.round(maskOpacity * 100),
+            value: Math.round(imageOpacity * 100),
             onChange: function (event) {
-              onChange({ maskOpacity: Number(event.target.value) / 100 })
+              onChange({ imageOpacity: Number(event.target.value) / 100 })
             },
-          })
+          }),
+          h('span', { className: 'gt-bg-value' }, Math.round(imageOpacity * 100) + '%')
         )
       )
     }
@@ -4790,9 +4774,7 @@ window.__ModuleLoader__.load({
           icon: '',
           background: '',
           backgroundFit: 'cover',
-          backgroundOpacity: 0.18,
-          backgroundMask: '#000000',
-          backgroundMaskOpacity: 0.25,
+          imageOpacity: 1,
           headerBackground: '',
           platforms: [ids[0]],
           installs: [],
@@ -5014,7 +4996,6 @@ window.__ModuleLoader__.load({
             gameDropNote
               ? h('div', { className: 'gt-note gt-drop-note' + (gameDropWarn ? ' gt-warn' : '') }, gameDropNote)
               : null,
-            h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.note'))
           ),
           h(
             'div',
@@ -5327,7 +5308,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'gt-group-title' }, t('settings.ui')),
             h(
               Field,
-              { label: t('settings.density') },
+              { label: t('settings.density'), hint: t('settings.density.hint') },
               h(Dropdown, {
                 value: SETTINGS.density,
                 minWidth: 110,
@@ -5419,6 +5400,19 @@ window.__ModuleLoader__.load({
             'div',
             { className: 'gt-group' },
             h('div', { className: 'gt-group-title' }, t('settings.background')),
+            h(
+              Field,
+              { label: t('bg.base'), hint: t('bg.base.hint') },
+              h('input', {
+                type: 'color',
+                className: 'gt-color',
+                value: SETTINGS.baseColor || '#0b0b0c',
+                onChange: function (event) {
+                  SETTINGS.baseColor = event.target.value
+                  touch()
+                },
+              })
+            ),
             h(ImageField, {
               t: t,
               value: SETTINGS.background || '',
@@ -5436,15 +5430,9 @@ window.__ModuleLoader__.load({
             }),
             h(BackgroundControls, {
               t: t,
-              value: {
-                opacity: SETTINGS.backgroundOpacity,
-                mask: SETTINGS.backgroundMask,
-                maskOpacity: SETTINGS.backgroundMaskOpacity,
-              },
+              value: { imageOpacity: SETTINGS.imageOpacity },
               onChange: function (patch) {
-                if (patch.opacity !== undefined) SETTINGS.backgroundOpacity = patch.opacity
-                if (patch.mask !== undefined) SETTINGS.backgroundMask = patch.mask
-                if (patch.maskOpacity !== undefined) SETTINGS.backgroundMaskOpacity = patch.maskOpacity
+                if (patch.imageOpacity !== undefined) SETTINGS.imageOpacity = patch.imageOpacity
                 touch()
               },
             }),
@@ -5507,7 +5495,7 @@ window.__ModuleLoader__.load({
             { className: 'gt-group' },
             h('div', { className: 'gt-group-title' }, t('settings.data')),
             h(Field, { label: t('settings.data.retention') }),
-            h(Field, { label: t('settings.data.later'), hint: t('settings.note') })
+            h(Field, { label: t('settings.data.later'), hint: t('settings.data.path') })
           ),
           h('div', { className: 'gt-credit' }, t('settings.credit').replace('{v}', VERSION))
         ),
@@ -5882,15 +5870,9 @@ window.__ModuleLoader__.load({
             }),
             h(BackgroundControls, {
               t: t,
-              value: {
-                opacity: game.backgroundOpacity,
-                mask: game.backgroundMask,
-                maskOpacity: game.backgroundMaskOpacity,
-              },
+              value: { imageOpacity: game.imageOpacity },
               onChange: function (patch) {
-                if (patch.opacity !== undefined) game.backgroundOpacity = patch.opacity
-                if (patch.mask !== undefined) game.backgroundMask = patch.mask
-                if (patch.maskOpacity !== undefined) game.backgroundMaskOpacity = patch.maskOpacity
+                if (patch.imageOpacity !== undefined) game.imageOpacity = patch.imageOpacity
                 touch()
               },
             }),
@@ -6292,24 +6274,18 @@ window.__ModuleLoader__.load({
 
       const bgUrl = activeGame ? activeGame.background || '' : SETTINGS.background || ''
       const bgFit = activeGame ? activeGame.backgroundFit || 'cover' : SETTINGS.backgroundFit || 'cover'
+      // Image opacity only: the panel base is an opaque colour, so DSH's own
+      // styling can never show through and mix with the image.
       const bgOpacity =
-        (activeGame ? activeGame.backgroundOpacity : SETTINGS.backgroundOpacity) === undefined
-          ? 0.18
+        (activeGame ? activeGame.imageOpacity : SETTINGS.imageOpacity) === undefined
+          ? 1
           : activeGame
-            ? activeGame.backgroundOpacity
-            : SETTINGS.backgroundOpacity
-      const surfaceSource = activeGame ? activeGame.backgroundOpacity : SETTINGS.backgroundOpacity
-      const surfaceAlpha = surfaceSource === undefined ? 0.05 : surfaceSource
+            ? activeGame.imageOpacity
+            : SETTINGS.imageOpacity
+      const baseColor = SETTINGS.baseColor || '#0b0b0c'
       const headerBg = activeGame
         ? activeGame.headerBackground || SETTINGS.headerBackground || ''
         : SETTINGS.headerBackground || ''
-      const bgMask = activeGame ? activeGame.backgroundMask || '#000000' : SETTINGS.backgroundMask || '#000000'
-      const bgMaskOpacity =
-        (activeGame ? activeGame.backgroundMaskOpacity : SETTINGS.backgroundMaskOpacity) === undefined
-          ? 0.25
-          : activeGame
-            ? activeGame.backgroundMaskOpacity
-            : SETTINGS.backgroundMaskOpacity
       let body
       if (route.name === 'game-settings') {
         const game = GAMES.find(function (item) {
@@ -6365,7 +6341,8 @@ window.__ModuleLoader__.load({
         {
           className: 'gt-shell' + (SETTINGS.density === 'compact' ? ' gt-compact' : ''),
           style: {
-            '--gt-surface-alpha': String(surfaceAlpha),
+            backgroundColor: baseColor,
+            '--gt-surface-alpha': '0.18',
             '--gt-surface-color': hexToRgb(SETTINGS.surfaceColor),
             '--gt-header-height': (SETTINGS.headerHeight || 300) + 'px',
             '--gt-header-fade': (SETTINGS.headerFade === undefined ? 52 : SETTINGS.headerFade) + '%',
@@ -6379,11 +6356,9 @@ window.__ModuleLoader__.load({
                 backgroundImage: 'url("' + bgUrl + '")',
                 backgroundSize: bgFit === 'tile' ? 'auto' : 'cover',
                 backgroundRepeat: bgFit === 'tile' ? 'repeat' : 'no-repeat',
+                opacity: String(bgOpacity),
               },
             })
-          : null,
-        bgUrl && bgMaskOpacity > 0
-          ? h('div', { className: 'gt-bg-mask', style: { background: bgMask, opacity: bgMaskOpacity } })
           : null,
         headerBg
           ? h('div', { className: 'gt-header-bg', style: { backgroundImage: 'url("' + headerBg + '")' } })

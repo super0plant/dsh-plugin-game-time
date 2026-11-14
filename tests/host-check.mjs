@@ -334,9 +334,7 @@ const kept = testApi.migrate({
       name: "G1",
       background: "/api/game-time/asset/aaaaaaaaaaaaaaaaaaaaaaaa.png",
       backgroundFit: "tile",
-      backgroundOpacity: 0.19,
-      backgroundMask: "#101820",
-      backgroundMaskOpacity: 0.4,
+      imageOpacity: 0.6,
       headerBackground: "/api/game-time/asset/bbbbbbbbbbbbbbbbbbbbbbbb.png",
       installs: [{ platformId: "p1", path: "D:/Games/G1/g1.exe" }],
       entries: [],
@@ -347,7 +345,7 @@ const kept = testApi.migrate({
 assert.equal(kept.games[0].background, "/api/game-time/asset/aaaaaaaaaaaaaaaaaaaaaaaa.png")
 assert.equal(kept.games[0].headerBackground, "/api/game-time/asset/bbbbbbbbbbbbbbbbbbbbbbbb.png")
 assert.equal(kept.games[0].backgroundFit, "tile")
-assert.equal(kept.games[0].backgroundMask, "#101820")
+assert.equal(kept.games[0].imageOpacity, 0.6)
 console.log("  migration keeps background fields")
 
 // --- platform attribution ------------------------------------------------
