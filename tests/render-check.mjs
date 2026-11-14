@@ -1384,6 +1384,14 @@ assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
 
+// --- pasted paths: quotes are stripped before anything resolves them --------
+
+assert.equal(testApi.normalizePath('"D:\\Games\\X\\Game.exe"'), 'D:\\Games\\X\\Game.exe', 'double quotes are stripped')
+assert.equal(testApi.normalizePath("'D:\\Games\\X\\Game.exe'"), 'D:\\Games\\X\\Game.exe', 'single quotes are stripped')
+assert.equal(testApi.normalizePath('  "D:\\Games\\X\\Game.exe"  '), 'D:\\Games\\X\\Game.exe', 'surrounding spaces go too')
+assert.equal(testApi.normalizePath('D:\\Games\\X\\Game.exe'), 'D:\\Games\\X\\Game.exe', 'an unquoted path is untouched')
+console.log('  pasted paths: surrounding quotes and spaces are stripped')
+
 // --- 跨零点：面板开着过夜，"今日"必须跟着时钟走 ---------------------------
 // 2026-11-13 22:00 开局，一直玩到 14 号凌晨 01:00：界面上"今日"曾经一直停在
 // 打开面板那天的窗口，整晚不刷新。现在 NOW 是活的（live 轮询 + 跨天看门狗都会

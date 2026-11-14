@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.4.0'
+    const VERSION = '0.4.1'
 
     const zh = {
       'panel': '游戏时长',
@@ -136,6 +136,7 @@ window.__ModuleLoader__.load({
       'game.watch.dir': '限定目录：{dir}',
       'pick': '选择文件',
       'reveal': '打开所在位置',
+      'pick.busy': '正在打开选择窗口…',
       'icon.extract': '从软件提取',
       'status.offline': '离线',
       'status.active': '正在计时',
@@ -356,6 +357,7 @@ window.__ModuleLoader__.load({
       'game.watch.dir': 'Limited to {dir}',
       'pick': 'Choose file',
       'reveal': 'Show in folder',
+      'pick.busy': 'Opening the file picker…',
       'icon.extract': 'Use app icon',
       'status.offline': 'Offline',
       'status.active': 'Timing',
@@ -1962,6 +1964,7 @@ window.__ModuleLoader__.load({
       '.gt-pathfield-wrap .gt-pathfield{width:100%;}',
       '.gt-pathfield-wrap[data-drop="true"] .gt-input{border-color:rgba(128,128,128,.6);}',
       '.gt-pathfield-note{font-size:11px;opacity:.62;line-height:1.45;}',
+      '.gt-reveal-glyph{font-size:12px;line-height:1;opacity:.85;}',
       '.gt-dup-tag{display:inline-flex;align-items:center;margin-left:6px;padding:0 6px;height:16px;border-radius:999px;font-size:10.5px;line-height:1;color:#ff6b6b;background:rgba(229,72,77,.14);border:1px solid rgba(229,72,77,.38);white-space:nowrap;vertical-align:middle;}',
       '.gt-iconpick{display:flex;align-items:center;gap:10px;padding:6px 0 10px;}',
       '.gt-iconpick-pick{display:inline-flex;align-items:center;gap:10px;cursor:pointer;}',
@@ -2322,6 +2325,8 @@ window.__ModuleLoader__.load({
     function PathField({ t, value, placeholder, onChange, dropMode, onResolved, onCommit }) {
       const [drag, setDrag] = React.useState(false)
       const [note, setNote] = React.useState('')
+      const [picking, setPicking] = React.useState(false)
+      const current = normalizePath(value)
 
       const applyResolved = function (resolved) {
         if (!resolved || !resolved.ok || !resolved.path) {
@@ -2339,12 +2344,30 @@ window.__ModuleLoader__.load({
         else onChange(resolved.path)
       }
 
-      const acceptPicked = function (picked) {
-        if (!picked) return pickExecutable()
-        if (!/\.(lnk|url)$/i.test(picked)) return picked
-        return resolvePathOnHost(picked).then(function (resolved) {
-          return resolved && resolved.ok && resolved.path ? resolved : picked
-        })
+      /**
+       * One dialog per click. Cancel must stay cancelled: the old code fell back
+       * to a second picker when the first returned nothing, so pressing Esc or
+       * Cancel chained another dialog and the field looked frozen.
+       */
+      const pickNow = function () {
+        if (picking) return
+        setPicking(true)
+        setNote('')
+        pickFileFromHost()
+          .then(function (picked) {
+            if (!picked) return null
+            if (!/\.(lnk|url)$/i.test(picked)) {
+              applyResolved({ ok: true, path: picked })
+              return null
+            }
+            return resolvePathOnHost(picked).then(function (resolved) {
+              applyResolved(resolved && resolved.ok && resolved.path ? resolved : { ok: true, path: picked })
+            })
+          })
+          .catch(function () {})
+          .then(function () {
+            setPicking(false)
+          })
       }
 
       const handleDrop = function (event) {
@@ -2391,6 +2414,13 @@ window.__ModuleLoader__.load({
               const clean = normalizePath(event.target.value)
               if (clean !== event.target.value) onChange(clean)
               if (typeof onCommit === 'function') onCommit(clean)
+              // Dropping a shortcut resolves it; pasting its path must do the same,
+              // otherwise the game never matches and the row looks dead.
+              if (/\.(lnk|url)$/i.test(clean)) {
+                resolvePathOnHost(clean).then(function (resolved) {
+                  if (resolved && resolved.ok && resolved.path) applyResolved(resolved)
+                })
+              }
             },
           }),
           h(
@@ -2398,26 +2428,30 @@ window.__ModuleLoader__.load({
             {
               type: 'button',
               className: 'gt-icon-btn small',
-              title: normalizePath(value) ? t('reveal') : t('pick'),
-              onClick: function () {
-                const current = normalizePath(value)
-                if (current) {
-                  revealPath(current)
-                  return
-                }
-                pickFileFromHost()
-                  .then(acceptPicked)
-                  .then(function (picked) {
-                    if (!picked) return
-                    if (typeof picked === 'string') applyResolved({ ok: true, path: picked })
-                    else applyResolved(picked)
-                  })
-              },
+              title: t('pick'),
+              disabled: picking,
+              onClick: pickNow,
             },
             h(FolderIcon, null)
-          )
+          ),
+          current
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'gt-icon-btn small',
+                  title: t('reveal'),
+                  onClick: function () {
+                    revealPath(current)
+                  },
+                },
+                h('span', { className: 'gt-reveal-glyph' }, '↗')
+              )
+            : null
         ),
-        note ? h('div', { className: 'gt-pathfield-note' }, note) : null
+        picking || note
+          ? h('div', { className: 'gt-pathfield-note' }, picking ? t('pick.busy') : note)
+          : null
       )
     }
 
@@ -6462,6 +6496,7 @@ window.__ModuleLoader__.load({
         SETTINGS: SETTINGS,
         NOW: NOW,
         setNow: setNow,
+        normalizePath: normalizePath,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
         seriesFor: seriesFor,

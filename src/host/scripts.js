@@ -232,14 +232,30 @@ export const PICK_SCRIPT = String.raw`
 Add-Type -AssemblyName System.Windows.Forms
 $outPath = [string]$args[-1]
 $path = ''
+# A shown owner form gives the dialog a real parent window. Without it Windows
+# can place the dialog behind the DSH window: the click looks ignored, the user
+# clicks again, and several dialogs pile up on top of each other.
 $owner = New-Object System.Windows.Forms.Form
-$owner.TopMost = $true
+$owner.Text = 'Game Time'
+$owner.FormBorderStyle = 'None'
 $owner.ShowInTaskbar = $false
-$owner.WindowState = [System.Windows.Forms.FormWindowState]::Minimized
-$dialog = New-Object System.Windows.Forms.OpenFileDialog
-$dialog.Filter = 'Programs (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|Programs (*.exe)|*.exe|All files (*.*)|*.*'
-if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { $path = [string]$dialog.FileName }
-$owner.Dispose()
+$owner.StartPosition = 'CenterScreen'
+$owner.Width = 1
+$owner.Height = 1
+$owner.TopMost = $true
+$owner.Show()
+try {
+  $dialog = New-Object System.Windows.Forms.OpenFileDialog
+  $dialog.Title = 'Select a game program'
+  $dialog.Filter = 'Programs (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|Programs (*.exe)|*.exe|All files (*.*)|*.*'
+  $dialog.CheckFileExists = $true
+  $dialog.RestoreDirectory = $true
+  if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { $path = [string]$dialog.FileName }
+  $dialog.Dispose()
+} finally {
+  $owner.Close()
+  $owner.Dispose()
+}
 $json = [pscustomobject]@{ path = $path } | ConvertTo-Json -Compress
 [System.IO.File]::WriteAllText($outPath, $json, (New-Object System.Text.UTF8Encoding($false)))
 `
@@ -400,7 +416,7 @@ $json = $result | ConvertTo-Json -Compress
 const scriptCache = {}
 const scriptWrites = {}
 
-export async function runScript(name, source, args) {
+export async function runScript(name, source, args, timeoutMs) {
   let target = scriptCache[name]
   if (!target) {
     target = join(DIR, name)
@@ -419,7 +435,7 @@ export async function runScript(name, source, args) {
     execFile(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', target].concat(args || []),
-      { windowsHide: true, timeout: 60000, maxBuffer: 16 * 1024 * 1024 },
+      { windowsHide: true, timeout: timeoutMs || 60000, maxBuffer: 16 * 1024 * 1024 },
       (error, stdout) => {
         resolve(error ? '' : String(stdout).trim())
       }
@@ -503,7 +519,7 @@ let jsonCallCounter = 0
  * back. stdout would be encoded with the console code page (GBK on Chinese
  * Windows) and Node decodes it as UTF-8, which mangles non-ASCII paths.
  */
-export async function runJsonScript(name, source, args) {
+export async function runJsonScript(name, source, args, timeoutMs) {
   await mkdir(DIR, { recursive: true })
   jsonCallCounter += 1
   const out = join(DIR, 'ps-out-' + String(process.pid) + '-' + String(jsonCallCounter) + '-' + name.replace(/\W+/g, '-') + '.json')
@@ -512,7 +528,7 @@ export async function runJsonScript(name, source, args) {
   } catch {
     /* nothing to clean */
   }
-  await runScript(name, source, (args || []).concat([out]))
+  await runScript(name, source, (args || []).concat([out]), timeoutMs)
   let text = ''
   try {
     text = await readFile(out, 'utf8')
@@ -540,5 +556,7 @@ export async function resolveGamePath(target) {
 }
 
 export function pickFileViaDialog() {
-  return runJsonScript('gt-pick.ps1', PICK_SCRIPT, []).then((payload) => (payload && payload.path ? payload.path : null))
+  // Browsing folders can easily take minutes; the default 60 s cap would kill
+  // the dialog mid-navigation.
+  return runJsonScript('gt-pick.ps1', PICK_SCRIPT, [], 300000).then((payload) => (payload && payload.path ? payload.path : null))
 }

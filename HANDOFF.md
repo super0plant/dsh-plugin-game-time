@@ -27,6 +27,8 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.4.1 修「选择文件」卡死**：用户反馈设置/游戏设置里的选择按钮「非常慢、很卡」。根因是**取消后自动回退**：`PathField` 的 `acceptPicked(null)` 会调 `pickExecutable()`（选目录 → 取目录里第一个 exe），也就是说按 Esc/取消会再弹一个窗口，连点就叠出好几个，看起来像死机。改法：① 取消即结束（删掉回退）；② `picking` 状态 + 按钮 `disabled` + 提示「正在打开选择窗口…」，点击立即反馈；③ 宿主 `PICK_SCRIPT` 建一个 `Show()` 过的小 owner 窗口再 `ShowDialog($owner)`（以前 owner 从不 Show，对话框可能落在 DSH 窗口后面 → 用户以为没反应）；④ 选择框超时 60s → 300s（`runScript` 新增可选 timeout）；⑤ 路径框拆成两个按钮：文件夹=选择、↗=打开所在位置（以前按钮会按「有没有值」偷偷换功能）；⑥ 粘贴 `.lnk`/`.url` 在失焦时也解析（以前只有拖拽解析）。验证：`render-check` 新增 `normalizePath` 引号剥离断言 + 五套全绿；PowerShell 脚本用 `Parser::ParseFile` 过了语法检查。**改了宿主，要重启 DSH。**
+
 - **2026-11-14 · 0.4.0 线（批 2/2）：删空开关、藏起宿主专用入口、把网页版文档收进一个档案**：① 设置里的「仅前台计时」整块删掉（[client.js](client.js) 里的 Field 换成一行说明），两条 `settings.foreground*` 文案键一并删除，宿主 `config.js` 的白名单行与 `constants.js` 默认值改成注释/删除——**字段留着也不会被读取**；② 「开机自启」的设置块**整块注释**（`/* 冻结（0.4.0）… */`），恢复只需取消注释，`settings.autostart*` 文案键和宿主接口 `/api/game-time/autostart` 全部保留；③ 网页版相关的所有文档（原 README 一章 + 构建/托盘/自启/MOTW 的坑 + 恢复步骤）收进 **`docs/WEB-FROZEN.md`**，README 只留一行「`standalone/` 是暂停维护的网页版遗留，可以忽略」；④ 页脚从品牌标语改成产品署名 `游戏时长 v0.4.0 · super0plant`（英文 `Game Time v0.4.0 · super0plant`），用户看不懂「local-first tools for DSH」那种定位语。验证：五套测试全绿 + 重新打包。
 
 - **2026-11-14 · 0.4.0 线开张（批 1/2）**：① 打了回退锚点 `v0.3.2-final`（本地 + 远端都有），0.4.0 做坏时 `git reset --hard v0.3.2-final` 就回到现在的样子；② 版本号 → **0.4.0**（删设置项属于行为变化，按 semver 走 minor）；③ **独立网页版暂停维护**：代码留在 `standalone/`，README 那一节加了「暂停维护」说明，不再宣传、不再测试（`npm test` 里仍会跑 `standalone-check`，它只在包内缺 `standalone/` 时跳过——**下个版本考虑把它摘出默认测试**）；④ 设置页页脚从「作者：super0plant」改成开发者署名式 `super0plant — local-first tools for DSH · v0.4.0`，版本号由 `client.js` 里的 `VERSION` 常量提供（以后发版只改这一处 + `package.json`）。批 2 是删掉 `foregroundOnly` 空开关。
