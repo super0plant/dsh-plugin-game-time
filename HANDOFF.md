@@ -27,6 +27,8 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.6.0「添加平台」这一行重排**：用户截图指出名称框撑满整行、地址框只剩一条缝、按钮被挤成两行。根因：名称框是裸 `.gt-input`（CSS 里 `width:100%`），又没有 flex 尺寸约束，于是在 flex 行里把宽度吃光。改法：新增行容器 `.gt-platform-new`（flex 行，gap 8），名称框 `flex:0 0 128px`，地址列 `flex:1 1 auto;min-width:0`，三个控件统一 `height:32px`；按钮从 `.gt-link` 换成 `.gt-btn .gt-platform-add`（实心、`white-space:nowrap`、`flex:0 0 auto`、带 hover）。平台说明补「可以直接拖 exe / 快捷方式到地址框」。**纯前端，刷新页面即可。**
+
 - **2026-11-14 · 0.5.0 背景裁剪预设比例 + 新的「铺满」规则（批 B）**：① `Cropper` 新增可选 `ratios`，背景类图片给预设（主界面/游戏：原图、16:9、8:3、4:3；标题：原图、6:1、4:1、3:1），**图标仍固定 1:1**（不传 ratios 就没有比例条）；切换比例会重新贴合图片并把缩放归 1。② 「铺满」不再用 CSS `cover`：新函数 `backgroundWidth(原图宽, 窗口宽) = max(原图宽, 窗口宽)`——窗口比图宽就放大，缩到原图尺寸就停住（只裁切不压缩）。`Page` 用 `ResizeObserver` 量 `.gt-shell` 宽、用 `new Image()` 读 `naturalWidth`，把结果写进 `background-size: <px> auto`；`.gt-bg` 和 `.gt-header-bg` 都走这套。③ 平铺仍然是 `auto + repeat`（原始像素）。验证：`render-check` 新增 `backgroundWidth` 五条断言 + 五套全绿；**只改客户端，刷新页面即可**（版本号要重启 DSH 才更新）。
 
 - **2026-11-14 · 0.4.2 背景模型重做 + 文案整理（批 A）**：用户发现 DSH 自定义主题会透过插件和背景图**叠在一起**。根因是面板一直半透明（`.gt-shell` 没有底色、`.gt-bg` 透明度写死 16%、再加一层蒙版），而且界面上那个「图片透明度」**从来没接线**。改成：`settings.baseColor`（默认 `#0b0b0c`，不透明纯色打底）+ 图片叠在上面 + `imageOpacity`（0–100%）真的可调；删掉 `backgroundMask` / `backgroundMaskOpacity` / `backgroundOpacity`（后者原本兼职控制卡片透明度，现在 `--gt-surface-alpha` 固定 0.18）；每游戏只保留 `imageOpacity`（底色跟全局）。设置页新增「底色」色块，蒙版两个旋钮移除。顺带：界面密度「紧凑」差值加大（root padding 14→8、行 9→4、字号 23→18、卡片 12→8，另加标题/标签/列表行），并把 `settings.density.hint` 接到界面上；设置/游戏设置的小字整体重写（删掉「演示状态」「接入采集后」「导入导出」这类过时说法，数据行改成直接给路径）。验证：五套全绿；`host-check` 的迁移断言从 `backgroundMask` 改成 `imageOpacity`。**改了宿主白名单，要重启 DSH。** 0.5.0 再做第 5 条（裁剪预设比例 + 新的「铺满」规则）。

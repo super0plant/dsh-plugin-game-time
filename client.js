@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.5.0'
+    const VERSION = '0.6.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -105,7 +105,7 @@ window.__ModuleLoader__.load({
       'settings.density.compact': '紧凑',
       'settings.density.hint': '紧凑会收紧行距、字号和内边距，一屏能多看一行。',
       'settings.platforms': '启动平台',
-      'settings.platforms.hint': '详情页的平台分布按这里的清单聚合。',
+      'settings.platforms.hint': '拖 exe / 快捷方式到地址框可直接填入；详情页的平台分布按这里的清单聚合。',
       'settings.addPlatform': '添加平台',
       'settings.expand': '详细设置',
       'settings.collapse': '收起',
@@ -328,7 +328,7 @@ window.__ModuleLoader__.load({
       'settings.density.compact': 'Compact',
       'settings.density.hint': 'Compact tightens rows, type and padding so one more line fits on screen.',
       'settings.platforms': 'Platforms',
-      'settings.platforms.hint': 'The per-game platform breakdown aggregates over this list.',
+      'settings.platforms.hint': 'Drop an exe or a shortcut onto the path box to fill it; the per-game platform breakdown aggregates over this list.',
       'settings.addPlatform': 'Add platform',
       'settings.expand': 'Details',
       'settings.collapse': 'Collapse',
@@ -2057,6 +2057,16 @@ window.__ModuleLoader__.load({
       '.gt-gamepill-name{white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;}',
       '.gt-gamepill-dup{width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex:0 0 auto;}',
       '.gt-link{font:inherit;font-size:12.5px;color:inherit;background:transparent;border:0;padding:6px 0;cursor:pointer;opacity:.75;text-decoration:none;}',
+      // Add-platform row: fixed name width, path takes the rest, one-line button
+      // with the same 32px height as every input so the row reads as one block.
+      '.gt-platform-new{display:flex;align-items:center;gap:8px;padding:8px 0;}',
+      '.gt-platform-new .gt-input{height:32px;padding:0 10px;line-height:1.2;}',
+      '.gt-platform-new .gt-platform-name{flex:0 0 128px;width:128px;}',
+      '.gt-platform-new .gt-platform-path{flex:1 1 auto;min-width:0;}',
+      '.gt-platform-new .gt-platform-path .gt-pathfield{min-width:0;}',
+      '.gt-platform-new .gt-pathfield-note{margin-top:2px;}',
+      '.gt-platform-add{height:32px;padding:0 14px;flex:0 0 auto;white-space:nowrap;font-weight:600;background:rgba(128,128,128,.18);border-color:rgba(128,128,128,.38);}',
+      '.gt-platform-add:hover{background:rgba(128,128,128,.28);}',
       '.gt-link:hover{opacity:1;}',
       '.gt-compact .gt-root{padding:8px 14px 12px;gap:8px;}',
       '.gt-compact .gt-title{font-size:15px;}',
@@ -5270,9 +5280,9 @@ window.__ModuleLoader__.load({
             })) : null,
             h(
               'div',
-              { style: { display: 'flex', gap: 6, padding: '8px 0' } },
+              { className: 'gt-platform-new' },
               h('input', {
-                className: 'gt-input',
+                className: 'gt-input gt-platform-name',
                 placeholder: t('platform.name'),
                 value: newPlatformName,
                 onChange: function (event) {
@@ -5281,7 +5291,7 @@ window.__ModuleLoader__.load({
               }),
               h(
                 'div',
-                { style: { flex: '1 1 auto', minWidth: 0 } },
+                { className: 'gt-platform-path' },
                 h(PathField, {
                   t: t,
                   value: newPlatformPath,
@@ -5291,7 +5301,7 @@ window.__ModuleLoader__.load({
                   },
                 })
               ),
-              h('button', { type: 'button', className: 'gt-link', onClick: addPlatform }, '+ ' + t('settings.addPlatform'))
+              h('button', { type: 'button', className: 'gt-btn gt-platform-add', onClick: addPlatform }, '+ ' + t('settings.addPlatform'))
             ),
             h('div', { className: 'gt-note', style: { paddingBottom: 10 } }, t('settings.platforms.hint'))
           ),
