@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.5'
+    const VERSION = '0.11.6'
 
     const zh = {
       'panel': '游戏时长',
@@ -1869,8 +1869,8 @@ window.__ModuleLoader__.load({
       '.gt-trend-module .gt-card-head-title .gt-muted{display:none;}',
       '.gt-trend-module .gt-chart-label,.gt-trend-module .gt-chart-y,.gt-trend-module .gt-chart-avg-y{font-size:6.5px;opacity:.4;}',
       '.gt-trend-module .gt-muted{font-size:11px;opacity:.55;}',
-      '.gt-trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;align-items:start;overflow-x:auto;}',
-      '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:240px;}',
+      '.gt-trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:8px;align-items:start;overflow-x:auto;}',
+      '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:450px;}',
       '.gt-trend-seg{align-self:flex-end;}',
       '.gt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
       '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
