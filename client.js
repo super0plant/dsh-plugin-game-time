@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.3'
+    const VERSION = '0.11.4'
 
     const zh = {
       'panel': '游戏时长',
@@ -994,6 +994,8 @@ window.__ModuleLoader__.load({
       historyDays: 365,
       baseColor: '#0b0b0c',
       imageOpacity: 1,
+      todayChart: 'line',
+      todayWindow: 'last7',
       autoArchive: { enabled: false, value: 60, unit: 'day' },
     }
 
@@ -1866,8 +1868,8 @@ window.__ModuleLoader__.load({
       '.gt-trend-module .gt-card-head-title .gt-muted{display:none;}',
       '.gt-trend-module .gt-chart-label,.gt-trend-module .gt-chart-y,.gt-trend-module .gt-chart-avg-y{font-size:6.5px;opacity:.4;}',
       '.gt-trend-module .gt-muted{font-size:11px;opacity:.55;}',
-      '.gt-trend-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;}',
-      '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}',
+      '.gt-trend-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;align-items:start;overflow-x:auto;}',
+      '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:240px;}',
       '.gt-trend-seg{align-self:flex-end;}',
       '.gt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
       '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
@@ -3319,11 +3321,11 @@ window.__ModuleLoader__.load({
      * uses, so tooltip, bar/line toggle, colours, selection and panning all come
      * along. `switchable` turns the wheel into a 7-day / 30-day switch.
      */
-    function TodayTrend({ t, initialRange, switchable, grain }) {
-      // The 7 / 30 day choice sticks between sessions; anything unexpected
-      // falls back to the seven-day window.
-      const savedWindow = switchable ? storedPref('gt-today-window', 'last7') : 'last7'
-      const startRange = switchable ? (savedWindow === 'last30' ? 'last30' : 'last7') : initialRange
+    function TodayTrend({ t, initialRange, switchable, grain, touch }) {
+      // Preferences live in config.json (through SETTINGS + touch), so they
+      // survive a DSH restart even when the web view's storage is ephemeral.
+      const savedWindow = switchable && SETTINGS.todayWindow === 'last30' ? 'last30' : 'last7'
+      const startRange = switchable ? savedWindow : initialRange
       const [range, setRange] = React.useState(startRange)
       const [anchor, setAnchor] = React.useState(null)
       const [selected, setSelected] = React.useState(null)
@@ -3342,7 +3344,8 @@ window.__ModuleLoader__.load({
                 wheelLock.current = now
                 const nextRange = range === 'last7' ? 'last30' : 'last7'
                 setRange(nextRange)
-                setStoredPref('gt-today-window', nextRange)
+                SETTINGS.todayWindow = nextRange
+                if (typeof touch === 'function') touch()
                 setAnchor(null)
                 setSelected(null)
                 if (event.preventDefault) event.preventDefault()
@@ -3356,8 +3359,11 @@ window.__ModuleLoader__.load({
           note: rangeLabelOf(range, currentAnchor, grain),
           points: points,
           selectedKey: selected,
-          defaultType: 'line',
-          prefKey: 'gt-today-chart',
+          chartType: SETTINGS.todayChart === 'bar' ? 'bar' : 'line',
+          onChartType: function (key) {
+            SETTINGS.todayChart = key
+            if (typeof touch === 'function') touch()
+          },
           detailOnClick: true,
           onPan: function (delta) {
             setAnchor(panAnchor(range, currentAnchor, delta, grain))
@@ -3376,7 +3382,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function TodayView({ t, onOpenGame }) {
+    function TodayView({ t, onOpenGame, touch }) {
       const duplicates = duplicateMap()
       const rows = GAMES.map(function (game) {
         const day = totalsFor(game.id, 'day', NOW)
@@ -3463,8 +3469,8 @@ window.__ModuleLoader__.load({
           h(
             'div',
             { className: 'gt-trend-row' },
-            h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1 }),
-            h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1 })
+            h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1, touch: touch }),
+            h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1, touch: touch })
           )
         )
       )
@@ -3878,6 +3884,22 @@ window.__ModuleLoader__.load({
     function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit, detailOnClick }) {
       const [tip, setTip] = React.useState(null)
       const [detail, setDetail] = React.useState(null)
+      const wrapRef = React.useRef(null)
+
+      // A click anywhere outside the chart closes the detail card.
+      React.useEffect(function () {
+        if (!detail) return undefined
+        if (typeof document === 'undefined' || !document.addEventListener) return undefined
+        const onDown = function (event) {
+          const node = wrapRef.current
+          if (node && event.target && node.contains(event.target)) return
+          setDetail(null)
+        }
+        document.addEventListener('mousedown', onDown)
+        return function () {
+          document.removeEventListener('mousedown', onDown)
+        }
+      }, [detail])
       const [hoverIndex, setHoverIndex] = React.useState(-1)
 
       const tipFor = function (point, x, y) {
@@ -4398,7 +4420,7 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { className: 'gt-chart-wrap' },
+        { className: 'gt-chart-wrap', ref: wrapRef },
         h(
           'svg',
           {
@@ -4524,8 +4546,9 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset, defaultType, prefKey, detailOnClick }) {
-      const [chartType, setChartType] = React.useState(prefKey ? storedPref(prefKey, defaultType || 'bar') : defaultType || 'bar')
+    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset, defaultType, prefKey, detailOnClick, chartType: chartTypeProp, onChartType }) {
+      const [chartTypeState, setChartType] = React.useState(prefKey ? storedPref(prefKey, defaultType || 'bar') : defaultType || 'bar')
+      const chartType = chartTypeProp || chartTypeState
       const template = t('chart.unit')
       const heading = unit
         ? template.indexOf('{title}') >= 0
@@ -4570,6 +4593,7 @@ window.__ModuleLoader__.load({
                   'data-active': chartType === key,
                   onClick: function () {
                     setChartType(key)
+                    if (onChartType) onChartType(key)
                     if (prefKey) setStoredPref(prefKey, key)
                   },
                 },
@@ -6839,7 +6863,7 @@ window.__ModuleLoader__.load({
                 setRoute({ name: route.from === 'all' ? 'all' : 'today' })
               },
             })
-          : h(TodayView, { t: t, onOpenGame: openGame })
+          : h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       } else if (route.name === 'settings') {
         body = h(GlobalSettings, {
           t: t,
@@ -6863,11 +6887,11 @@ window.__ModuleLoader__.load({
               onSettings: openGameSettings,
               touch: touch,
             })
-          : h(TodayView, { t: t, onOpenGame: openGame })
+          : h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       } else if (route.name === 'all') {
         body = h(AllView, { t: t, onOpenGame: openGame, touch: touch })
       } else {
-        body = h(TodayView, { t: t, onOpenGame: openGame })
+        body = h(TodayView, { t: t, onOpenGame: openGame, touch: touch })
       }
 
       const showTabs = route.name === 'today' || route.name === 'all'

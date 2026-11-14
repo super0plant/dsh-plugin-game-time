@@ -27,6 +27,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.11.4 趋势图偏好进配置 + 点外部关卡片 + 自适应两列**：① 偏好从 localStorage 挪到 `settings.todayChart` / `settings.todayWindow`（宿主 `sanitizeConfig` 白名单 + `constants.js` 默认值 + 客户端 `SETTINGS` 默认值）；`TodayTrend` 写入后调 `touch()` 落盘，重启 DSH 仍生效；`ChartCard` 支持受控 `chartType` / `onChartType`（不再依赖 localStorage）。② `Chart` 加 `wrapRef` + `useEffect(document mousedown)`，点到图表外清空 `detail`。③ `.gt-trend-row` 改 `repeat(auto-fit,minmax(260px,1fr))` + `overflow-x:auto`，`.gt-trend-cell` `min-width:240px`：宽=两列、窄=两行、再窄=横向滚动不压缩。**宿主白名单改了，要重启 DSH 才生效。** 验证：五套全绿。
+
+
 - **2026-11-14 · 0.11.3 趋势图改「悬浮看数值、点击看明细」**：Chart 新增 detailOnClick（ChartCard 透传），今日页两张卡传 true。命中区 onMouseMove 在 detailOnClick 时只 setTip({x,y,chip:compactDuration(秒)})；onClick 打开/切换 detail（Object.assign(tipFor(...), {key}) 用于判断同一根）。渲染分支：detailOnClick 时画 .gt-chart-chip 小标签 + 由 detail 画完整卡片；非 detailOnClick 走原来的悬浮卡片。新增 compactDuration()（≥1 小时保留一位小数、去 .0；<1 小时按分钟）。文字密度在 .gt-trend-module 作用域内降：隐藏卡片日期范围、坐标字号 6.5px、说明缩短；**回退只需删那三条 CSS**。验证：新增 4 条 compactDuration 断言 + 五套全绿。**纯前端。**
 
 - **2026-11-14 · 0.11.2 趋势图模块化 + 偏好记忆**：ChartCard 新增 defaultType / prefKey 两个可选属性（不传就还是柱状、不记忆，不影响「全部」页）；storedPref/setStoredPref 包一层 localStorage。今日页两张卡传 defaultType:'line' + prefKey:'gt-today-chart'，所以默认曲线、点柱状后记住；7/30 天窗口也存 gt-today-window，滚轮切换时写入。两张卡包进 .gt-trend-module，标题「趋势图」+ 说明，模块 order-top 与列表分隔。验证：render-check 断言「两张卡默认 line」「模块只有一个」+ 五套全绿。**纯前端。**

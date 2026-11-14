@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-game-time",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "type": "module",
   "description": "Local per-game play-time tracking for Windows, as a DeepSeek Harness (DSH) plugin or a standalone web app.",
   "author": "super0plant <super0plant@users.noreply.github.com>",
