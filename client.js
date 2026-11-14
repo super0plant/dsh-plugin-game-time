@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.7.1'
+    const VERSION = '0.8.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -1939,6 +1939,9 @@ window.__ModuleLoader__.load({
       '.gt-chart-unit{fill:currentColor;opacity:.42;letter-spacing:0;}',
       '.gt-chart-axis{stroke:currentColor;opacity:.12;stroke-width:1;}',
       '.gt-chart-grid{stroke:currentColor;opacity:.05;stroke-width:1;}',
+      '.gt-chart-guide{stroke:currentColor;opacity:.22;stroke-width:1;stroke-dasharray:3 3;pointer-events:none;}',
+      '.gt-chart text,.gt-chart circle,.gt-chart path{pointer-events:none;}',
+      '.gt-bar-rect{transition:opacity .12s ease;}',
       '.gt-chart .gt-chart-y,.gt-chart .gt-chart-avg-y{font-size:7px;font-weight:500;fill:currentColor;opacity:.5;letter-spacing:0;font-variant-numeric:tabular-nums;}',
       '.gt-chart-avg{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:.75;stroke-dasharray:2 3;fill:none;}',
       '.gt-chart-avg-tick{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:1;}',
@@ -3676,8 +3679,89 @@ window.__ModuleLoader__.load({
       return { kept: kept, folded: folded, foldedCount: rest.length }
     }
 
+    // Monotone cubic interpolation (Fritsch–Carlson). The curve is smooth but
+    // never overshoots the data, so a dip cannot draw a value below zero.
+    function smoothPath(points) {
+      const list = Array.isArray(points) ? points : []
+      const count = list.length
+      if (count < 2) return ''
+      const dx = []
+      const slope = []
+      for (let index = 0; index < count - 1; index += 1) {
+        dx[index] = list[index + 1].x - list[index].x
+        const dy = list[index + 1].y - list[index].y
+        slope[index] = dx[index] === 0 ? 0 : dy / dx[index]
+      }
+      const tangent = []
+      tangent[0] = slope[0] || 0
+      tangent[count - 1] = slope[count - 2] || 0
+      for (let index = 1; index < count - 1; index += 1) {
+        if (slope[index - 1] * slope[index] <= 0) {
+          tangent[index] = 0
+        } else {
+          const w1 = 2 * dx[index] + dx[index - 1]
+          const w2 = dx[index] + 2 * dx[index - 1]
+          tangent[index] = (w1 + w2) / (w1 / slope[index - 1] + w2 / slope[index])
+        }
+      }
+      let d = 'M ' + list[0].x + ' ' + list[0].y
+      for (let index = 0; index < count - 1; index += 1) {
+        const h = dx[index] / 3
+        const c1x = list[index].x + h
+        const c1y = list[index].y + tangent[index] * h
+        const c2x = list[index + 1].x - h
+        const c2y = list[index + 1].y - tangent[index + 1] * h
+        d += ' C ' + c1x + ' ' + c1y + ' ' + c2x + ' ' + c2y + ' ' + list[index + 1].x + ' ' + list[index + 1].y
+      }
+      return d
+    }
+
+    /** A bar with rounded top corners: the only shape bars use now. */
+    function barTopPath(x, y, width, height, radius) {
+      const w = Math.max(0, Number(width) || 0)
+      const boxH = Math.max(0, Number(height) || 0)
+      if (w <= 0 || boxH <= 0) return ''
+      const r = Math.max(0, Math.min(Number(radius) || 0, w / 2, boxH))
+      const bottom = y + boxH
+      if (r === 0) return 'M ' + x + ' ' + y + ' H ' + (x + w) + ' V ' + bottom + ' H ' + x + ' Z'
+      return (
+        'M ' + x + ' ' + bottom +
+        ' V ' + (y + r) +
+        ' Q ' + x + ' ' + y + ' ' + (x + r) + ' ' + y +
+        ' H ' + (x + w - r) +
+        ' Q ' + (x + w) + ' ' + y + ' ' + (x + w) + ' ' + (y + r) +
+        ' V ' + bottom +
+        ' Z'
+      )
+    }
+
+    /**
+     * Charts get a slightly brighter stroke than the stored brand colour, so a
+     * 1.7 px line still reads on a dark panel without changing the data itself.
+     */
+    function chartColor(value) {
+      const raw = String(value || '').trim()
+      const short = /^#([0-9a-f]{3})$/i.exec(raw)
+      const full = short
+        ? '#' + short[1].split('').map(function (char) { return char + char }).join('')
+        : raw
+      const match = /^#([0-9a-f]{6})$/i.exec(full)
+      if (!match) return raw || 'currentColor'
+      const num = parseInt(match[1], 16)
+      const lift = function (channel) {
+        return Math.round(channel + (255 - channel) * 0.14)
+      }
+      const hex = function (channel) {
+        return channel.toString(16).padStart(2, '0')
+      }
+      return '#' + hex(lift((num >> 16) & 255)) + hex(lift((num >> 8) & 255)) + hex(lift(num & 255))
+    }
+
+    let chartSeq = 0
+
     function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit }) {
       const [tip, setTip] = React.useState(null)
+      const [hoverIndex, setHoverIndex] = React.useState(-1)
 
       const tipFor = function (point, x, y) {
         const split = tipSegments(point.parts)
@@ -3926,6 +4010,7 @@ window.__ModuleLoader__.load({
           )
         })
 
+      const barRadius = 2.5
       const bars = points.map(function (point, index) {
         const x = pad.left + slot * index + (slot - barW) / 2
         const barH = (point.seconds / max) * plotH
@@ -3945,109 +4030,163 @@ window.__ModuleLoader__.load({
 
         if (stacked.length === 0) {
           const plainH = Math.max(point.seconds > 0 ? 2 : 0, barH)
+          if (plainH <= 0) return null
           const plainY = pad.top + plotH - plainH
-          return h('rect', {
+          return h('path', {
             key: point.key,
             className: 'gt-bar-rect',
-            x: x,
-            y: plainY,
-            width: barW,
-            height: plainH,
+            d: barTopPath(x, plainY, barW, plainH, barRadius),
             fill: stroke,
             opacity: selectedKey === point.key ? 0.95 : point.seconds > 0 ? 0.62 : 0.14,
-            style: { cursor: 'pointer' },
-            onMouseEnter: function () {
-              setTip(tipFor(point, cx(index), plainY))
-            },
-            onClick: function () {
-              clicked(point.key)
-            },
           })
         }
 
+        if (barH <= 0) return null
         let acc = 0
-        return stacked.map(function (part) {
+        return stacked.map(function (part, partIndex) {
           const height = barH * (part.seconds / sum)
           const y = pad.top + plotH - acc - height
           const fill = part.color || sliceColor(part.id)
           acc += height
-          return h('rect', {
+          // Only the cap is rounded: rounding every slice turns a stack of thin
+          // segments into a column of pills.
+          const radius = partIndex === stacked.length - 1 ? barRadius : 0
+          return h('path', {
             key: point.key + '-' + part.id,
             className: 'gt-bar-rect',
-            x: x,
-            y: y,
-            width: barW,
-            height: height,
+            d: barTopPath(x, y, barW, height, radius),
             fill: fill,
             opacity: selectedKey === point.key ? 1 : 0.9,
-            style: { cursor: 'pointer' },
-            onMouseEnter: function () {
-              setTip(tipFor(point, cx(index), y))
-            },
-            onClick: function () {
-              clicked(point.key)
-            },
           })
         })
       })
 
-      const linePoints = points
-        .map(function (point, index) {
-          return cx(index) + ',' + cy(point)
-        })
-        .join(' ')
+      const pointXY = points.map(function (point, index) {
+        return { x: cx(index), y: cy(point) }
+      })
+      const baseY = pad.top + plotH
+      const lineD = smoothPath(pointXY)
+      const areaD =
+        pointXY.length > 1
+          ? 'M ' + pointXY[0].x + ' ' + baseY +
+            ' L ' + pointXY[0].x + ' ' + pointXY[0].y +
+            lineD.slice(lineD.indexOf(' C')) +
+            ' L ' + pointXY[pointXY.length - 1].x + ' ' + baseY + ' Z'
+          : ''
+      const gradientId = 'gt-area-' + String((chartSeq += 1))
+      const lineColor = chartColor(stroke)
+      const showDots = points.length <= 40
+      const hoverPoint = hoverIndex >= 0 && hoverIndex < points.length ? points[hoverIndex] : null
 
-      const areaPath =
-        'M ' +
-        cx(0) +
-        ' ' +
-        (pad.top + plotH) +
-        ' L ' +
-        points
-          .map(function (point, index) {
-            return cx(index) + ' ' + cy(point)
-          })
-          .join(' L ') +
-        ' L ' +
-        cx(points.length - 1) +
-        ' ' +
-        (pad.top + plotH) +
-        ' Z'
+      /** Which column the pointer is over, in viewBox units. */
+      const indexAt = function (event) {
+        const node = event.currentTarget && event.currentTarget.ownerSVGElement
+        if (!node || typeof node.getBoundingClientRect !== 'function') return -1
+        const rect = node.getBoundingClientRect()
+        if (!rect.width) return -1
+        const xView = ((event.clientX - rect.left) / rect.width) * width
+        return Math.max(0, Math.min(points.length - 1, Math.floor((xView - pad.left) / slot)))
+      }
 
       const marks =
         chartType === 'line'
           ? [
-              h('path', { key: 'area', d: areaPath, fill: stroke, opacity: 0.14 }),
-              h('polyline', {
-                key: 'line',
-                points: linePoints,
+              h(
+                'defs',
+                { key: 'defs' },
+                h(
+                  'linearGradient',
+                  { id: gradientId, x1: 0, y1: 0, x2: 0, y2: 1 },
+                  h('stop', { offset: '0%', stopColor: stroke, stopOpacity: 0.24 }),
+                  h('stop', { offset: '100%', stopColor: stroke, stopOpacity: 0 })
+                )
+              ),
+              areaD ? h('path', { key: 'area', d: areaD, fill: 'url(#' + gradientId + ')' }) : null,
+              h('path', {
+                key: 'line-under',
+                d: lineD,
                 fill: 'none',
                 stroke: stroke,
-                strokeWidth: 2,
-                strokeLinejoin: 'round',
+                strokeWidth: 4,
                 strokeLinecap: 'round',
-                opacity: 0.85,
+                strokeLinejoin: 'round',
+                opacity: 0.16,
               }),
-            ].concat(
-              points.map(function (point, index) {
-                return h('circle', {
-                  key: 'dot-' + point.key,
-                  cx: cx(index),
-                  cy: cy(point),
-                  r: selectedKey === point.key ? 4 : 2.6,
-                  fill: stroke,
-                  opacity: point.seconds > 0 ? 0.9 : 0.2,
-                  style: { cursor: 'pointer' },
-                  onMouseEnter: function () {
-                    setTip(tipFor(point, cx(index), cy(point)))
-                  },
-                  onClick: function () {
-                    clicked(point.key)
-                  },
-                })
-              })
-            )
+              h('path', {
+                key: 'line',
+                d: lineD,
+                fill: 'none',
+                stroke: lineColor,
+                strokeWidth: 1.7,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+              }),
+            ]
+              .filter(Boolean)
+              .concat(
+                showDots
+                  ? pointXY.map(function (xy, index) {
+                      const point = points[index]
+                      const active = index === hoverIndex || selectedKey === point.key
+                      const dim = point.seconds <= 0
+                      return h(
+                        'g',
+                        { key: 'dot-' + point.key },
+                        h('circle', {
+                          cx: xy.x,
+                          cy: xy.y,
+                          r: active ? 5.4 : 3.6,
+                          fill: stroke,
+                          opacity: dim ? 0.08 : active ? 0.26 : 0.16,
+                        }),
+                        h('circle', {
+                          cx: xy.x,
+                          cy: xy.y,
+                          r: active ? 2.8 : 2,
+                          fill: lineColor,
+                          opacity: dim ? 0.25 : 1,
+                        })
+                      )
+                    })
+                  : []
+              )
           : bars
+
+      const guide = hoverPoint
+        ? h('line', {
+            key: 'guide',
+            className: 'gt-chart-guide',
+            x1: cx(hoverIndex),
+            y1: pad.top,
+            x2: cx(hoverIndex),
+            y2: baseY,
+          })
+        : null
+
+      const hitArea = h('rect', {
+        key: 'hit',
+        className: 'gt-chart-hit',
+        x: pad.left,
+        y: pad.top,
+        width: Math.max(1, plotW),
+        height: Math.max(1, plotH),
+        fill: 'transparent',
+        onMouseMove: function (event) {
+          const index = indexAt(event)
+          if (index < 0) return
+          if (index !== hoverIndex) setHoverIndex(index)
+          const point = points[index]
+          setTip(tipFor(point, cx(index), Math.min(baseY - 2, Math.max(pad.top + 2, cy(point)))))
+        },
+        onMouseLeave: function () {
+          setHoverIndex(-1)
+          setTip(null)
+        },
+        onClick: function (event) {
+          const index = indexAt(event)
+          if (index >= 0) clicked(points[index].key)
+        },
+      })
 
       // Dense grains (10-minute ticks, daily ticks over a year) can't fit every
       // label, so the stride grows until neighbouring labels no longer touch.
@@ -4108,6 +4247,7 @@ window.__ModuleLoader__.load({
           gridMarks,
           averageMarks,
           marks,
+          guide,
           yLabels,
           labels,
           unitText
@@ -4116,7 +4256,8 @@ window.__ModuleLoader__.load({
                 { className: 'gt-chart-unit', x: 2, y: height - 6, textAnchor: 'start' },
                 unitText
               )
-            : null
+            : null,
+          hitArea
         ),
         tip
           ? h(
@@ -6661,6 +6802,9 @@ window.__ModuleLoader__.load({
         setNow: setNow,
         normalizePath: normalizePath,
         backgroundWidth: backgroundWidth,
+        smoothPath: smoothPath,
+        barTopPath: barTopPath,
+        chartColor: chartColor,
         tipSegments: tipSegments,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,

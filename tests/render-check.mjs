@@ -192,7 +192,7 @@ const stackedTree = render(
 )
 
 const chartLabels = []
-const chartRects = []
+const chartBars = []
 function collect(node) {
   if (node === null || node === undefined || node === false) return
   if (Array.isArray(node)) {
@@ -201,7 +201,7 @@ function collect(node) {
   }
   if (typeof node !== 'object') return
   if (node.type === 'text' && node.props.className === 'gt-chart-label') chartLabels.push(node)
-  if (node.type === 'rect') chartRects.push(node)
+  if (node.type === 'path' && node.props.className === 'gt-bar-rect') chartBars.push(node)
   collect(node.children)
 }
 collect(stackedTree)
@@ -210,16 +210,18 @@ if (chartLabels.length !== stackedPoints.length) {
   throw new Error('x labels were skipped: ' + chartLabels.length + '/' + stackedPoints.length)
 }
 const visibleSegments = stackedPoints.reduce(function (count, point) {
+  if (!(point.seconds > 0)) return count
   return count + Math.max(1, (point.parts || []).filter((part) => part.seconds > 0).length)
 }, 0)
-if (chartRects.length !== visibleSegments) {
-  throw new Error('bar segments: ' + chartRects.length + ', expected ' + visibleSegments)
+if (chartBars.length !== visibleSegments) {
+  throw new Error('bar segments: ' + chartBars.length + ', expected ' + visibleSegments)
 }
-const fills = new Set(chartRects.map((rect) => rect.props.fill))
+const fills = new Set(chartBars.map((bar) => bar.props.fill))
 if (fills.size < 1) throw new Error('bar segments carry no fill')
-for (const rect of chartRects) {
-  if (!Number.isFinite(rect.props.y) || !Number.isFinite(rect.props.height)) throw new Error('bad segment geometry')
-  if (rect.props.rx !== undefined) throw new Error('bars must be square')
+for (const bar of chartBars) {
+  const d = bar.props.d
+  if (typeof d !== 'string' || d.indexOf('M ') !== 0) throw new Error('bad segment geometry: ' + d)
+  if (!d.endsWith('Z')) throw new Error('a bar path must close')
 }
 
 // --- y axis --------------------------------------------------------------
@@ -1384,6 +1386,31 @@ assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
 
+// --- chart drawing helpers: smoothing, rounded bars, lifted colours ---------
+
+const curve = testApi.smoothPath([
+  { x: 0, y: 40 },
+  { x: 10, y: 10 },
+  { x: 20, y: 10 },
+  { x: 30, y: 40 },
+])
+assert.ok(curve.indexOf('M 0 40') === 0, 'the curve starts at the first point')
+assert.ok(curve.indexOf(' C ') > 0, 'the curve is made of cubic segments')
+assert.equal(curve.indexOf('NaN'), -1, 'no NaN creeps into the path')
+assert.equal(testApi.smoothPath([{ x: 1, y: 1 }]), '', 'a single point draws no line')
+
+const rounded = testApi.barTopPath(0, 0, 10, 20, 2.5)
+assert.ok(rounded.indexOf('Q') > 0, 'the bar cap is rounded')
+assert.ok(rounded.endsWith('Z'), 'the bar path closes')
+const square = testApi.barTopPath(0, 0, 10, 20, 0)
+assert.equal(square.indexOf('Q'), -1, 'radius 0 keeps a square cap')
+
+const lifted = testApi.chartColor('#4f8ff7')
+assert.match(lifted, /^#[0-9a-f]{6}$/, 'the lifted colour stays a hex colour')
+assert.notEqual(lifted, '#4f8ff7', 'the stroke is lifted from the stored colour')
+assert.equal(testApi.chartColor('#abc'), '#b6c5d3', 'short hex expands before lifting')
+assert.equal(testApi.chartColor('currentColor'), 'currentColor', 'non-hex colours pass through')
+console.log('  chart helpers: smooth curve, rounded caps, lifted strokes')
 // --- chart tooltip rows: total first, then the biggest blocks --------------
 
 const tipSplit = testApi.tipSegments([
