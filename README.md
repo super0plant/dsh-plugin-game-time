@@ -82,6 +82,14 @@
 - **不联网、无遥测、无账号**。所有统计都在本机完成。
 - 删除 `game-time` 目录即可清空全部数据；卸载插件不会自动删数据。
 
+## 截图
+
+| 今日 | 全部 |
+|---|---|
+| ![今日页](docs/screenshots/today-zh.jpg) | ![全部分析](docs/screenshots/all-zh.jpg) |
+| **设置** | **游戏详情** |
+| ![设置](docs/screenshots/settings-zh.jpg) | ![游戏详情](docs/screenshots/detail-zh.jpg) |
+
 ## 常见问题
 
 - **别把启动器当游戏**：要拖的是游戏本体（比如 `ZenlessZoneZero.exe`），不是 `launcher.exe` 或平台客户端。

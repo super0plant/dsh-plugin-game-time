@@ -37,6 +37,14 @@ You do not need to scan your library. Dragging a shortcut or pasting a path is e
 - Hover a column for its value; click for the breakdown; click outside to close.
 - Each chart remembers its own bar/line choice and the 7/30-day window.
 
+## Screenshots
+
+| Today (English UI) | Settings |
+|---|---|
+| ![Today](docs/screenshots/today-en.jpg) | ![Settings](docs/screenshots/settings-zh.jpg) |
+| **All games** | **Game detail** |
+| ![All](docs/screenshots/all-zh.jpg) | ![Detail](docs/screenshots/detail-zh.jpg) |
+
 ## Common questions
 
 - **Don't add the launcher.** Add the game itself (`ZenlessZoneZero.exe`), not `launcher.exe`.
