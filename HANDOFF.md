@@ -27,6 +27,8 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.7.1 悬停卡片换行顺序**：用户截图显示长游戏名把「1时16分」挤成两行。改 CSS：.gt-tip-dur 加 white-space:nowrap;flex:0 0 auto，.gt-tip-name 改成最多两行（-webkit-line-clamp:2）+ 断词，行内 lign-items:flex-start 让色块/时间贴第一行，卡片 max-width 220→248。纯 CSS。
+
 - **2026-11-14 · 0.7.0 图表悬停改成「整柱明细卡」**：用户要的是「悬停在柱子上看总时长 + 每个色块各自的时长」，原来三段 hover（堆叠段、无切片柱、曲线点）各自只报**当前那一段**。改法：抽出纯函数 `tipSegments(parts)`（过滤 0 秒、按秒数降序、最多 8 行、其余折成一行），`Chart` 里统一用 `tipFor(point, x, y)` 生成 `{label,total,rows}`；渲染从「一行药丸」换成卡片：`gt-tip-head`（总时长 + 标签）+ `gt-tip-row`（色块 / 名称 / 时长）。曲线点的 hover 也走同一张卡。验证：`render-check` 新增 `tipSegments` 三条断言（丢 0 秒、降序、超过 8 项折叠并合计）+ 五套全绿。**纯前端，刷新即可。**
 
 - **2026-11-14 · 0.6.0「添加平台」这一行重排**：用户截图指出名称框撑满整行、地址框只剩一条缝、按钮被挤成两行。根因：名称框是裸 `.gt-input`（CSS 里 `width:100%`），又没有 flex 尺寸约束，于是在 flex 行里把宽度吃光。改法：新增行容器 `.gt-platform-new`（flex 行，gap 8），名称框 `flex:0 0 128px`，地址列 `flex:1 1 auto;min-width:0`，三个控件统一 `height:32px`；按钮从 `.gt-link` 换成 `.gt-btn .gt-platform-add`（实心、`white-space:nowrap`、`flex:0 0 auto`、带 hover）。平台说明补「可以直接拖 exe / 快捷方式到地址框」。**纯前端，刷新页面即可。**
