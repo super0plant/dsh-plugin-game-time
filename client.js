@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.4.2'
+    const VERSION = '0.5.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -161,6 +161,7 @@ window.__ModuleLoader__.load({
       'settings.headerFade': '渐变起点 (%)',
       'bg.imageOpacity': '图片透明度',
       'crop.zoom': '缩放',
+      'crop.ratio.original': '原图',
       'crop.apply': '确定',
       'crop.hint': '拖动调整位置',
       'image.choose': '选择图片',
@@ -383,6 +384,7 @@ window.__ModuleLoader__.load({
       'settings.headerFade': 'Fade start (%)',
       'bg.imageOpacity': 'Image opacity',
       'crop.zoom': 'Zoom',
+      'crop.ratio.original': 'Original',
       'crop.apply': 'Apply',
       'crop.hint': 'Drag to reposition',
       'image.choose': 'Choose image',
@@ -2686,6 +2688,20 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Cover rule for both background layers: the image is never narrower than
+     * the window, so it grows with the window but stops shrinking once it hits
+     * its own pixel width — below that the window crops it instead of squashing
+     * it. 0 means "size unknown yet", and the caller falls back to CSS cover.
+     */
+    function backgroundWidth(naturalWidth, containerWidth) {
+      const natural = Number(naturalWidth) || 0
+      const container = Number(containerWidth) || 0
+      if (natural <= 0) return 0
+      if (container <= 0) return natural
+      return Math.max(natural, Math.round(container))
+    }
+
+    /**
      * Background image opacity only. The opaque base colour lives one level up
      * (global settings) because the panel base is shared by every page.
      */
@@ -2712,15 +2728,33 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Cropper({ t, src: source, aspect, outputWidth, format, onCancel, onApply }) {
+    // Crop presets. `null` keeps the picture's own ratio; the icon cropper
+    // deliberately gets none of these and stays square.
+    const PANEL_RATIOS = [
+      { key: 'original', labelKey: 'crop.ratio.original', value: null },
+      { key: '16x9', label: '16:9', value: 16 / 9 },
+      { key: '8x3', label: '8:3', value: 8 / 3 },
+      { key: '4x3', label: '4:3', value: 4 / 3 },
+    ]
+    const HEADER_RATIOS = [
+      { key: 'original', labelKey: 'crop.ratio.original', value: null },
+      { key: '6x1', label: '6:1', value: 6 },
+      { key: '4x1', label: '4:1', value: 4 },
+      { key: '3x1', label: '3:1', value: 3 },
+    ]
+
+    function Cropper({ t, src: source, aspect, outputWidth, format, ratios, onCancel, onApply }) {
       const [imageSize, setImageSize] = React.useState(null)
       const [imageElement, setImageElement] = React.useState(null)
       const [zoom, setZoom] = React.useState(1)
       const [offset, setOffset] = React.useState({ x: 0, y: 0 })
       const [dragging, setDragging] = React.useState(false)
+      // `null` means "keep the picture's own ratio"; a number is a preset.
+      const [ratio, setRatio] = React.useState(aspect)
+      const activeAspect = ratio === null ? (imageSize ? imageSize.w / imageSize.h : aspect) : ratio
 
-      const viewportWidth = aspect >= 2 ? 420 : aspect >= 1 ? 320 : 240
-      const viewportHeight = Math.round(viewportWidth / aspect)
+      const viewportWidth = activeAspect >= 2 ? 420 : activeAspect >= 1 ? 320 : 240
+      const viewportHeight = Math.max(1, Math.round(viewportWidth / activeAspect))
       const base = imageSize ? Math.max(viewportWidth / imageSize.w, viewportHeight / imageSize.h) : 1
       const scale = base * zoom
       const displayWidth = imageSize ? imageSize.w * scale : 0
@@ -2782,11 +2816,26 @@ window.__ModuleLoader__.load({
         })
       }
 
+      /** Swap the crop ratio and re-fit the picture into the new viewport. */
+      const changeRatio = function (next) {
+        setRatio(next)
+        setZoom(1)
+        if (!imageSize) return
+        const nextAspect = next === null ? imageSize.w / imageSize.h : next
+        const width = nextAspect >= 2 ? 420 : nextAspect >= 1 ? 320 : 240
+        const height = Math.max(1, Math.round(width / nextAspect))
+        const fit = Math.max(width / imageSize.w, height / imageSize.h)
+        setOffset({
+          x: (width - imageSize.w * fit) / 2,
+          y: (height - imageSize.h * fit) / 2,
+        })
+      }
+
       const apply = function () {
         if (!imageElement || !imageSize) return
         const canvas = document.createElement('canvas')
         canvas.width = outputWidth
-        canvas.height = Math.max(1, Math.round(outputWidth / aspect))
+        canvas.height = Math.max(1, Math.round(outputWidth / activeAspect))
         const context = canvas.getContext('2d')
         const sourceX = (0 - offset.x) / scale
         const sourceY = (0 - offset.y) / scale
@@ -2802,6 +2851,27 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { className: 'gt-crop' },
+          ratios && ratios.length
+            ? h(
+                'div',
+                { className: 'gt-seg' },
+                ratios.map(function (option) {
+                  return h(
+                    'button',
+                    {
+                      key: option.key,
+                      type: 'button',
+                      className: 'gt-seg-btn',
+                      'data-active': option.value === null ? ratio === null : ratio === option.value,
+                      onClick: function () {
+                        changeRatio(option.value)
+                      },
+                    },
+                    option.labelKey ? t(option.labelKey) : option.label
+                  )
+                })
+              )
+            : null,
           h(
             'div',
             {
@@ -2852,7 +2922,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function ImageField({ t, value, aspect, width, fit, onChange, onFit }) {
+    function ImageField({ t, value, aspect, width, fit, ratios, onChange, onFit }) {
       const [busy, setBusy] = React.useState(false)
       const [pending, setPending] = React.useState(null)
       const choose = function (event) {
@@ -2899,6 +2969,7 @@ window.__ModuleLoader__.load({
               src: pending,
               aspect: aspect,
               outputWidth: width,
+              ratios: ratios,
               onCancel: function () {
                 setPending(null)
               },
@@ -5331,6 +5402,7 @@ window.__ModuleLoader__.load({
               value: SETTINGS.headerBackground || '',
               aspect: 4,
               width: 1600,
+              ratios: HEADER_RATIOS,
               onChange: function (value) {
                 SETTINGS.headerBackground = value
                 touch()
@@ -5418,6 +5490,7 @@ window.__ModuleLoader__.load({
               value: SETTINGS.background || '',
               aspect: 8 / 3,
               width: 1280,
+              ratios: PANEL_RATIOS,
               fit: SETTINGS.backgroundFit || 'cover',
               onChange: function (value) {
                 SETTINGS.background = value
@@ -5842,6 +5915,7 @@ window.__ModuleLoader__.load({
               value: game.headerBackground || '',
               aspect: 4,
               width: 1600,
+              ratios: HEADER_RATIOS,
               onChange: function (value) {
                 game.headerBackground = value
                 touch()
@@ -5858,6 +5932,7 @@ window.__ModuleLoader__.load({
               value: game.background || '',
               aspect: 8 / 3,
               width: 1280,
+              ratios: PANEL_RATIOS,
               fit: game.backgroundFit || 'cover',
               onChange: function (value) {
                 game.background = value
@@ -6286,6 +6361,60 @@ window.__ModuleLoader__.load({
       const headerBg = activeGame
         ? activeGame.headerBackground || SETTINGS.headerBackground || ''
         : SETTINGS.headerBackground || ''
+
+      // Cover sizing needs two numbers: the shell width (the "window") and each
+      // image's own pixel width. backgroundWidth() then keeps the image at least
+      // as wide as the window and never narrower than itself.
+      const shellRef = React.useRef(null)
+      const [shellWidth, setShellWidth] = React.useState(0)
+      const [bgNatural, setBgNatural] = React.useState(0)
+      const [headerNatural, setHeaderNatural] = React.useState(0)
+
+      React.useEffect(function () {
+        const node = shellRef.current
+        if (!node || typeof ResizeObserver !== 'function') return undefined
+        const observer = new ResizeObserver(function (entries) {
+          const entry = entries && entries[0]
+          if (entry) setShellWidth(Math.round(entry.contentRect.width))
+        })
+        observer.observe(node)
+        return function () {
+          observer.disconnect()
+        }
+      }, [])
+
+      React.useEffect(function () {
+        if (!bgUrl || typeof Image !== 'function') {
+          setBgNatural(0)
+          return undefined
+        }
+        const image = new Image()
+        image.onload = function () {
+          setBgNatural(image.naturalWidth || 0)
+        }
+        image.src = bgUrl
+        return function () {
+          image.onload = null
+        }
+      }, [bgUrl])
+
+      React.useEffect(function () {
+        if (!headerBg || typeof Image !== 'function') {
+          setHeaderNatural(0)
+          return undefined
+        }
+        const image = new Image()
+        image.onload = function () {
+          setHeaderNatural(image.naturalWidth || 0)
+        }
+        image.src = headerBg
+        return function () {
+          image.onload = null
+        }
+      }, [headerBg])
+
+      const bgWidth = backgroundWidth(bgNatural, shellWidth)
+      const headerWidth = backgroundWidth(headerNatural, shellWidth)
       let body
       if (route.name === 'game-settings') {
         const game = GAMES.find(function (item) {
@@ -6339,6 +6468,7 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         {
+          ref: shellRef,
           className: 'gt-shell' + (SETTINGS.density === 'compact' ? ' gt-compact' : ''),
           style: {
             backgroundColor: baseColor,
@@ -6354,14 +6484,20 @@ window.__ModuleLoader__.load({
               className: 'gt-bg',
               style: {
                 backgroundImage: 'url("' + bgUrl + '")',
-                backgroundSize: bgFit === 'tile' ? 'auto' : 'cover',
+                backgroundSize: bgFit === 'tile' ? 'auto' : bgWidth ? bgWidth + 'px auto' : 'cover',
                 backgroundRepeat: bgFit === 'tile' ? 'repeat' : 'no-repeat',
                 opacity: String(bgOpacity),
               },
             })
           : null,
         headerBg
-          ? h('div', { className: 'gt-header-bg', style: { backgroundImage: 'url("' + headerBg + '")' } })
+          ? h('div', {
+              className: 'gt-header-bg',
+              style: {
+                backgroundImage: 'url("' + headerBg + '")',
+                backgroundSize: headerWidth ? headerWidth + 'px auto' : 'cover',
+              },
+            })
           : null,
         h(
           'div',
@@ -6472,6 +6608,7 @@ window.__ModuleLoader__.load({
         NOW: NOW,
         setNow: setNow,
         normalizePath: normalizePath,
+        backgroundWidth: backgroundWidth,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
         seriesFor: seriesFor,

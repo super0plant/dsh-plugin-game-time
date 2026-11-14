@@ -1384,6 +1384,14 @@ assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
 
+// --- background cover rule: never narrower than the image ------------------
+
+assert.equal(testApi.backgroundWidth(1600, 900), 1600, 'a narrow window crops the image, it does not shrink it')
+assert.equal(testApi.backgroundWidth(1600, 2000), 2000, 'a wide window grows the image with it')
+assert.equal(testApi.backgroundWidth(1600, 1600), 1600, 'an equal width is neutral')
+assert.equal(testApi.backgroundWidth(0, 900), 0, 'an unmeasured image falls back to CSS cover')
+assert.equal(testApi.backgroundWidth(1600, 0), 1600, 'an unmeasured window keeps the natural width')
+console.log('  background cover rule: grow with the window, never shrink below natural')
 // --- pasted paths: quotes are stripped before anything resolves them --------
 
 assert.equal(testApi.normalizePath('"D:\\Games\\X\\Game.exe"'), 'D:\\Games\\X\\Game.exe', 'double quotes are stripped')
