@@ -1470,6 +1470,38 @@ assert.equal(folded.kept.length, 8, 'the tooltip lists at most eight rows')
 assert.equal(folded.foldedCount, 3, 'the rest folds into one row')
 assert.equal(folded.folded, 10 + 20 + 30, 'the folded row sums the smallest blocks')
 console.log('  chart tooltip: total then top blocks, long lists fold into one row')
+// --- rolling windows: 近 7 天 / 近 1 月 ------------------------------------
+
+const rolling7 = testApi.rangeBounds('last7', testApi.NOW)
+assert.equal(Math.round((rolling7.to.getTime() - rolling7.from.getTime()) / 86400000), 7, 'last 7 days spans 7 days')
+assert.equal(rolling7.from.getHours(), 0, 'the window starts at midnight')
+assert.equal(rolling7.to.getHours(), 0, 'the window ends at midnight')
+
+const grainDay = testApi.GRAIN_LEVELS.last7.levels[0]
+const last7Points = testApi.seriesFor(null, 'last7', testApi.NOW, testApi.BY_GAME, grainDay)
+assert.equal(last7Points.length, 7, 'seven daily buckets')
+const grainWeek = testApi.GRAIN_LEVELS.last30.levels[0]
+const last30Points = testApi.seriesFor(null, 'last30', testApi.NOW, testApi.BY_GAME, grainWeek)
+assert.equal(last30Points.length, 5, 'thirty days fit five weekly buckets')
+assert.match(testApi.rangeLabelOf('last7', testApi.NOW, grainDay), /\d/, 'the label names the dates')
+console.log('  rolling windows: 7 daily / 30-day weekly buckets')
+
+// --- today page: two trend cards side by side ------------------------------
+
+const todayTrendTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(trend)')
+const todayCards = []
+function collectCards(node) {
+  if (!node || typeof node !== 'object') return
+  if (Array.isArray(node)) {
+    node.forEach(collectCards)
+    return
+  }
+  if (node.props && node.props.className === 'gt-panel-card') todayCards.push(node)
+  collectCards(node.children)
+}
+collectCards(todayTrendTree)
+assert.equal(todayCards.length, 2, 'today shows two trend cards')
+console.log('  today page: two trend cards')
 // --- background cover rule: never narrower than the image ------------------
 
 assert.equal(testApi.backgroundWidth(1600, 900), 1600, 'a narrow window crops the image, it does not shrink it')

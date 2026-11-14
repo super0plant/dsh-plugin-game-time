@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.9.0'
+    const VERSION = '0.11.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -32,6 +32,8 @@ window.__ModuleLoader__.load({
       'today.col.day': '本日',
       'today.col.week': '本周',
       'today.col.total': '总计',
+      'today.byDay': '按天',
+      'today.byWeek': '按周',
       'search': '搜索游戏…',
       'sort.total': '总时长',
       'sort.week': '本周',
@@ -45,6 +47,8 @@ window.__ModuleLoader__.load({
       'all.empty': '没有匹配的游戏',
       'back': '返回',
       'range.day': '今日',
+      'range.last7': '近 7 天',
+      'range.last30': '近 1 月',
       'range.week': '本周',
       'range.month': '本月',
       'range.all': '全部',
@@ -256,6 +260,8 @@ window.__ModuleLoader__.load({
       'today.col.day': 'Today',
       'today.col.week': 'Week',
       'today.col.total': 'Total',
+      'today.byDay': 'By day',
+      'today.byWeek': 'By week',
       'search': 'Search games…',
       'sort.total': 'Total time',
       'sort.week': 'This week',
@@ -269,6 +275,8 @@ window.__ModuleLoader__.load({
       'all.empty': 'No matching games',
       'back': 'Back',
       'range.day': 'Day',
+      'range.last7': 'Last 7 days',
+      'range.last30': 'Last 30 days',
       'range.week': 'Week',
       'range.month': 'Month',
       'range.all': 'All',
@@ -560,6 +568,11 @@ window.__ModuleLoader__.load({
         const from = startOfDay(anchor)
         return { from: from, to: new Date(from.getTime() + DAY_MS) }
       }
+      if (range === 'last7' || range === 'last30') {
+        const days = range === 'last7' ? 7 : 30
+        const to = new Date(startOfDay(anchor).getTime() + DAY_MS)
+        return { from: new Date(to.getTime() - days * DAY_MS), to: to }
+      }
       if (range === 'week') {
         const from = startOfWeek(anchor)
         return { from: from, to: new Date(from.getTime() + 7 * DAY_MS) }
@@ -586,6 +599,8 @@ window.__ModuleLoader__.load({
     // moves one level, up = finer.
     const GRAIN_LEVELS = {
       day: { levels: [GRAIN.h1, GRAIN.m30, GRAIN.m10], base: 0 },
+      last7: { levels: [GRAIN.d1], base: 0 },
+      last30: { levels: [GRAIN.w1, GRAIN.mo], base: 0 },
       week: { levels: [GRAIN.d1], base: 0 },
       month: { levels: [GRAIN.w1, GRAIN.d1], base: 1 },
       all: { levels: [GRAIN.mo, GRAIN.w1, GRAIN.d1], base: 0 },
@@ -602,6 +617,18 @@ window.__ModuleLoader__.load({
 
     /** The exact span a chart draws: every range is a rolling window ending at its anchor. */
     function windowBounds(range, anchor, grain) {
+      // Rolling windows ignore panning: they always end at tomorrow midnight, so
+      // "last 7 days" never turns into "the 7 days before some other date".
+      if (range === 'last7' || range === 'last30') {
+        const days = range === 'last7' ? 7 : 30
+        const periodEnd = new Date(startOfDay(NOW).getTime() + DAY_MS)
+        const earliest = FIRST_START !== null ? FIRST_START : earliestSessionStart()
+        const minEnd = earliest === null
+          ? periodEnd
+          : new Date(startOfDay(new Date(earliest)).getTime() + DAY_MS)
+        const end = periodEnd.getTime() < minEnd.getTime() ? minEnd : periodEnd
+        return { from: new Date(end.getTime() - days * DAY_MS), to: end }
+      }
       const unit = grainOf(range, grain)
       const end = clampAnchor(range, anchor, unit)
       if (range === 'all') {
@@ -617,6 +644,10 @@ window.__ModuleLoader__.load({
 
     /** The visible window printed next to a chart's title. */
     function rangeLabelOf(range, anchor, grain) {
+      if (range === 'last7' || range === 'last30') {
+        const bounds = windowBounds(range, anchor, grain)
+        return shortDate(bounds.from) + ' – ' + shortDate(new Date(bounds.to.getTime() - DAY_MS))
+      }
       const unit = grainOf(range, grain)
       if (range === 'all') {
         const end = clampAnchor('all', anchor, unit)
@@ -677,6 +708,8 @@ window.__ModuleLoader__.load({
     /** How many bars one window holds: the full day, week or month. */
     function windowLength(range, end) {
       if (range === 'day') return 1
+      if (range === 'last7') return 7
+      if (range === 'last30') return 30
       if (range === 'week') return 7
       const last = new Date(end.getTime() - 1)
       return new Date(last.getFullYear(), last.getMonth() + 1, 0).getDate()
@@ -686,6 +719,7 @@ window.__ModuleLoader__.load({
     function defaultAnchor(range) {
       const day = startOfDay(NOW)
       if (range === 'day') return new Date(day.getTime() + DAY_MS)
+      if (range === 'last7' || range === 'last30') return new Date(day.getTime() + DAY_MS)
       if (range === 'week') return new Date(startOfWeek(day).getTime() + 7 * DAY_MS)
       if (range === 'month') return new Date(day.getFullYear(), day.getMonth() + 1, 1)
       return new Date(NOW)
@@ -1609,7 +1643,7 @@ window.__ModuleLoader__.load({
     function bucketLabel(range, grain, from) {
       if (grain.kind === 'minute') return clockOf(from)
       if (grain.kind === 'week') return shortDate(from)
-      if (range === 'week') return ['一', '二', '三', '四', '五', '六', '日'][(from.getDay() + 6) % 7]
+      if (range === 'week' || (range === 'last7' && grain.kind === 'day')) return ['一', '二', '三', '四', '五', '六', '日'][(from.getDay() + 6) % 7]
       if (range === 'month') return String(from.getDate())
       return shortDate(from)
     }
@@ -1831,6 +1865,9 @@ window.__ModuleLoader__.load({
       '.gt-tab:hover{opacity:.85;}',
       '.gt-tab[data-active="true"]{background:rgba(128,128,128,.20);opacity:1;}',
       '.gt-root{display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;padding:14px 22px 22px;gap:14px;overflow:auto;color:inherit;font:inherit;}',
+      '.gt-trend-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;}',
+      '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}',
+      '.gt-trend-seg{align-self:flex-end;}',
       '.gt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
       '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
       '.gt-label{font-size:12px;opacity:.62;letter-spacing:.2px;}',
@@ -3276,6 +3313,53 @@ window.__ModuleLoader__.load({
      * Today view
      * ------------------------------------------------------------------ */
 
+    /**
+     * One trend card for the today page: the same ChartCard the all-games page
+     * uses, so tooltip, bar/line toggle, colours and selection all come along.
+     */
+    function TodayTrend({ t, range, grains, title }) {
+      const [zoomIndex, setZoomIndex] = React.useState(0)
+      const [selected, setSelected] = React.useState(null)
+      const grain = grains[zoomIndex]
+      const points = bucketSeries(seriesFor(null, range, NOW, BY_GAME, grain), t)
+      return h(
+        'div',
+        { className: 'gt-trend-cell' },
+        grains.length > 1
+          ? h(
+              'div',
+              { className: 'gt-seg gt-trend-seg' },
+              grains.map(function (item, index) {
+                return h(
+                  'button',
+                  {
+                    key: item.key,
+                    type: 'button',
+                    className: 'gt-seg-btn',
+                    'data-active': index === zoomIndex,
+                    onClick: function () {
+                      setZoomIndex(index)
+                    },
+                  },
+                  t('unit.' + item.key)
+                )
+              })
+            )
+          : null,
+        h(ChartCard, {
+          t: t,
+          title: title,
+          unit: t('unit.' + grain.key),
+          note: rangeLabelOf(range, NOW, grain),
+          points: points,
+          selectedKey: selected,
+          onSelect: function (key) {
+            setSelected(selected === key ? null : key)
+          },
+        })
+      )
+    }
+
     function TodayView({ t, onOpenGame }) {
       const duplicates = duplicateMap()
       const rows = GAMES.map(function (game) {
@@ -3297,6 +3381,12 @@ window.__ModuleLoader__.load({
           h(Stat, { label: t('stat.today'), seconds: totalsFor(null, 'day', NOW), t: t }),
           h(Stat, { label: t('stat.week'), seconds: totalsFor(null, 'week', NOW), t: t }),
           h(Stat, { label: t('stat.total'), seconds: totalsFor(null, 'all', NOW), t: t })
+        ),
+        h(
+          'div',
+          { className: 'gt-trend-row' },
+          h(TodayTrend, { t: t, range: 'last7', grains: [GRAIN.d1], title: t('today.byDay') }),
+          h(TodayTrend, { t: t, range: 'last30', grains: [GRAIN.w1, GRAIN.mo], title: t('today.byWeek') })
         ),
         rows.length === 0
           ? h(
@@ -3373,6 +3463,7 @@ window.__ModuleLoader__.load({
       const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
       const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
       const grain = levelConfig.levels[zoomIndex]
+      const rolling = range === 'last7' || range === 'last30'
       const zoomBy = function (delta) {
         setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
       }
@@ -3530,6 +3621,12 @@ window.__ModuleLoader__.load({
               )
             : null
         ),
+        h(
+          'div',
+          { className: 'gt-trend-row' },
+          h(TodayTrend, { t: t, range: 'last7', grains: [GRAIN.d1], title: t('today.byDay') }),
+          h(TodayTrend, { t: t, range: 'last30', grains: [GRAIN.w1, GRAIN.mo], title: t('today.byWeek') })
+        ),
         rows.length === 0
           ? archivedRows.length === 0
             ? h('div', { className: 'gt-empty' }, h('div', { className: 'gt-empty-title' }, t('all.empty')))
@@ -3594,7 +3691,7 @@ window.__ModuleLoader__.load({
             h(
               'div',
               { className: 'gt-seg' },
-              ['day', 'week', 'month', 'all'].map(function (key) {
+              ['day', 'last7', 'last30', 'all'].map(function (key) {
                 return h(
                   'button',
                   {
@@ -3618,11 +3715,11 @@ window.__ModuleLoader__.load({
               range: range,
               anchor: currentAnchor,
               grain: grain,
-              onPan: function (delta) {
+              onPan: rolling ? undefined : function (delta) {
                 setAnchor(panAnchor(range, currentAnchor, delta, grain))
               },
-              onZoom: zoomBy,
-              onReset: function () {
+              onZoom: rolling ? undefined : zoomBy,
+              onReset: rolling ? undefined : function () {
                 setAnchor(null)
                 setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
               },
@@ -4607,6 +4704,7 @@ window.__ModuleLoader__.load({
       const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
       const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
       const grain = levelConfig.levels[zoomIndex]
+      const rolling = range === 'last7' || range === 'last30'
       const zoomBy = function (delta) {
         setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
       }
@@ -4810,7 +4908,7 @@ window.__ModuleLoader__.load({
           h(
             'div',
             { className: 'gt-seg' },
-            ['day', 'week', 'month', 'all'].map(function (key) {
+            ['day', 'last7', 'last30', 'all'].map(function (key) {
               return h(
                 'button',
                 {
@@ -4881,8 +4979,8 @@ window.__ModuleLoader__.load({
           points: points,
           selectedKey: selected,
           onPan: shift,
-          onZoom: zoomBy,
-          onReset: function () {
+          onZoom: rolling ? undefined : zoomBy,
+          onReset: rolling ? undefined : function () {
             setAnchor(defaultAnchor(range))
             setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
             setSelected(null)
