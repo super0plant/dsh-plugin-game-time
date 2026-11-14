@@ -27,6 +27,8 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.11.1 今日页双趋势图定稿**：① 顺序改成 统计卡 → 今天玩过列表 → 趋势图（用户要求「今日玩过放在表格上面」）；② 左图 = ange:'day' + GRAIN.h1（24 根小时柱），右图 = last7/last30 + GRAIN.d1，TodayTrend 用 onWheel（280ms 防抖）在 7/30 天之间切换，去掉了原来的「周/月」分段按钮；③ windowBounds 去掉「滚动窗口忽略 anchor」的特判，last7/last30 恢复成可平移的定长窗口（angeLabelOf 的特判同步删除，注意别把 const unit = grainOf(...) 一起删掉——这次就删错过一次，靠 render-check 抓到）；④ AllView/DetailView 的 olling ? undefined 门控全部移除，平移/缩放/重置恢复。验证：五套全绿。**纯前端，刷新即可。**
+
 - **2026-11-14 · 0.11.0 滚动窗口 + 今日页双趋势图（从 0.9.0 重新做，避开 0.10.0）**：0.10.0 的今日页（正在游玩卡/同期对比/小图）在真机出问题，已整体 git reset --hard v0.9.0 回退，本版只在 0.9.0 上加趋势图。数据层新增 last7 / last30：angeBounds 给 7/30 天，GRAIN_LEVELS.last7=[d1]、last30=[w1,mo]，windowLength 7/30，defaultAnchor 明天零点；windowBounds 对滚动窗口**特判**（恒定结束于明天零点、不受 anchor 影响），angeLabelOf 也特判；ucketLabel 里 last7 按天显示星期。因为滚动窗口不翻页，AllView/DetailView 的 onPan/onZoom/onReset 在 olling 时传 undefined（ChartCard 自动不渲染对应按钮）。今日页新增 TodayTrend（内部复用 ChartCard），两列网格 .gt-trend-row：左 last7/d1，右 last30/w1（可切月）。验证：新增「last7 跨 7 天 / 7 个日桶 / last30 五个周桶 / 标签含日期 / 今日页两张趋势卡」断言；五套全绿。**纯前端，刷新即可。**
 
 - **2026-11-14 · 0.9.0 曲线改成堆叠色带**：用户要「曲线里也要有柱状图那种分块，颜色同一套逻辑」。做法：按 order（和柱状完全相同的切片顺序）累加每个切片的上下边界，andPath(lower, upper) = 上边界平滑路径 + 反向的下边界平滑路径 + Z，每个 band 用 sliceColor(id) 填充、opacity .82；顶部再画一条 1.2 px 总时长线（原来 1.7）。只有一个切片时仍走原来的渐变面积分支。点更小（3 / 1.7 px）。验证：ender-check 新增「曲线 band 数 == 可见切片数 + 只有一条总时长线 + 线宽 ≤1.3」；五套全绿。**纯前端，刷新即可。**

@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.0'
+    const VERSION = '0.11.1'
 
     const zh = {
       'panel': '游戏时长',
@@ -600,7 +600,7 @@ window.__ModuleLoader__.load({
     const GRAIN_LEVELS = {
       day: { levels: [GRAIN.h1, GRAIN.m30, GRAIN.m10], base: 0 },
       last7: { levels: [GRAIN.d1], base: 0 },
-      last30: { levels: [GRAIN.w1, GRAIN.mo], base: 0 },
+      last30: { levels: [GRAIN.d1], base: 0 },
       week: { levels: [GRAIN.d1], base: 0 },
       month: { levels: [GRAIN.w1, GRAIN.d1], base: 1 },
       all: { levels: [GRAIN.mo, GRAIN.w1, GRAIN.d1], base: 0 },
@@ -617,18 +617,6 @@ window.__ModuleLoader__.load({
 
     /** The exact span a chart draws: every range is a rolling window ending at its anchor. */
     function windowBounds(range, anchor, grain) {
-      // Rolling windows ignore panning: they always end at tomorrow midnight, so
-      // "last 7 days" never turns into "the 7 days before some other date".
-      if (range === 'last7' || range === 'last30') {
-        const days = range === 'last7' ? 7 : 30
-        const periodEnd = new Date(startOfDay(NOW).getTime() + DAY_MS)
-        const earliest = FIRST_START !== null ? FIRST_START : earliestSessionStart()
-        const minEnd = earliest === null
-          ? periodEnd
-          : new Date(startOfDay(new Date(earliest)).getTime() + DAY_MS)
-        const end = periodEnd.getTime() < minEnd.getTime() ? minEnd : periodEnd
-        return { from: new Date(end.getTime() - days * DAY_MS), to: end }
-      }
       const unit = grainOf(range, grain)
       const end = clampAnchor(range, anchor, unit)
       if (range === 'all') {
@@ -644,10 +632,6 @@ window.__ModuleLoader__.load({
 
     /** The visible window printed next to a chart's title. */
     function rangeLabelOf(range, anchor, grain) {
-      if (range === 'last7' || range === 'last30') {
-        const bounds = windowBounds(range, anchor, grain)
-        return shortDate(bounds.from) + ' – ' + shortDate(new Date(bounds.to.getTime() - DAY_MS))
-      }
       const unit = grainOf(range, grain)
       if (range === 'all') {
         const end = clampAnchor('all', anchor, unit)
@@ -3314,45 +3298,51 @@ window.__ModuleLoader__.load({
      * ------------------------------------------------------------------ */
 
     /**
-     * One trend card for the today page: the same ChartCard the all-games page
-     * uses, so tooltip, bar/line toggle, colours and selection all come along.
+     * A trend card for the today page: the same ChartCard the all-games page
+     * uses, so tooltip, bar/line toggle, colours, selection and panning all come
+     * along. `switchable` turns the wheel into a 7-day / 30-day switch.
      */
-    function TodayTrend({ t, range, grains, title }) {
-      const [zoomIndex, setZoomIndex] = React.useState(0)
+    function TodayTrend({ t, initialRange, switchable, grain }) {
+      const [range, setRange] = React.useState(initialRange)
+      const [anchor, setAnchor] = React.useState(null)
       const [selected, setSelected] = React.useState(null)
-      const grain = grains[zoomIndex]
-      const points = bucketSeries(seriesFor(null, range, NOW, BY_GAME, grain), t)
+      const wheelLock = React.useRef(0)
+      const currentAnchor = anchor || defaultAnchor(range)
+      const points = bucketSeries(seriesFor(null, range, currentAnchor, BY_GAME, grain), t)
+      const heading = initialRange === 'day' ? t('today.hours') : t('range.' + range)
       return h(
         'div',
-        { className: 'gt-trend-cell' },
-        grains.length > 1
-          ? h(
-              'div',
-              { className: 'gt-seg gt-trend-seg' },
-              grains.map(function (item, index) {
-                return h(
-                  'button',
-                  {
-                    key: item.key,
-                    type: 'button',
-                    className: 'gt-seg-btn',
-                    'data-active': index === zoomIndex,
-                    onClick: function () {
-                      setZoomIndex(index)
-                    },
-                  },
-                  t('unit.' + item.key)
-                )
-              })
-            )
-          : null,
+        {
+          className: 'gt-trend-cell',
+          onWheel: switchable
+            ? function (event) {
+                const now = Date.now()
+                if (now - wheelLock.current < 280) return
+                wheelLock.current = now
+                setRange(range === 'last7' ? 'last30' : 'last7')
+                setAnchor(null)
+                setSelected(null)
+                if (event.preventDefault) event.preventDefault()
+              }
+            : undefined,
+        },
         h(ChartCard, {
           t: t,
-          title: title,
+          title: heading,
           unit: t('unit.' + grain.key),
-          note: rangeLabelOf(range, NOW, grain),
+          note: rangeLabelOf(range, currentAnchor, grain),
           points: points,
           selectedKey: selected,
+          onPan: function (delta) {
+            setAnchor(panAnchor(range, currentAnchor, delta, grain))
+          },
+          onReset: switchable
+            ? function () {
+                setAnchor(null)
+              }
+            : function () {
+                setAnchor(null)
+              },
           onSelect: function (key) {
             setSelected(selected === key ? null : key)
           },
@@ -3381,12 +3371,6 @@ window.__ModuleLoader__.load({
           h(Stat, { label: t('stat.today'), seconds: totalsFor(null, 'day', NOW), t: t }),
           h(Stat, { label: t('stat.week'), seconds: totalsFor(null, 'week', NOW), t: t }),
           h(Stat, { label: t('stat.total'), seconds: totalsFor(null, 'all', NOW), t: t })
-        ),
-        h(
-          'div',
-          { className: 'gt-trend-row' },
-          h(TodayTrend, { t: t, range: 'last7', grains: [GRAIN.d1], title: t('today.byDay') }),
-          h(TodayTrend, { t: t, range: 'last30', grains: [GRAIN.w1, GRAIN.mo], title: t('today.byWeek') })
         ),
         rows.length === 0
           ? h(
@@ -3440,7 +3424,13 @@ window.__ModuleLoader__.load({
                   h('div', { className: 'gt-num' }, h(Duration, { seconds: row.total, t: t }))
                 )
               })
-            )
+            ),
+        h(
+          'div',
+          { className: 'gt-trend-row' },
+          h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1 }),
+          h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1 })
+        )
       )
     }
 
@@ -3463,7 +3453,6 @@ window.__ModuleLoader__.load({
       const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
       const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
       const grain = levelConfig.levels[zoomIndex]
-      const rolling = range === 'last7' || range === 'last30'
       const zoomBy = function (delta) {
         setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
       }
@@ -3621,12 +3610,6 @@ window.__ModuleLoader__.load({
               )
             : null
         ),
-        h(
-          'div',
-          { className: 'gt-trend-row' },
-          h(TodayTrend, { t: t, range: 'last7', grains: [GRAIN.d1], title: t('today.byDay') }),
-          h(TodayTrend, { t: t, range: 'last30', grains: [GRAIN.w1, GRAIN.mo], title: t('today.byWeek') })
-        ),
         rows.length === 0
           ? archivedRows.length === 0
             ? h('div', { className: 'gt-empty' }, h('div', { className: 'gt-empty-title' }, t('all.empty')))
@@ -3715,11 +3698,11 @@ window.__ModuleLoader__.load({
               range: range,
               anchor: currentAnchor,
               grain: grain,
-              onPan: rolling ? undefined : function (delta) {
+              onPan: function (delta) {
                 setAnchor(panAnchor(range, currentAnchor, delta, grain))
               },
-              onZoom: rolling ? undefined : zoomBy,
-              onReset: rolling ? undefined : function () {
+              onZoom: zoomBy,
+              onReset: function () {
                 setAnchor(null)
                 setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
               },
@@ -4704,7 +4687,6 @@ window.__ModuleLoader__.load({
       const levelConfig = GRAIN_LEVELS[range] || GRAIN_LEVELS.day
       const zoomIndex = Math.min(Math.max(zoom, 0), levelConfig.levels.length - 1)
       const grain = levelConfig.levels[zoomIndex]
-      const rolling = range === 'last7' || range === 'last30'
       const zoomBy = function (delta) {
         setZoom(Math.min(Math.max(zoomIndex + delta, 0), levelConfig.levels.length - 1))
       }
@@ -4979,8 +4961,8 @@ window.__ModuleLoader__.load({
           points: points,
           selectedKey: selected,
           onPan: shift,
-          onZoom: rolling ? undefined : zoomBy,
-          onReset: rolling ? undefined : function () {
+          onZoom: zoomBy,
+          onReset: function () {
             setAnchor(defaultAnchor(range))
             setZoom((GRAIN_LEVELS[range] || GRAIN_LEVELS.day).base)
             setSelected(null)

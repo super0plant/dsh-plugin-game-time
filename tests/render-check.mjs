@@ -1482,9 +1482,9 @@ const last7Points = testApi.seriesFor(null, 'last7', testApi.NOW, testApi.BY_GAM
 assert.equal(last7Points.length, 7, 'seven daily buckets')
 const grainWeek = testApi.GRAIN_LEVELS.last30.levels[0]
 const last30Points = testApi.seriesFor(null, 'last30', testApi.NOW, testApi.BY_GAME, grainWeek)
-assert.equal(last30Points.length, 5, 'thirty days fit five weekly buckets')
+assert.equal(last30Points.length, 30, 'thirty daily buckets')
 assert.match(testApi.rangeLabelOf('last7', testApi.NOW, grainDay), /\d/, 'the label names the dates')
-console.log('  rolling windows: 7 daily / 30-day weekly buckets')
+console.log('  rolling windows: 7 daily / 30 daily buckets')
 
 // --- today page: two trend cards side by side ------------------------------
 
