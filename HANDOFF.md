@@ -6,6 +6,23 @@
 
 ---
 
+## 0. 现状速览（先读这 12 行）
+
+- **版本**：0.11.6（main HEAD `84f6f75`）；GitHub 已发布到 v0.11.6；**npm 尚未发布**（账号注册卡住）。
+- **形态**：只有 DSH 插件。独立网页版已冻结，文档在 `docs/WEB-FROZEN.md`。
+- **测试**：五套（render / host / exit / restore / standalone），`npm test` 一条命令；**一定看退出码**。
+- **今日页**：统计卡 → 今天玩过 → 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
+- **时间窗**：今日 / 近 7 天 / 近 1 月 / 全部；`last7`、`last30` 是**定长可平移**窗口。
+- **背景**：不透明纯色底（`settings.baseColor`）+ 图片（`imageOpacity`）；每个游戏可独立背景。
+- **偏好**：`settings.todayChartHours` / `todayChartRange` / `todayWindow`，存在 config.json（不是 localStorage）。
+- **改哪里生效**：`client.js` → 刷新页面；`src/host/*`、`index.js` → 重启 DSH；**新增配置字段必须先加白名单再重启**。
+- **备份/还原**：`backup.cmd` / `restore.cmd`（数据快照 + 代码 tag；`backups/` 已 gitignore）。
+- **已知短板**：无自动发现、双采集器无硬互斥、无 CI、无英文 README、`foregroundOnly` 已移除但替代方案未做。
+- **发布**：流程见 `docs/RELEASING.md`，下一版文案见 `docs/RELEASE-NEXT.md`。
+- **历史**：改动细节按版本记在 §1（最近）与 `CHANGELOG.md`（全量）。
+
+---
+
 ## 1. 这是什么
 
 一个 DSH 插件，在侧边栏加「游戏时长」面板，本地采集游戏游玩时长：
@@ -16,7 +33,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.4.0（网页版冻结 + 隐藏开机自启 + 移除 `foregroundOnly` 空开关 + 页脚署名，见 §1）；**独立网页版已冻结**，主线只有 DSH 插件，网页版文档全在 `docs/WEB-FROZEN.md`。已出包的是 0.4.0（只有 DSH 插件包）。五套测试目前全绿（DSH 包内 `standalone-check` 会跳过）。**未完成**：双采集器硬互斥、自动发现（§11）、按游戏的后台暂停（替代 §10 #5）。
+**当前状态**：源码 0.11.6；今日页趋势模块、滚动窗口、背景纯色底、选择框修复均已上线；**独立网页版已冻结**（`docs/WEB-FROZEN.md`）。已发布 v0.11.6（GitHub Release）。**未完成**：npm 发布、awesome 投稿、自动发现（§11）、双采集器硬互斥、按游戏的后台暂停（替代 §10 #5）、CI、英文 README。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
