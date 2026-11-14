@@ -1470,6 +1470,13 @@ assert.equal(folded.kept.length, 8, 'the tooltip lists at most eight rows')
 assert.equal(folded.foldedCount, 3, 'the rest folds into one row')
 assert.equal(folded.folded, 10 + 20 + 30, 'the folded row sums the smallest blocks')
 console.log('  chart tooltip: total then top blocks, long lists fold into one row')
+// --- hover chip: short value text ------------------------------------------
+
+assert.equal(testApi.compactDuration(12600, t), '3.5hour', 'timed values round to one decimal hour')
+assert.equal(testApi.compactDuration(10800, t), '3hour', 'whole hours lose the decimal')
+assert.equal(testApi.compactDuration(1800, t), '30minute', 'under an hour stays in minutes')
+assert.equal(testApi.compactDuration(0, t), '0minute', 'zero reads as zero minutes')
+console.log('  hover chip: compact durations')
 // --- rolling windows: 近 7 天 / 近 1 月 ------------------------------------
 
 const rolling7 = testApi.rangeBounds('last7', testApi.NOW)

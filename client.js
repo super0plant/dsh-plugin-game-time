@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.2'
+    const VERSION = '0.11.3'
 
     const zh = {
       'panel': '游戏时长',
@@ -33,7 +33,7 @@ window.__ModuleLoader__.load({
       'today.col.week': '本周',
       'today.col.total': '总计',
       'today.trend': '趋势图',
-      'today.trend.hint': '左：今日 24 小时 · 右：近 7 天（滚轮切近 30 天）',
+      'today.trend.hint': '左 24 小时 · 右 7/30 天，滚轮切换',
       'today.byDay': '按天',
       'today.byWeek': '按周',
       'search': '搜索游戏…',
@@ -263,7 +263,7 @@ window.__ModuleLoader__.load({
       'today.col.week': 'Week',
       'today.col.total': 'Total',
       'today.trend': 'Trend',
-      'today.trend.hint': 'Left: today by hour - right: last 7 days (wheel switches to 30)',
+      'today.trend.hint': 'Left 24 hours · right 7/30 days, wheel to switch',
       'today.byDay': 'By day',
       'today.byWeek': 'By week',
       'search': 'Search games…',
@@ -548,6 +548,13 @@ window.__ModuleLoader__.load({
         .join('')
     }
 
+    /** Short value for the hover chip: "3.5时" / "42分". */
+    function compactDuration(seconds, t) {
+      const total = Math.max(0, Math.round(Number(seconds) || 0))
+      if (total < 3600) return Math.round(total / 60) + t('minute')
+      const hours = Math.round((total / 3600) * 10) / 10
+      return String(hours).replace('.0', '') + t('hour')
+    }
     function formatRelative(ts, t, now) {
       if (!ts) return t('rel.never')
       const days = Math.round((startOfDay(now).getTime() - startOfDay(ts).getTime()) / DAY_MS)
@@ -1853,7 +1860,12 @@ window.__ModuleLoader__.load({
       '.gt-tab:hover{opacity:.85;}',
       '.gt-tab[data-active="true"]{background:rgba(128,128,128,.20);opacity:1;}',
       '.gt-root{display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;padding:14px 22px 22px;gap:14px;overflow:auto;color:inherit;font:inherit;}',
+      '.gt-chart-chip{position:absolute;z-index:5;padding:2px 6px;border-radius:6px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 4px 10px rgba(0,0,0,.16);pointer-events:none;transform:translate(-50%,calc(-100% - 4px));font-size:10.5px;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+      '.gt-chart-chip[data-side="below"]{transform:translate(-50%,4px);}',
       '.gt-trend-module{display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(128,128,128,.26);}',
+      '.gt-trend-module .gt-card-head-title .gt-muted{display:none;}',
+      '.gt-trend-module .gt-chart-label,.gt-trend-module .gt-chart-y,.gt-trend-module .gt-chart-avg-y{font-size:6.5px;opacity:.4;}',
+      '.gt-trend-module .gt-muted{font-size:11px;opacity:.55;}',
       '.gt-trend-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;}',
       '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}',
       '.gt-trend-seg{align-self:flex-end;}',
@@ -3346,6 +3358,7 @@ window.__ModuleLoader__.load({
           selectedKey: selected,
           defaultType: 'line',
           prefKey: 'gt-today-chart',
+          detailOnClick: true,
           onPan: function (delta) {
             setAnchor(panAnchor(range, currentAnchor, delta, grain))
           },
@@ -3862,8 +3875,9 @@ window.__ModuleLoader__.load({
 
     let chartSeq = 0
 
-    function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit }) {
+    function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit, detailOnClick }) {
       const [tip, setTip] = React.useState(null)
+      const [detail, setDetail] = React.useState(null)
       const [hoverIndex, setHoverIndex] = React.useState(-1)
 
       const tipFor = function (point, x, y) {
@@ -4328,7 +4342,13 @@ window.__ModuleLoader__.load({
           if (index < 0) return
           if (index !== hoverIndex) setHoverIndex(index)
           const point = points[index]
-          setTip(tipFor(point, cx(index), Math.min(baseY - 2, Math.max(pad.top + 2, cy(point)))))
+          const tipX = cx(index)
+          const tipY = Math.min(baseY - 2, Math.max(pad.top + 2, cy(point)))
+          if (detailOnClick) {
+            setTip({ x: tipX, y: tipY, chip: compactDuration(point.seconds, t) })
+          } else {
+            setTip(tipFor(point, tipX, tipY))
+          }
         },
         onMouseLeave: function () {
           setHoverIndex(-1)
@@ -4336,7 +4356,14 @@ window.__ModuleLoader__.load({
         },
         onClick: function (event) {
           const index = indexAt(event)
-          if (index >= 0) clicked(points[index].key)
+          if (index < 0) return
+          const point = points[index]
+          clicked(point.key)
+          if (!detailOnClick) return
+          const tipX = cx(index)
+          const tipY = Math.min(baseY - 2, Math.max(pad.top + 2, cy(point)))
+          const next = Object.assign(tipFor(point, tipX, tipY), { key: point.key })
+          setDetail(detail && detail.key === point.key ? null : next)
         },
       })
 
@@ -4411,24 +4438,38 @@ window.__ModuleLoader__.load({
             : null,
           hitArea
         ),
-        tip
+        detailOnClick && tip
+          ? h(
+              'div',
+              {
+                className: 'gt-chart-chip',
+                'data-side': tip.y < 46 ? 'below' : 'above',
+                style: {
+                  left: (Math.min(Math.max(tip.x, 12), width - 12) / width) * 100 + '%',
+                  top: (tip.y / height) * 100 + '%',
+                },
+              },
+              tip.chip
+            )
+          : null,
+        (detailOnClick ? detail : tip)
           ? h(
               'div',
               {
                 className: 'gt-chart-tip',
-                'data-side': tip.y < 46 ? 'below' : 'above',
+                'data-side': (detailOnClick ? detail : tip).y < 46 ? 'below' : 'above',
                 style: {
-                  left: (Math.min(Math.max(tip.x, 34), width - 34) / width) * 100 + '%',
-                  top: (tip.y / height) * 100 + '%',
+                  left: (Math.min(Math.max((detailOnClick ? detail : tip).x, 34), width - 34) / width) * 100 + '%',
+                  top: ((detailOnClick ? detail : tip).y / height) * 100 + '%',
                 },
               },
               h(
                 'div',
                 { className: 'gt-tip-head' },
-                h('b', null, formatDuration(tip.total, t)),
-                h('span', null, tip.label)
+                h('b', null, formatDuration((detailOnClick ? detail : tip).total, t)),
+                h('span', null, (detailOnClick ? detail : tip).label)
               ),
-              (tip.rows || []).map(function (row) {
+              ((detailOnClick ? detail : tip).rows || []).map(function (row) {
                 return h(
                   'div',
                   { key: 'tip-' + row.key, className: 'gt-tip-row' },
@@ -4483,7 +4524,7 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset, defaultType, prefKey }) {
+    function ChartCard({ t, title, unit, note, points, color, selectedKey, onSelect, onPan, onZoom, onReset, defaultType, prefKey, detailOnClick }) {
       const [chartType, setChartType] = React.useState(prefKey ? storedPref(prefKey, defaultType || 'bar') : defaultType || 'bar')
       const template = t('chart.unit')
       const heading = unit
@@ -4546,6 +4587,7 @@ window.__ModuleLoader__.load({
           color: color,
           onPan: onPan,
           onZoom: onZoom,
+          detailOnClick: detailOnClick,
           unit: unit,
         })
       )
@@ -6977,6 +7019,8 @@ window.__ModuleLoader__.load({
         smoothPath: smoothPath,
         barTopPath: barTopPath,
         chartColor: chartColor,
+        compactDuration: compactDuration,
+        tipSegments: tipSegments,
         tipSegments: tipSegments,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
