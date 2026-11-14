@@ -27,6 +27,8 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.7.0 图表悬停改成「整柱明细卡」**：用户要的是「悬停在柱子上看总时长 + 每个色块各自的时长」，原来三段 hover（堆叠段、无切片柱、曲线点）各自只报**当前那一段**。改法：抽出纯函数 `tipSegments(parts)`（过滤 0 秒、按秒数降序、最多 8 行、其余折成一行），`Chart` 里统一用 `tipFor(point, x, y)` 生成 `{label,total,rows}`；渲染从「一行药丸」换成卡片：`gt-tip-head`（总时长 + 标签）+ `gt-tip-row`（色块 / 名称 / 时长）。曲线点的 hover 也走同一张卡。验证：`render-check` 新增 `tipSegments` 三条断言（丢 0 秒、降序、超过 8 项折叠并合计）+ 五套全绿。**纯前端，刷新即可。**
+
 - **2026-11-14 · 0.6.0「添加平台」这一行重排**：用户截图指出名称框撑满整行、地址框只剩一条缝、按钮被挤成两行。根因：名称框是裸 `.gt-input`（CSS 里 `width:100%`），又没有 flex 尺寸约束，于是在 flex 行里把宽度吃光。改法：新增行容器 `.gt-platform-new`（flex 行，gap 8），名称框 `flex:0 0 128px`，地址列 `flex:1 1 auto;min-width:0`，三个控件统一 `height:32px`；按钮从 `.gt-link` 换成 `.gt-btn .gt-platform-add`（实心、`white-space:nowrap`、`flex:0 0 auto`、带 hover）。平台说明补「可以直接拖 exe / 快捷方式到地址框」。**纯前端，刷新页面即可。**
 
 - **2026-11-14 · 0.5.0 背景裁剪预设比例 + 新的「铺满」规则（批 B）**：① `Cropper` 新增可选 `ratios`，背景类图片给预设（主界面/游戏：原图、16:9、8:3、4:3；标题：原图、6:1、4:1、3:1），**图标仍固定 1:1**（不传 ratios 就没有比例条）；切换比例会重新贴合图片并把缩放归 1。② 「铺满」不再用 CSS `cover`：新函数 `backgroundWidth(原图宽, 窗口宽) = max(原图宽, 窗口宽)`——窗口比图宽就放大，缩到原图尺寸就停住（只裁切不压缩）。`Page` 用 `ResizeObserver` 量 `.gt-shell` 宽、用 `new Image()` 读 `naturalWidth`，把结果写进 `background-size: <px> auto`；`.gt-bg` 和 `.gt-header-bg` 都走这套。③ 平铺仍然是 `auto + repeat`（原始像素）。验证：`render-check` 新增 `backgroundWidth` 五条断言 + 五套全绿；**只改客户端，刷新页面即可**（版本号要重启 DSH 才更新）。

@@ -1384,6 +1384,24 @@ assert.equal(testApi.SESSIONS.length, 0, 'deleting a game drops its lazy pages')
 delete sandbox.fetch
 console.log("  lazy pages: filtered by the current games, dropped when a game is deleted")
 
+// --- chart tooltip rows: total first, then the biggest blocks --------------
+
+const tipSplit = testApi.tipSegments([
+  { id: 'a', seconds: 60 },
+  { id: 'b', seconds: 180 },
+  { id: 'c', seconds: 0 },
+])
+assert.equal(tipSplit.kept.length, 2, 'zero-second blocks are dropped')
+assert.equal(tipSplit.kept[0].id, 'b', 'the biggest block comes first')
+assert.equal(tipSplit.foldedCount, 0, 'nothing folds under the row cap')
+
+const manyParts = []
+for (let index = 0; index < 11; index += 1) manyParts.push({ id: 'p' + index, seconds: (index + 1) * 10 })
+const folded = testApi.tipSegments(manyParts)
+assert.equal(folded.kept.length, 8, 'the tooltip lists at most eight rows')
+assert.equal(folded.foldedCount, 3, 'the rest folds into one row')
+assert.equal(folded.folded, 10 + 20 + 30, 'the folded row sums the smallest blocks')
+console.log('  chart tooltip: total then top blocks, long lists fold into one row')
 // --- background cover rule: never narrower than the image ------------------
 
 assert.equal(testApi.backgroundWidth(1600, 900), 1600, 'a narrow window crops the image, it does not shrink it')

@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.6.0'
+    const VERSION = '0.7.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -56,6 +56,7 @@ window.__ModuleLoader__.load({
       'chart.line': '曲线',
       'chart.avg': '平均',
       'chart.other': '其他',
+      'chart.more': '其他 {n} 项',
       'chart.unit': '{title}（{unit}）',
       'chart.reset': '恢复默认',
       'unit.10m': '10分',
@@ -279,6 +280,7 @@ window.__ModuleLoader__.load({
       'chart.line': 'Line',
       'chart.avg': 'avg',
       'chart.other': 'Other',
+      'chart.more': '{n} more',
       'chart.unit': '{title} ({unit})',
       'chart.reset': 'Reset',
       'unit.10m': '10m',
@@ -1941,11 +1943,15 @@ window.__ModuleLoader__.load({
       '.gt-chart-avg{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:.75;stroke-dasharray:2 3;fill:none;}',
       '.gt-chart-avg-tick{stroke:var(--gt-chart-avg,rgba(148,155,166,.5));stroke-width:1;}',
       '.gt-chart-avg-tag{fill:currentColor;opacity:.5;}',
-      '.gt-chart-tip{position:absolute;z-index:5;display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:7px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 8px 20px rgba(0,0,0,.18);white-space:nowrap;pointer-events:none;transform:translate(-50%,calc(-100% - 6px));font-size:11px;line-height:1.4;}',
+      '.gt-chart-tip{position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 8px 20px rgba(0,0,0,.18);pointer-events:none;transform:translate(-50%,calc(-100% - 6px));font-size:11px;line-height:1.45;min-width:126px;max-width:220px;}',
       '.gt-chart-tip[data-side="below"]{transform:translate(-50%,6px);}',
       '.gt-chart-tip i{width:7px;height:7px;border-radius:2px;display:inline-block;flex:0 0 auto;}',
-      '.gt-chart-tip b{font-weight:600;}',
-      '.gt-chart-tip span{opacity:.55;font-variant-numeric:tabular-nums;}',
+      '.gt-tip-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:2px;}',
+      '.gt-tip-head b{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;}',
+      '.gt-tip-head span{font-size:10.5px;opacity:.55;white-space:nowrap;}',
+      '.gt-tip-row{display:flex;align-items:center;gap:6px;}',
+      '.gt-tip-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.82;}',
+      '.gt-tip-dur{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.95;}',
       '.gt-list{display:flex;flex-direction:column;gap:1px;}',
       '.gt-list-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;font-size:12.5px;}',
       '.gt-list-row:hover{background:rgba(128,128,128,.07);}',
@@ -3649,8 +3655,49 @@ window.__ModuleLoader__.load({
       return rest === 0 ? hours + t('hour') : hours + t('hour') + rest + t('minute')
     }
 
+    // Hovering a stacked bar explains the whole bar: total on top, then one row
+    // per colour block. Long lists fold into a single "more" row.
+    const TIP_ROWS = 8
+
+    function tipSegments(parts) {
+      const list = (Array.isArray(parts) ? parts : [])
+        .filter(function (part) {
+          return part && part.seconds > 0
+        })
+        .sort(function (left, right) {
+          return right.seconds - left.seconds
+        })
+      const kept = list.slice(0, TIP_ROWS)
+      const rest = list.slice(TIP_ROWS)
+      const folded = rest.reduce(function (sum, part) {
+        return sum + part.seconds
+      }, 0)
+      return { kept: kept, folded: folded, foldedCount: rest.length }
+    }
+
     function Chart({ t, points, chartType, selectedKey, onSelect, color, onPan, onZoom, unit }) {
       const [tip, setTip] = React.useState(null)
+
+      const tipFor = function (point, x, y) {
+        const split = tipSegments(point.parts)
+        const rows = split.kept.map(function (part) {
+          return {
+            key: part.id,
+            color: part.color || sliceColor(part.id),
+            name: part.name || sliceName(part.id),
+            seconds: part.seconds,
+          }
+        })
+        if (split.foldedCount > 0) {
+          rows.push({
+            key: 'folded',
+            color: OTHER_COLOR,
+            name: t('chart.more').replace('{n}', String(split.foldedCount)),
+            seconds: split.folded,
+          })
+        }
+        return { x: x, y: y, label: point.label, total: point.seconds, rows: rows }
+      }
       const drag = React.useRef(null)
       const svgRef = React.useRef(null)
       const zoomLock = React.useRef(0)
@@ -3909,13 +3956,7 @@ window.__ModuleLoader__.load({
             opacity: selectedKey === point.key ? 0.95 : point.seconds > 0 ? 0.62 : 0.14,
             style: { cursor: 'pointer' },
             onMouseEnter: function () {
-              setTip({
-                x: cx(index),
-                y: plainY,
-                dot: stroke,
-                title: formatDuration(point.seconds, t),
-                sub: point.label,
-              })
+              setTip(tipFor(point, cx(index), plainY))
             },
             onClick: function () {
               clicked(point.key)
@@ -3940,13 +3981,7 @@ window.__ModuleLoader__.load({
             opacity: selectedKey === point.key ? 1 : 0.9,
             style: { cursor: 'pointer' },
             onMouseEnter: function () {
-              setTip({
-                x: cx(index),
-                y: y,
-                dot: fill,
-                title: part.name || sliceName(part.id),
-                sub: formatDuration(part.seconds, t) + ' · ' + point.label,
-              })
+              setTip(tipFor(point, cx(index), y))
             },
             onClick: function () {
               clicked(point.key)
@@ -4003,13 +4038,7 @@ window.__ModuleLoader__.load({
                   opacity: point.seconds > 0 ? 0.9 : 0.2,
                   style: { cursor: 'pointer' },
                   onMouseEnter: function () {
-                    setTip({
-                      x: cx(index),
-                      y: cy(point),
-                      dot: stroke,
-                      title: formatDuration(point.seconds, t),
-                      sub: point.label,
-                    })
+                    setTip(tipFor(point, cx(index), cy(point)))
                   },
                   onClick: function () {
                     clicked(point.key)
@@ -4099,9 +4128,21 @@ window.__ModuleLoader__.load({
                   top: (tip.y / height) * 100 + '%',
                 },
               },
-              h('i', { style: { background: tip.dot } }),
-              h('b', null, tip.title),
-              h('span', null, tip.sub)
+              h(
+                'div',
+                { className: 'gt-tip-head' },
+                h('b', null, formatDuration(tip.total, t)),
+                h('span', null, tip.label)
+              ),
+              (tip.rows || []).map(function (row) {
+                return h(
+                  'div',
+                  { key: 'tip-' + row.key, className: 'gt-tip-row' },
+                  h('i', { style: { background: row.color } }),
+                  h('span', { className: 'gt-tip-name' }, row.name),
+                  h('span', { className: 'gt-tip-dur' }, formatDuration(row.seconds, t))
+                )
+              })
             )
           : null,
         empty
@@ -6619,6 +6660,7 @@ window.__ModuleLoader__.load({
         setNow: setNow,
         normalizePath: normalizePath,
         backgroundWidth: backgroundWidth,
+        tipSegments: tipSegments,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
         seriesFor: seriesFor,
