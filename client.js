@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.14.0'
+    const VERSION = '0.15.0'
 
     const zh = {
       'panel': '游戏时长',
@@ -115,6 +115,7 @@ window.__ModuleLoader__.load({
       'settings.language': '语言',
       'settings.language.hint': '默认跟随系统；这里只影响这个面板。',
       'language.auto': '跟随系统',
+      'platform.other': '其他',
       'settings.platforms': '启动平台',
       'settings.platforms.hint': '拖 exe / 快捷方式到地址框可直接填入；详情页的平台分布按这里的清单聚合。',
       'settings.addPlatform': '添加平台',
@@ -362,6 +363,7 @@ window.__ModuleLoader__.load({
       'settings.language': 'Language',
       'settings.language.hint': 'Follows the system by default; this only affects this panel.',
       'language.auto': 'System',
+      'platform.other': 'Other',
       'settings.platforms': 'Platforms',
       'settings.platforms.hint': 'Drop an exe or a shortcut onto the path box to fill it; the per-game platform breakdown aggregates over this list.',
       'settings.addPlatform': 'Add platform',
@@ -1035,6 +1037,15 @@ window.__ModuleLoader__.load({
       autoArchive: { enabled: false, value: 60, unit: 'day' },
     }
 
+    /** The built-in "other" platform is shown in the current language. */
+    let TR_FN = null
+
+    function platformLabel(platform) {
+      if (!platform) return ''
+      if (platform.id === 'other' && TR_FN) return TR_FN('platform.other')
+      return platform.name
+    }
+
     function enabledPlatforms(game) {
       const ids = []
       const add = function (id) {
@@ -1670,7 +1681,7 @@ window.__ModuleLoader__.load({
           return { name: name, color: groupColorOf(name) }
         }
         const platform = PLATFORMS[id]
-        return { name: platform ? platform.name : id, color: platform ? platform.color : OTHER_COLOR }
+        return { name: platformLabel(platform) || id, color: platform ? platform.color : OTHER_COLOR }
       },
     }
 
@@ -2396,9 +2407,9 @@ window.__ModuleLoader__.load({
             borderColor: 'rgba(' + rgb + ', .4)',
             opacity: active === false ? 0.42 : 1,
           },
-          title: platform.name,
+          title: platformLabel(platform),
         },
-        platform.name
+        platformLabel(platform)
       )
     }
 
@@ -3411,7 +3422,7 @@ window.__ModuleLoader__.load({
           const platform = PLATFORMS[id]
           return {
             value: id,
-            label: platform ? platform.name : id,
+            label: platformLabel(platform) || id,
             color: platform ? platform.color : '#888',
           }
         }),
@@ -3620,7 +3631,7 @@ window.__ModuleLoader__.load({
                   value: platformId,
                   minWidth: 140,
                   options: ids.map(function (id) {
-                    return { value: id, label: PLATFORMS[id] ? PLATFORMS[id].name : id }
+                    return { value: id, label: PLATFORMS[id] ? platformLabel(PLATFORMS[id]) : id }
                   }),
                   onChange: function (value) {
                     setPlatformId(value)
@@ -5244,7 +5255,7 @@ window.__ModuleLoader__.load({
                   return h(
                     'span',
                     { key: id, className: 'gt-status-platform', 'data-active': String(id === activePlatform) },
-                    PLATFORMS[id] ? PLATFORMS[id].name : id
+                    PLATFORMS[id] ? platformLabel(PLATFORMS[id]) : id
                   )
                 })
               )
@@ -6953,7 +6964,7 @@ window.__ModuleLoader__.load({
                   h('input', {
                     className: 'gt-input',
                     value: entry.name,
-                    placeholder: platform ? platform.name : t('game.entry.name'),
+                    placeholder: platform ? platformLabel(platform) : t('game.entry.name'),
                     onChange: function (event) {
                       setEntry(entry, { name: event.target.value })
                     },
@@ -7482,6 +7493,7 @@ window.__ModuleLoader__.load({
           const value = (SETTINGS.language === 'zh' ? zh : en)[key]
           return value === undefined ? boundT(key) : value
         }
+        TR_FN = t
 
         ctx.slots.inject('main', () =>
           ctx.slots.register({ name: 'main', key: PANEL_ID, locale: NS, inject: () => ({ t }) }, Page)

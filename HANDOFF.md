@@ -44,6 +44,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.15.0 内置平台名本地化 + 独立 profile 安装验证**：新增 `platformLabel(platform)`（模块级 `TR_FN` 在 apply 里绑定 `t`），替换徽章/图例/设置列表/会话行/添加弹窗里的 `platform.name`；`platform.id === 'other'` 时用 `t('platform.other')`。配置里仍存「其他」，不写回英文。另外用 `npm pack` 的 tgz 在 `~/.dsh/profiles/game-time-test` 跑 `pnpm install` 验证包可安装（0.15.0），desktop profile 的 `link:` 未动。注意：写 `~/.dsh/profiles` 需要 danger-full-access。
+
+
 - **2026-11-14 · 0.13.0 拖拽添加 + 确认弹窗 + 默认「其他」平台 + 检查更新 + 英文 README**：① `DropSurface`（今日/全部/详情三处根节点）接页面级拖放，遮罩提示后弹 `AddGameDialog`（可改名称、选平台，默认 `other`，重复 exe 只提示）；数据来自新函数 `draftGameFromResolved` → 确认后 `commitGameDraft`，与设置页那套共存。② `DEFAULT_PLATFORMS` 加 `other`（无启动器路径），`PRESETS_VERSION` 1→2，老配置启动时自动补上；新游戏 platform 兜底改为 `other`。③ 空状态文案改成「当前没有进程在计时 + 拖入提示」。④ 设置页「关于」+ `UpdateCheck`（GitHub Releases API，只读，`compareVersion` 比较后提示/给下载链接）。⑤ `README.en.md` 精简英文版 + 中文 README 顶部切换。⑥ 修 AllView 默认 `range='week'`（该选项已被 last7/last30 取代）导致选择器无高亮的 bug。验证：新增 draft/confirm/duplicate 三条断言 + 五套全绿。**宿主预置变了 → 重启 DSH。**
 
 

@@ -25,7 +25,7 @@ A DSH sidebar panel that tracks how long you actually play: it watches game proc
 
 ## First run
 
-Drop a game's `.exe` or a shortcut anywhere on the today/all-games page. A small dialog asks for a name and a platform — leave the platform on **其他 (Other)** if you don't care. The status light turns green once the game is detected; it updates every 10 seconds (configurable) and the refresh button updates it immediately.
+Drop a game's `.exe` or a shortcut anywhere on the today/all-games page. A small dialog asks for a name and a platform — leave the platform on **Other** if you don't care. The status light turns green once the game is detected; it updates every 10 seconds (configurable) and the refresh button updates it immediately.
 
 You do not need to scan your library. Dragging a shortcut or pasting a path is enough.
 
