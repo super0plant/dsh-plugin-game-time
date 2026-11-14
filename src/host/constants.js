@@ -41,7 +41,7 @@ export const DEFAULT_PLATFORMS = {
 
 export const DEFAULT_CONFIG = {
   version: 3,
-  settings: { intervalSec: 10, autostart: true, density: 'comfortable', historyDays: HISTORY_DAYS, baseColor: '#0b0b0c', todayChart: 'line', todayWindow: 'last7' },
+  settings: { intervalSec: 10, autostart: true, density: 'comfortable', historyDays: HISTORY_DAYS, baseColor: '#0b0b0c', todayChartHours: 'line', todayChartRange: 'line', todayWindow: 'last7' },
   platforms: DEFAULT_PLATFORMS,
   games: [],
 }

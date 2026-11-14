@@ -27,6 +27,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-14 · 0.11.5 拆开两张趋势图的图型记忆**：0.11.4 用同一个 `settings.todayChart` 做受控属性，点一张另一张跟着变（用户报的「左右绑在一起」）。现在拆成 `todayChartHours`（左 24h）和 `todayChartRange`（右 7/30 天），`TodayTrend` 加 `prefField` 决定读写字段时间，两张卡各自受控、各自 `touch()` 落盘。旧字段 `todayChart` 从白名单移除（保存后自动消失）。**宿主白名单变了，重启 DSH 生效。** 验证：五套全绿。
+
+
 - **2026-11-14 · 0.11.4 趋势图偏好进配置 + 点外部关卡片 + 自适应两列**：① 偏好从 localStorage 挪到 `settings.todayChart` / `settings.todayWindow`（宿主 `sanitizeConfig` 白名单 + `constants.js` 默认值 + 客户端 `SETTINGS` 默认值）；`TodayTrend` 写入后调 `touch()` 落盘，重启 DSH 仍生效；`ChartCard` 支持受控 `chartType` / `onChartType`（不再依赖 localStorage）。② `Chart` 加 `wrapRef` + `useEffect(document mousedown)`，点到图表外清空 `detail`。③ `.gt-trend-row` 改 `repeat(auto-fit,minmax(260px,1fr))` + `overflow-x:auto`，`.gt-trend-cell` `min-width:240px`：宽=两列、窄=两行、再窄=横向滚动不压缩。**宿主白名单改了，要重启 DSH 才生效。** 验证：五套全绿。
 
 

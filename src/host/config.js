@@ -216,7 +216,10 @@ export function sanitizeConfig(input) {
       autostart: bool(settings.autostart, true),
       density: settings.density === 'compact' ? 'compact' : 'comfortable',
       // Today page trend preferences, persisted so a restart keeps them.
-      todayChart: settings.todayChart === 'bar' ? 'bar' : 'line',
+      // One field per card: the 24-hour chart and the 7/30-day chart remember
+      // their own bar/line choice.
+      todayChartHours: settings.todayChartHours === 'bar' ? 'bar' : 'line',
+      todayChartRange: settings.todayChartRange === 'bar' ? 'bar' : 'line',
       todayWindow: settings.todayWindow === 'last30' ? 'last30' : 'last7',
       historyDays: clampRange(settings.historyDays, HISTORY_DAYS_MIN, HISTORY_DAYS_MAX, HISTORY_DAYS),
       groupColors: groupColorsOf(settings.groupColors),

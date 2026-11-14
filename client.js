@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.11.4'
+    const VERSION = '0.11.5'
 
     const zh = {
       'panel': '游戏时长',
@@ -994,7 +994,8 @@ window.__ModuleLoader__.load({
       historyDays: 365,
       baseColor: '#0b0b0c',
       imageOpacity: 1,
-      todayChart: 'line',
+      todayChartHours: 'line',
+      todayChartRange: 'line',
       todayWindow: 'last7',
       autoArchive: { enabled: false, value: 60, unit: 'day' },
     }
@@ -3321,7 +3322,7 @@ window.__ModuleLoader__.load({
      * uses, so tooltip, bar/line toggle, colours, selection and panning all come
      * along. `switchable` turns the wheel into a 7-day / 30-day switch.
      */
-    function TodayTrend({ t, initialRange, switchable, grain, touch }) {
+    function TodayTrend({ t, initialRange, switchable, grain, touch, prefField }) {
       // Preferences live in config.json (through SETTINGS + touch), so they
       // survive a DSH restart even when the web view's storage is ephemeral.
       const savedWindow = switchable && SETTINGS.todayWindow === 'last30' ? 'last30' : 'last7'
@@ -3359,9 +3360,9 @@ window.__ModuleLoader__.load({
           note: rangeLabelOf(range, currentAnchor, grain),
           points: points,
           selectedKey: selected,
-          chartType: SETTINGS.todayChart === 'bar' ? 'bar' : 'line',
+          chartType: SETTINGS[prefField] === 'bar' ? 'bar' : 'line',
           onChartType: function (key) {
-            SETTINGS.todayChart = key
+            SETTINGS[prefField] = key
             if (typeof touch === 'function') touch()
           },
           detailOnClick: true,
@@ -3469,8 +3470,8 @@ window.__ModuleLoader__.load({
           h(
             'div',
             { className: 'gt-trend-row' },
-            h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1, touch: touch }),
-            h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1, touch: touch })
+            h(TodayTrend, { t: t, initialRange: 'day', grain: GRAIN.h1, touch: touch, prefField: 'todayChartHours' }),
+            h(TodayTrend, { t: t, initialRange: 'last7', switchable: true, grain: GRAIN.d1, touch: touch, prefField: 'todayChartRange' })
           )
         )
       )

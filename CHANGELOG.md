@@ -1,5 +1,10 @@
 # 更新日志
 
+## 0.11.5 — 2026-11-14
+
+- 修「左边和右边的柱状/曲线被绑在一起」：两张趋势图原来共用同一个配置字段 `settings.todayChart`，点一张另一张跟着变。现在拆成两个：`todayChartHours`（左，24 小时图）与 `todayChartRange`（右，7/30 天图），各自独立记忆。
+- 旧字段 `todayChart` 不再使用，保存配置时会自动从文件里消失（不影响其它数据）。
+
 ## 0.11.4 — 2026-11-14
 
 - 修「重启后不记得图表状态」：原来把柱状/曲线、7/30 天存在浏览器的 localStorage 里，DSH 客户端重启后可能拿不到。现在改成存进配置文件（settings.todayChart / settings.todayWindow），重启 DSH 后仍然生效。
