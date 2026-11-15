@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.15.0'
+    const VERSION = '0.15.1'
 
     const zh = {
       'panel': '游戏时长',
@@ -24,8 +24,8 @@ window.__ModuleLoader__.load({
       'stat.today': '本日',
       'stat.week': '本周',
       'stat.total': '总计',
-      'empty.title': '当前没有进程在计时',
-      'empty.body': '把游戏 exe 或快捷方式拖到面板里，就会出现在这里。',
+      'empty.title': '今天还没有玩游戏',
+      'empty.body': '如要添加新游戏，把游戏 exe 或快捷方式拖到面板里',
       'today.section': '今天玩过',
       'today.count': '{n} 款',
       'today.col.game': '游戏',
@@ -272,8 +272,8 @@ window.__ModuleLoader__.load({
       'stat.today': 'Today',
       'stat.week': 'This week',
       'stat.total': 'Total',
-      'empty.title': 'Nothing is being timed right now',
-      'empty.body': 'Drop a game exe or shortcut on this panel and it will show up here.',
+      'empty.title': 'No games played today',
+      'empty.body': 'To add a new game, drop its exe or shortcut on this panel',
       'today.section': 'Played today',
       'today.count': '{n} games',
       'today.col.game': 'Game',

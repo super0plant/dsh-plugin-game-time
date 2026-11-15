@@ -44,6 +44,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-15 · 0.15.1 今日页空状态文案**：只改 `empty.title` / `empty.body`（今日页用），中文「今天还没有玩游戏 / 如要添加新游戏，把游戏 exe 或快捷方式拖到面板里」，英文「No games played today / To add a new game, drop its exe or shortcut on this panel」。**「全部」页用的是 `all.empty`，没动**。纯前端。
+
+
 - **2026-11-14 · 0.15.0 内置平台名本地化 + 独立 profile 安装验证**：新增 `platformLabel(platform)`（模块级 `TR_FN` 在 apply 里绑定 `t`），替换徽章/图例/设置列表/会话行/添加弹窗里的 `platform.name`；`platform.id === 'other'` 时用 `t('platform.other')`。配置里仍存「其他」，不写回英文。另外用 `npm pack` 的 tgz 在 `~/.dsh/profiles/game-time-test` 跑 `pnpm install` 验证包可安装（0.15.0），desktop profile 的 `link:` 未动。注意：写 `~/.dsh/profiles` 需要 danger-full-access。
 
 
