@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.15.1'
+    const VERSION = '0.15.2'
 
     const zh = {
       'panel': '游戏时长',
@@ -205,6 +205,7 @@ window.__ModuleLoader__.load({
       'drop.failed': '无法识别：{names}',
       'drop.unreadable': '读不出路径：浏览器里拖 exe 需要桌面端，请用文件夹按钮',
       'drop.needExe': '这里只接受 exe 或指向 exe 的快捷方式',
+      'drop.badGame': '没能识别出游戏（{why}）',
       'drop.owned': '这个 exe 已经在「{name}」里计时，再加一条不会重复计时',
       'drop.ownedAddAsk': '「{name}」已经在计时这个 exe，仍然添加？',
       'drop.ownedAdd': '仍然添加',
@@ -453,6 +454,7 @@ window.__ModuleLoader__.load({
       'drop.failed': 'Could not read: {names}',
       'drop.unreadable': 'No path available; dropping an exe needs the desktop app, use the folder button',
       'drop.needExe': 'Only an exe or a shortcut to one is accepted here',
+      'drop.badGame': 'Could not read a game from this file ({why})',
       'drop.owned': 'This exe is already timed under "{name}"; a second row would stay at zero',
       'drop.ownedAddAsk': '"{name}" already times this exe. Add anyway?',
       'drop.ownedAdd': 'Add anyway',
@@ -2121,6 +2123,7 @@ window.__ModuleLoader__.load({
       '.gt-btn.primary{background:#3d7dff;border-color:#3d7dff;color:#fff;}',
       '.gt-update{display:flex;flex-direction:column;gap:6px;}',
       '.gt-update-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}',
+      '.gt-drop-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:65;max-width:min(560px,88vw);padding:8px 14px;border-radius:9px;background:rgba(20,20,22,.92);border:1px solid rgba(255,120,120,.5);color:#fff;font-size:12px;line-height:1.5;box-shadow:0 10px 28px rgba(0,0,0,.4);cursor:pointer;}',
       '.gt-drop-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(11,11,12,.72);border:2px dashed rgba(120,170,255,.6);color:#fff;font-size:13px;pointer-events:none;}',
       '.gt-modal-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);}',
       '.gt-modal{width:min(420px,90vw);border-radius:12px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,#17181a);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 48px rgba(0,0,0,.4);}',
@@ -3507,6 +3510,7 @@ window.__ModuleLoader__.load({
     function DropSurface({ t, className, touch, children }) {
       const [over, setOver] = React.useState(false)
       const [draft, setDraft] = React.useState(null)
+      const [note, setNote] = React.useState('')
       const depth = React.useRef(0)
 
       const hasFiles = function (event) {
@@ -3533,11 +3537,17 @@ window.__ModuleLoader__.load({
             return item && item.ok
           })
           if (!resolved) {
-            if (typeof bumpPage === 'function') bumpPage()
+            const why = (list.find(Boolean) || {}).warning || ''
+            setNote(t('drop.badGame').replace('{why}', why || '?'))
             return
           }
           const next = draftGameFromResolved(t, resolved)
-          if (next) setDraft(next)
+          if (next) {
+            setNote('')
+            setDraft(next)
+          } else {
+            setNote(t('drop.badGame').replace('{why}', resolved.warning || resolved.path || '?'))
+          }
         })
       }
 
@@ -3568,6 +3578,18 @@ window.__ModuleLoader__.load({
         },
         children,
         over ? h('div', { className: 'gt-drop-overlay' }, t('drop.overlay')) : null,
+        note
+          ? h(
+              'div',
+              {
+                className: 'gt-drop-toast',
+                onClick: function () {
+                  setNote('')
+                },
+              },
+              note
+            )
+          : null,
         draft
           ? h(AddGameDialog, {
               t: t,

@@ -310,10 +310,10 @@ function Find-SteamGame([string]$appId) {
     if (-not $dir) { continue }
     $base = Join-Path $lib ('steamapps\common\' + $dir)
     if (-not (Test-Path -LiteralPath $base)) { continue }
-    $candidates = Get-ChildItem -LiteralPath $base -Filter '*.exe' -Recurse -Depth 2 -File -ErrorAction SilentlyContinue |
+    $candidates = Get-ChildItem -LiteralPath $base -Filter '*.exe' -Recurse -Depth 4 -File -ErrorAction SilentlyContinue |
       Where-Object {
-        $_.Name -notmatch '(?i)unins|crash|helper|setup|vc_redist|launcher|anticheat|eac|activation|touchup|cleanup|overlay|benchmark|trial|demo' -and
-        $_.FullName -notmatch '(?i)\\(__installer|__overlay|support|tools|redist)(\\|$)'
+        $_.Name -notmatch '(?i)unins|install|setup|redist|vcredist|dxsetup|dotnet|directx|crash|report|helper|launcher|updat|patch|config|anticheat|easyanticheat|battleye|eac|activation|touchup|cleanup|overlay|benchmark|trial|demo|vconsole|vrprism|vrserver|vrcompositor|vrmonitor|vrstartup|vrdashboard|vrwebhelper|vrpathreg|vrsetup' -and
+        $_.FullName -notmatch '(?i)\\(__installer|__overlay|support|tools|redist|steamworks)(\\|$)'
       }
     $key = ($dir -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
     $scored = foreach ($c in $candidates) {

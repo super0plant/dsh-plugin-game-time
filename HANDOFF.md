@@ -44,6 +44,9 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
+- **2026-11-15 · 0.15.2 Steam .url 识别修复 + 拖入失败提示**：`RESOLVE_SCRIPT` 的 exe 扫描 `-Depth 2`→`4`（Alyx 的 `hlvr.exe` 在 `game\bin\win64` 4 层内），过滤词加 `install|vconsole|vrserver|vrprism|vrcompositor|vrmonitor|vrstartup|vrdashboard|vrwebhelper|vrpathreg|vrsetup`（Wallpaper Engine 之前选中 `installer.exe`，SteamVR 会选 `vrprismhost.exe`）。验证方式：用 `$env:APPDATA\...\Start Menu\Programs\Steam\*.url` 跑 `RESOLVE_SCRIPT`（powershell -File），现在 Celeste/Alyx/VRChat/Wallpaper Engine 都能解析到正确 exe。另外 `DropSurface` 加了 `note` 状态 + `.gt-drop-toast`，识别失败时显示原因（新 key `drop.badGame`），不再静默。注意：Node 里 `spawnSync` 抓 stdout 在沙箱会 EPERM，所以测试解析器要用 `powershell -File` 直接跑、结果读 JSON 文件。
+
+
 - **2026-11-15 · 0.15.1 今日页空状态文案**：只改 `empty.title` / `empty.body`（今日页用），中文「今天还没有玩游戏 / 如要添加新游戏，把游戏 exe 或快捷方式拖到面板里」，英文「No games played today / To add a new game, drop its exe or shortcut on this panel」。**「全部」页用的是 `all.empty`，没动**。纯前端。
 
 

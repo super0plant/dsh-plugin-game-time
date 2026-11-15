@@ -1,5 +1,11 @@
 # 更新日志
 
+## 0.15.2 — 2026-11-15
+
+- 修 Steam 快捷方式（`.url`）识别：扫描深度从 2 层加到 4 层，能找 `game\bin\win64\hlvr.exe` 这类深层 exe（之前 Half-Life Alyx 会报「找不到 exe」）。
+- 收紧 exe 过滤：排除 `installer`、`vconsole`、`vrserver`、`vrprism`、`redist`、`dotnet`、`easyanticheat` 等工具/引导程序，避免把安装器或控制台当游戏（Wallpaper Engine 之前会选到 `installer.exe`）。
+- 拖入文件**识别失败时会弹出提示**（以前什么都不显示），提示里带上具体原因（如「steam game has no exe」），点一下可关闭。
+
 ## 0.15.1 — 2026-11-15
 
 - 今日页空状态文案改成「今天还没有玩游戏 / 如要添加新游戏，把游戏 exe 或快捷方式拖到面板里」；「全部」页的空状态（没有匹配的游戏）保持不变。中英文同步。
