@@ -2164,7 +2164,8 @@ window.__ModuleLoader__.load({
       // ring becomes the "finished lap" colour and the next lap draws on top.
       '.gt-ring-green{stroke:#4fc7a6;transition:stroke .2s ease;}',
       '.gt-ring-red{stroke:#e35c5c;transition:stroke .2s ease;}',
-      '.gt-ring-lap{fill:currentColor;opacity:.85;font-size:9px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px;}',
+      '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}',
+      '.gt-ring-lap[data-tone="over"]{fill:#e35c5c;opacity:1;}',
       '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:11px;line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
       '.gt-ring:hover .gt-ring-tip{opacity:1;}',
       '.gt-card-btn{font:inherit;color:inherit;text-align:left;cursor:pointer;}',
@@ -3547,17 +3548,20 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Ring gauge that counts laps (100 % = one lap).
+     * Ring gauge with the percentage in the middle.
      *
-     * - 0–100 %: no background at all; a green arc grows from 12 o'clock.
-     * - 100–200 %: the ring is green (the finished lap) and a red arc grows on it.
-     * - 200 %+: the ring is red and the arc cycles again (green), because a
-     *   circle cannot show two laps. The middle prints 200%+ / 300%+ so the lap
-     *   count stays readable.
+     * - under 100 %: no background, a green arc grows from 12 o'clock.
+     * - 100–200 %: the ring is green (a finished lap) and a red arc grows on it.
+     * - 200 % and up: the whole ring is red, no arc — the middle number carries
+     *   the rest.
      *
-     * Drawn as a single stroke: no track, no outline, no rounded caps, and an
-     * integer stroke width (40 px box, 6 px stroke, r = 17) so the edge lands on
-     * whole pixels instead of looking jagged.
+     * The middle always prints the percentage ("85 %", "154 %"), turns red past
+     * 100 %, and caps the text at 999 %+ so a runaway ratio cannot break the
+     * layout.
+     *
+     * Drawn as a single stroke: no track, no outline, no rounded caps, integer
+     * stroke width (40 px box, 6 px stroke) and one pixel of margin, so the edge
+     * lands on whole pixels instead of looking jagged.
      */
     function Ring({ ratio, tip, size }) {
       const box = Number(size) || 40
@@ -3567,12 +3571,15 @@ window.__ModuleLoader__.load({
       const radius = (box - stroke) / 2 - 1
       const circumference = 2 * Math.PI * radius
       const value = Math.max(0, Number(ratio) || 0)
-      const laps = Math.floor(value)
-      const rest = value - laps
       const center = box / 2
-      const background = laps <= 0 ? null : laps === 1 ? 'gt-ring-green' : 'gt-ring-red'
-      const foreground = laps === 1 ? 'gt-ring-red' : 'gt-ring-green'
-      const lapText = laps >= 2 ? laps * 100 + '%+' : ''
+      const percent = Math.round(value * 100)
+      const allRed = value >= 2
+      const background = allRed ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : null
+      // The arc is the part of the lap in flight: green below one lap, red on
+      // top of the green lap, and nothing once the ring is entirely red.
+      const arcColor = value >= 1 ? 'gt-ring-red' : 'gt-ring-green'
+      const arcFraction = allRed ? 0 : value >= 1 ? value - 1 : value
+      const label = percent > 999 ? '999%+' : String(percent) + '%'
       const parts = []
       if (background) {
         parts.push(
@@ -3587,37 +3594,36 @@ window.__ModuleLoader__.load({
           })
         )
       }
-      if (rest > 0) {
+      if (arcFraction > 0) {
         parts.push(
           h('circle', {
             key: 'arc',
-            className: foreground,
+            className: arcColor,
             cx: center,
             cy: center,
             r: radius,
             fill: 'none',
             strokeWidth: stroke,
-            strokeDasharray: rest * circumference + ' ' + circumference,
+            strokeDasharray: arcFraction * circumference + ' ' + circumference,
             transform: 'rotate(-90 ' + center + ' ' + center + ')',
           })
         )
       }
-      if (lapText) {
-        parts.push(
-          h(
-            'text',
-            {
-              key: 'lap-text',
-              className: 'gt-ring-lap',
-              x: center,
-              y: center,
-              textAnchor: 'middle',
-              dominantBaseline: 'central',
-            },
-            lapText
-          )
+      parts.push(
+        h(
+          'text',
+          {
+            key: 'percent',
+            className: 'gt-ring-lap',
+            'data-tone': percent > 100 ? 'over' : 'flat',
+            x: center,
+            y: center,
+            textAnchor: 'middle',
+            dominantBaseline: 'central',
+          },
+          label
         )
-      }
+      )
       return h(
         'span',
         { className: 'gt-ring', 'data-tip': tip || undefined },

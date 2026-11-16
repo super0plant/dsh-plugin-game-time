@@ -897,7 +897,7 @@ function ringCircles(ringNode) {
 
 const halfRing = testApi.Ring({ ratio: 0.5, tip: 'half' })
 if (circleClass(halfRing).join(',') !== 'gt-ring-green') {
-  throw new Error('a half-full ring is a bare green arc (no background at 0 laps), got ' + circleClass(halfRing))
+  throw new Error('a half-full ring is a bare green arc (no background under one lap), got ' + circleClass(halfRing))
 }
 const greenArc = ringCircles(halfRing)[0]
 if (!/^[\d.]+ [\d.]+$/.test(greenArc.props.strokeDasharray)) {
@@ -910,7 +910,17 @@ if (!halfRing.children[1] || halfRing.children[1].props.className !== 'gt-ring-t
 }
 if (halfRing.children[1].children.join('') !== 'half') throw new Error('the ring tooltip lost its text')
 
-// One full lap is a flat green ring, no arc on top.
+function ringLabel(ringNode) {
+  const label = ringParts(ringNode).find((item) => item.type === 'text')
+  return label || null
+}
+
+// The middle always prints the percentage, in the normal colour under 100 %.
+const halfLabel = ringLabel(halfRing)
+if (!halfLabel || halfLabel.children.join('') !== '50%') throw new Error('the middle must read 50%')
+if (halfLabel.props['data-tone'] !== 'flat') throw new Error('under 100 % the percentage stays neutral')
+
+// One full lap is a flat green ring with a neutral 100 %.
 const oneLap = testApi.Ring({ ratio: 1, tip: 'full' })
 if (circleClass(oneLap).join(',') !== 'gt-ring-green') {
   throw new Error('a full lap is one green ring, got ' + circleClass(oneLap))
@@ -918,8 +928,9 @@ if (circleClass(oneLap).join(',') !== 'gt-ring-green') {
 if (ringCircles(oneLap)[0].props.strokeDasharray !== undefined) {
   throw new Error('the finished lap must be a plain circle, not a dashed arc')
 }
+if (ringLabel(oneLap).children.join('') !== '100%') throw new Error('one lap must read 100%')
 
-// Past 100 %: the ring turns green (finished lap) and a red arc draws over it.
+// Past 100 %: green ring, red arc, red percentage.
 const overRing = testApi.Ring({ ratio: 1.4, tip: 'over' })
 if (circleClass(overRing).join(',') !== 'gt-ring-green,gt-ring-red') {
   throw new Error('over one lap needs a green background and a red arc, got ' + circleClass(overRing))
@@ -927,25 +938,27 @@ if (circleClass(overRing).join(',') !== 'gt-ring-green,gt-ring-red') {
 const overArc = ringCircles(overRing)[1]
 const overFraction = Number(String(overArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * overArc.props.r)
 if (Math.abs(overFraction - 0.4) > 0.01) throw new Error('1.4 laps draws a 0.4-lap arc, got ' + overFraction)
+const overLabel = ringLabel(overRing)
+if (overLabel.children.join('') !== '140%') throw new Error('1.4 must read 140%')
+if (overLabel.props['data-tone'] !== 'over') throw new Error('past 100 % the percentage must turn red')
 
-// Past 200 %: red ring, the arc cycles again, and the middle names the lap.
+// Past 200 %: the whole ring is red and there is no arc any more.
 const deepRing = testApi.Ring({ ratio: 2.5, tip: 'deep' })
-if (circleClass(deepRing).join(',') !== 'gt-ring-red,gt-ring-green') {
-  throw new Error('past 200 % the ring is red and the arc cycles, got ' + circleClass(deepRing))
+if (circleClass(deepRing).join(',') !== 'gt-ring-red') {
+  throw new Error('past 200 % the ring is entirely red, got ' + circleClass(deepRing))
 }
-const lapLabel = ringParts(deepRing).find((item) => item.type === 'text')
-if (!lapLabel || lapLabel.props.className !== 'gt-ring-lap' || lapLabel.children.join('') !== '200%+') {
-  throw new Error('past 200 % the middle must read 200%+')
-}
-const threeLaps = testApi.Ring({ ratio: 3.2, tip: 'three' })
-const threeLabel = ringParts(threeLaps).find((item) => item.type === 'text')
-if (!threeLabel || threeLabel.children.join('') !== '300%+') {
-  throw new Error('past 300 % the middle must read 300%+')
-}
+if (ringLabel(deepRing).children.join('') !== '250%') throw new Error('2.5 must read 250%')
+if (ringLabel(deepRing).props['data-tone'] !== 'over') throw new Error('past 200 % the percentage stays red')
+
+// The label caps out so a runaway ratio cannot break the ring.
+const runaway = testApi.Ring({ ratio: 12.34, tip: 'runaway' })
+if (ringLabel(runaway).children.join('') !== '999%+') throw new Error('past 999 % the label caps at 999%+')
+
 const emptyRing = testApi.Ring({ ratio: 0, tip: 'empty' })
 if (circleClass(emptyRing).join(',') !== '') {
   throw new Error('a zero ratio draws nothing (transparent background), got ' + circleClass(emptyRing))
 }
+if (ringLabel(emptyRing).children.join('') !== '0%') throw new Error('a zero ratio still reads 0%')
 
 const cardTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(stats)')
 const cards = ringsOf(cardTree)
