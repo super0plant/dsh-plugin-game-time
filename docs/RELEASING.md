@@ -77,3 +77,13 @@ jobs:
 ```
 
 3. Commit → 之后每次 push 自动跑四套测试，README 可加徽章。
+
+## 7. 发布前检查清单（每次发版照着勾）
+
+- [ ] `npm test` 退出码 0（render / host / exit / restore）
+- [ ] 两处版本号一致（`package.json` / `client.js`）
+- [ ] `CHANGELOG.md` 有本版条目
+- [ ] `node scripts/build.mjs` 出包到 `dist/`
+- [ ] tag `vX.Y.Z` 已推送到远端
+- [ ] Release 只挂 `dsh-plugin-game-time.zip`（资产名不带版本号）
+- [ ] 说明里写清是否需要重启 DSH

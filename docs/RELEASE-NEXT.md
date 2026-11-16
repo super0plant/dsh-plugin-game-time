@@ -37,15 +37,3 @@ Requires a **DSH restart** once (the host adds two read-only fields to `/state`:
 需要**重启一次 DSH**（宿主多返回两个只读字段），之后刷新页面即可。
 
 **已知限制**：仅 Windows；没有自动发现游戏；没有"仅前台计时"；数据只在本机。
-
----
-
-## 发布前检查清单
-
-- [x] `npm test` 退出码 0（render / host / exit / restore）
-- [x] 两处版本号一致（`package.json` / `client.js`，均 0.16.0）
-- [x] `CHANGELOG.md` 有 0.16.0 条目
-- [ ] `node scripts/build.mjs` 出包
-- [ ] 打 tag `v0.16.0` 并推送
-- [ ] Release 只挂 `dsh-plugin-game-time.zip`（资产名不带版本号）
-- [x] 说明里写清「需要重启 DSH」
