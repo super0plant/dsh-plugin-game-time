@@ -1046,13 +1046,13 @@ testApi.setStatsPeriod('week')
 console.log('  stat cards: today / week-month / total with comparison rings')
 const tiers = [
   [0, 'lg'],
-  [819, 'md'],
+  [839, 'md'],
   [700, 'md'],
   [699, 'sm'],
-  [620, 'sm'],
-  [619, 'xs'],
-  [540, 'xs'],
-  [539, 'xxs'],
+  [640, 'sm'],
+  [639, 'xs'],
+  [580, 'xs'],
+  [579, 'xxs'],
 ]
 for (const [width, expected] of tiers) {
   const actual = testApi.widthTier(width)

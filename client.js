@@ -644,10 +644,13 @@ window.__ModuleLoader__.load({
     function widthTier(width) {
       const value = Number(width) || 0
       if (value <= 0) return 'lg'
-      if (value >= 820) return 'lg'
+      // Tuned to the row budget: first column = panel − 320, and the fixed
+      // parts are dot 6 + gaps 30 + tile 34 + name 180/150/140/120 + the hint
+      // chip (252 / 136 / 104 / 64 px wide).
+      if (value >= 840) return 'lg'
       if (value >= 700) return 'md'
-      if (value >= 620) return 'sm'
-      if (value >= 540) return 'xs'
+      if (value >= 640) return 'sm'
+      if (value >= 580) return 'xs'
       return 'xxs'
     }
 
