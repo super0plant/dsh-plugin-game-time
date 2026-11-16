@@ -791,24 +791,30 @@ const hintStrip = testApi.HintStrip({
 const hintNodes = hintsOf(hintStrip)
 if (hintNodes.length !== 3) throw new Error('a row needs exactly three hints, got ' + hintNodes.length)
 const ranks = hintNodes.map((node) => node.props['data-rank'])
-if (ranks.join(',') !== '1,2,3') throw new Error('hint ranks must be 1,2,3 from left to right, got ' + ranks)
-const toneOne = hintNodes[0].children[1]
+// Left to right: 平均/天, 总天数, 比平均 — but rank 1 (the comparison) is the
+// one that survives longest when the panel narrows.
+if (ranks.join(',') !== '2,3,1') throw new Error('hint order must be avg/day, total days, comparison (ranks 2,3,1), got ' + ranks)
+const labels = hintNodes.map((node) => node.children[0].children.join(''))
+if (labels.join(',') !== 'list.hint.avgDay：,list.hint.days：,list.hint.vsAvg：') {
+  throw new Error('every hint needs its label and a colon, got ' + labels.join(','))
+}
+const toneOne = hintNodes[2].children[1]
 if (['over', 'under', 'flat'].indexOf(toneOne.props['data-tone']) < 0) {
   throw new Error('the compare hint needs an over/under/flat tone')
 }
 if (toneOne.children.join('') !== '▲50%') {
   throw new Error('5 400 s against a 3 600 s/day baseline is +50%, got ' + toneOne.children.join(''))
 }
-const avgHint = hintNodes[1].children[1].children.join('')
-if (avgHint !== '1hour') throw new Error('平均每天 must show the per-day value, got ' + avgHint)
-if (hintNodes[2].children[1].children.join('') !== '2day') {
-  throw new Error('已玩 must carry its unit, got ' + hintNodes[2].children[1].children.join(''))
+const avgHint = hintNodes[0].children[1].children.join('')
+if (avgHint !== '1hour') throw new Error('平均/天 must show the per-day value, got ' + avgHint)
+if (hintNodes[1].children[1].children.join('') !== '2day') {
+  throw new Error('总天数 must carry its unit, got ' + hintNodes[1].children[1].children.join(''))
 }
 
 // No play today: a white dash, never a fake percentage.
 const quiet = hintsOf(testApi.HintStrip({ t, game: testApi.GAMES[0], today: 0, total: 7200, days: 2, lastPlayed: testApi.NOW.getTime() }))
-if (quiet[0].children[1].props['data-tone'] !== 'flat') throw new Error('no play today must read as flat')
-if (quiet[0].children[1].children.join('') !== 'noData') throw new Error('no play today must show a dash')
+if (quiet[2].children[1].props['data-tone'] !== 'flat') throw new Error('no play today must read as flat')
+if (quiet[2].children[1].children.join('') !== 'noData') throw new Error('no play today must show a dash')
 
 // The recency gate: a game nobody played for longer than `statsDays` shows nothing.
 const before = testApi.SETTINGS.statsDays
@@ -1001,8 +1007,8 @@ const statSubs = []
   collectSubs(node.children)
 })(cardTree)
 if (statSubs.length !== 3) throw new Error('each stat card needs its comparison line, got ' + statSubs.length)
-const subLabels = statSubs.map((node) => node.children[1].children.join(''))
-if (subLabels.join(',') !== 'stat.avgDaily,stat.lastWeekSum,stat.played') {
+const subLabels = statSubs.map((node) => node.children[0].children.join(''))
+if (subLabels.join(',') !== 'stat.avgDaily：,stat.lastWeekSum：,stat.played：') {
   throw new Error('unexpected comparison labels: ' + subLabels.join(','))
 }
 

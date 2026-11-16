@@ -24,10 +24,10 @@ window.__ModuleLoader__.load({
       'stat.today': '本日',
       'stat.week': '本周',
       'stat.total': '总计',
-      'stat.avgDaily': '平均每日',
-      'stat.lastWeekSum': '上周总和',
-      'stat.lastMonthSum': '上月总和',
-      'stat.played': '已玩',
+      'stat.avgDaily': '平均/天',
+      'stat.lastWeekSum': '上周',
+      'stat.lastMonthSum': '上月',
+      'stat.played': '总天数',
       'stat.switch': '点击切换为{name}',
       'stat.tip.day': '今日 {now} · 平均每日 {avg}',
       'stat.tip.week': '本周 {now} · 上周总和 {avg}',
@@ -41,8 +41,9 @@ window.__ModuleLoader__.load({
       'today.col.day': '本日',
       'today.col.week': '本周',
       'today.col.total': '总计',
-      'list.hint.vsAvg': '对比平均',
-      'list.hint.avgDay': '平均每天',
+      'list.hint.vsAvg': '比平均',
+      'list.hint.avgDay': '平均/天',
+      'list.hint.days': '总天数',
       'list.hint.played': '已玩',
       'today.trend': '趋势图',
       'today.trend.hint': '左 24 小时 · 右 7/30 天，滚轮切换',
@@ -293,7 +294,7 @@ window.__ModuleLoader__.load({
       'stat.avgDaily': 'avg/day',
       'stat.lastWeekSum': 'last week',
       'stat.lastMonthSum': 'last month',
-      'stat.played': 'played',
+      'stat.played': 'total days',
       'stat.switch': 'Click to show {name}',
       'stat.tip.day': 'Today {now} · avg/day {avg}',
       'stat.tip.week': 'This week {now} · last week {avg}',
@@ -309,6 +310,7 @@ window.__ModuleLoader__.load({
       'today.col.total': 'Total',
       'list.hint.vsAvg': 'vs avg',
       'list.hint.avgDay': 'avg/day',
+      'list.hint.days': 'total days',
       'list.hint.played': 'played',
       'today.trend': 'Trend',
       'today.trend.hint': 'Left 24 hours · right 7/30 days, wheel to switch',
@@ -2181,6 +2183,9 @@ window.__ModuleLoader__.load({
       '.gt-value .gt-unit{font-size:.68em;font-weight:500;opacity:var(--gt-muted);margin-left:1px;margin-right:3px;}',
       '.gt-section{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;margin-top:2px;}',
       '.gt-section-title{font-size:var(--gt-fs-3);font-weight:600;opacity:.9;}',
+      // A soft card around the list so the page reads as separate blocks
+      // (stats / list / trend) instead of one long scroll.
+      '.gt-list-card{display:flex;flex-direction:column;gap:4px;padding:10px 8px 8px;border:1px solid rgba(128,128,128,.18);border-radius:12px;background:linear-gradient(180deg,rgba(128,128,128,.07),rgba(128,128,128,.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}',
       '.gt-muted{font-size:var(--gt-fs-2);opacity:var(--gt-muted);}',
       '.gt-grid-head,.gt-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 72px 72px;gap:8px;align-items:center;}',
       '.gt-grid-head{font-size:var(--gt-fs-2);opacity:.5;padding:0 10px 2px;letter-spacing:.2px;}',
@@ -2196,8 +2201,8 @@ window.__ModuleLoader__.load({
       // Row hints take the space the fixed name leaves, split into equal
       // columns: equal fractions of the same row width line up across rows, and
       // right-aligned values line up in a column at any panel width.
-      '.gt-hints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:baseline;gap:10px;margin-left:auto;padding-left:10px;min-width:0;flex:1 1 auto;font-size:var(--gt-fs-2);line-height:1.25;}',
-      '.gt-hint{display:flex;align-items:baseline;gap:3px;justify-content:flex-end;min-width:0;overflow:hidden;white-space:nowrap;}',
+      '.gt-hints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:baseline;gap:8px;margin-left:auto;padding-left:8px;min-width:0;flex:1 1 auto;font-size:var(--gt-fs-2);line-height:1.25;}',
+      '.gt-hint{display:flex;align-items:baseline;gap:2px;justify-content:flex-end;min-width:0;overflow:hidden;white-space:nowrap;}',
       '.gt-hint-k{opacity:.5;font-size:var(--gt-fs-2);letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;}',
       '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;flex:0 0 auto;}',
       '.gt-hint-v[data-tone="over"]{color:var(--gt-red);opacity:1;}',
@@ -2454,6 +2459,7 @@ window.__ModuleLoader__.load({
       '.gt-compact .gt-name{font-size:calc(var(--gt-fs-3) - 1px);}',
       '.gt-compact .gt-value{font-size:calc(var(--gt-fs-4) * .9);margin-top:3px;}',
       '.gt-compact .gt-card{padding:8px 10px;}',
+      '.gt-compact .gt-list-card{padding:7px 6px 6px;}',
       '.gt-compact .gt-panel-card{padding:8px 10px;}',
       '.gt-compact .gt-list-row{padding:4px 7px;font-size:12px;}',
       '.gt-compact .gt-section-title{font-size:12px;}',
@@ -2482,6 +2488,8 @@ window.__ModuleLoader__.load({
       '.gt-shell[data-w="xxs"] .gt-row-main .gt-name-wrap{flex:1 1 auto;}',
       // Same order on the stat cards: the ring goes first, then the small line.
       '.gt-shell[data-w="sm"] .gt-ring,.gt-shell[data-w="xs"] .gt-ring,.gt-shell[data-w="xxs"] .gt-ring{display:none;}',
+      // The comparison line keeps only the value at sm, then disappears at xs.
+      '.gt-shell[data-w="sm"] .gt-stat-sub-k{display:none;}',
       '.gt-shell[data-w="xs"] .gt-stat-sub,.gt-shell[data-w="xxs"] .gt-stat-sub{display:none;}',
       '.gt-shell[data-w="xs"] .gt-summary-4,.gt-shell[data-w="xxs"] .gt-summary-4{grid-template-columns:repeat(2,minmax(0,1fr));}',
     ].join('')
@@ -3680,8 +3688,8 @@ window.__ModuleLoader__.load({
           ? h(
               'div',
               { className: 'gt-stat-sub' },
-              h('span', { className: 'gt-stat-sub-v', 'data-tone': sub.tone || 'flat' }, sub.value),
-              h('span', { className: 'gt-stat-sub-k' }, sub.label)
+              h('span', { className: 'gt-stat-sub-k' }, sub.label + '：'),
+              h('span', { className: 'gt-stat-sub-v', 'data-tone': sub.tone || 'flat' }, sub.value)
             )
           : null,
       ]
@@ -4066,27 +4074,25 @@ window.__ModuleLoader__.load({
         percent === null || Math.abs(percent) < 0.5
           ? t('noData')
           : (percent > 0 ? '▲' : '▼') + String(Math.min(199, Math.round(Math.abs(percent)))) + '%'
+      // Display order is avg/day → total days → comparison, but the ranks are
+      // by importance: the comparison is the last one to disappear when the
+      // panel narrows (rank 3 goes first, then 2, then 1).
+      const items = [
+        { rank: 2, label: t('list.hint.avgDay'), value: count > 0 ? compactDuration(average, t) : t('noData'), tone: 'flat' },
+        { rank: 3, label: t('list.hint.days'), value: count > 0 ? String(count) + t('day') : t('noData'), tone: 'flat' },
+        { rank: 1, label: t('list.hint.vsAvg'), value: compareText, tone: tone },
+      ]
       return h(
         'div',
         { className: 'gt-hints', 'aria-label': t('list.hint.vsAvg') },
-        h(
-          'span',
-          { className: 'gt-hint', 'data-rank': '1' },
-          h('span', { className: 'gt-hint-k' }, t('list.hint.vsAvg')),
-          h('span', { className: 'gt-hint-v', 'data-tone': tone }, compareText)
-        ),
-        h(
-          'span',
-          { className: 'gt-hint', 'data-rank': '2' },
-          h('span', { className: 'gt-hint-k' }, t('list.hint.avgDay')),
-          h('span', { className: 'gt-hint-v' }, count > 0 ? compactDuration(average, t) : t('noData'))
-        ),
-        h(
-          'span',
-          { className: 'gt-hint', 'data-rank': '3' },
-          h('span', { className: 'gt-hint-k' }, t('list.hint.played')),
-          h('span', { className: 'gt-hint-v' }, count > 0 ? String(count) + t('day') : t('noData'))
-        )
+        items.map(function (item) {
+          return h(
+            'span',
+            { key: item.rank, className: 'gt-hint', 'data-rank': String(item.rank) },
+            h('span', { className: 'gt-hint-k' }, item.label + '：'),
+            h('span', { className: 'gt-hint-v', 'data-tone': item.tone }, item.value)
+          )
+        })
       )
     }
 
@@ -4166,14 +4172,14 @@ window.__ModuleLoader__.load({
           label: t('stat.today'),
           seconds: today,
           t: t,
-          sub: { value: '/' + (avgDaily > 0 ? compactDuration(avgDaily, t) : t('noData')), label: t('stat.avgDaily'), tone: todayTone },
+          sub: { value: avgDaily > 0 ? compactDuration(avgDaily, t) : t('noData'), label: t('stat.avgDaily'), tone: todayTone },
           ring: { ratio: todayRatio, tip: todayTip },
         }),
         h(Stat, {
           label: t('range.' + period),
           seconds: periodSeconds,
           t: t,
-          sub: { value: '/' + (prevSeconds > 0 ? compactDuration(prevSeconds, t) : t('noData')), label: prevLabel, tone: periodTone },
+          sub: { value: prevSeconds > 0 ? compactDuration(prevSeconds, t) : t('noData'), label: prevLabel, tone: periodTone },
           ring: { ratio: periodRatio, tip: periodTip },
           onClick: togglePeriod,
           hint: t('stat.switch').replace('{name}', nextPeriodName),
@@ -4213,7 +4219,7 @@ window.__ModuleLoader__.load({
             )
           : h(
               'div',
-              { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
+              { className: 'gt-list-card' },
               h(
                 'div',
                 { className: 'gt-section' },
@@ -4475,7 +4481,7 @@ window.__ModuleLoader__.load({
             : null
           : h(
               'div',
-              { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+              { className: 'gt-list-card' },
               h(
                 'div',
                 { className: 'gt-grid-head' },
