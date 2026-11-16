@@ -3562,7 +3562,9 @@ window.__ModuleLoader__.load({
     function Ring({ ratio, tip, size }) {
       const box = Number(size) || 40
       const stroke = 6
-      const radius = (box - stroke) / 2
+      // One pixel of margin inside the viewBox: a stroke tangent to the edge
+      // gets clipped by the SVG bounds and reads as a jagged rim.
+      const radius = (box - stroke) / 2 - 1
       const circumference = 2 * Math.PI * radius
       const value = Math.max(0, Number(ratio) || 0)
       const laps = Math.floor(value)
