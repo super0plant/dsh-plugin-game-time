@@ -41,7 +41,8 @@
 
 ## 4. 还没做的发布渠道
 
-- **npm 发布**：`npm publish` 后包名 `dsh-plugin-game-time` 才被市场索引收录；目前卡在 npm 账号注册（见 HANDOFF 待办）。发布前确认 `repository` 字段指回 GitHub。
+- **npm 发布**：`npm publish` 后包名 `dsh-plugin-game-time` 才被市场索引收录。**2026-11-16 实测**：包名空闲（`npm view` 404、`npm publish --dry-run` 20 个文件 / 204.5 kB 通过），但 `~/.npmrc` 里的 token 已失效（`npm whoami` → 401，`npm publish` → E404），需要重新生成 Automation token。发布前确认 `repository` 字段指回 GitHub。
+- **GitHub 推送 / Release**：仓库已有 `origin`，但沙箱里没有可用凭据（`gh auth status` 未登录；`git push` 报 `could not read Username`；`git credential fill` 会卡在交互式凭据助手）。在**自己的终端**里 `gh auth login` 后再推，或设置 `$env:GH_TOKEN`。
 - **awesome-dsh-plugin 投稿**：文件 `publish/data-plugins-super0plant__dsh-plugin-game-time.yml`，`category: fun`，仓库需满 1 天。
 - **英文 README**：marketplace 与 awesome 的评审主要看英文，建议至少给一个精简英文版（见 `docs/RELEASE-NEXT.md` 末尾的清单）。
 
