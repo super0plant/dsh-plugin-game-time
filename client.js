@@ -24,6 +24,15 @@ window.__ModuleLoader__.load({
       'stat.today': '本日',
       'stat.week': '本周',
       'stat.total': '总计',
+      'stat.avgDaily': '平均每日',
+      'stat.lastWeekAvg': '上周平均',
+      'stat.lastMonthAvg': '上月平均',
+      'stat.played': '已玩',
+      'stat.switch': '点击切换为{name}',
+      'stat.tip.day': '今日 {now} · 平均每日 {avg}',
+      'stat.tip.week': '本周 {now} · 日均 {day} · 上周日均 {avg}',
+      'stat.tip.month': '本月 {now} · 日均 {day} · 上月日均 {avg}',
+      'stat.tip.total': '已玩 {days} 天 · 共 {total} 天',
       'empty.title': '今天还没有玩游戏',
       'empty.body': '如要添加新游戏，把游戏 exe 或快捷方式拖到面板里',
       'today.section': '今天玩过',
@@ -281,6 +290,15 @@ window.__ModuleLoader__.load({
       'stat.today': 'Today',
       'stat.week': 'This week',
       'stat.total': 'Total',
+      'stat.avgDaily': 'avg/day',
+      'stat.lastWeekAvg': 'last week',
+      'stat.lastMonthAvg': 'last month',
+      'stat.played': 'played',
+      'stat.switch': 'Click to show {name}',
+      'stat.tip.day': 'Today {now} · avg/day {avg}',
+      'stat.tip.week': 'This week {now} · per day {day} · last week {avg}',
+      'stat.tip.month': 'This month {now} · per day {day} · last month {avg}',
+      'stat.tip.total': 'Played {days} days of {total}',
       'empty.title': 'No games played today',
       'empty.body': 'To add a new game, drop its exe or shortcut on this panel',
       'today.section': 'Played today',
@@ -1215,7 +1233,7 @@ window.__ModuleLoader__.load({
     // lazy-load window; counting here would disagree with "总计" (HANDOFF §9).
     let ALL_PLAYED_DAYS = null
     let PLAYED_DAYS_TOTAL = 0
-    let DEMO_PLAYED_DAYS = null
+    let WINDOW_PLAYED_DAYS = null
     let HISTORY_REQUESTS = []
     // Module scope, not component state: the panel unmounts when you switch
     // away, so a React state would drop you back on the start page every time.
@@ -1296,7 +1314,7 @@ window.__ModuleLoader__.load({
       LAST_PLAYED = payload.lastPlayed && typeof payload.lastPlayed === 'object' ? payload.lastPlayed : null
       ALL_PLAYED_DAYS = payload.playedDays && typeof payload.playedDays === 'object' ? payload.playedDays : null
       PLAYED_DAYS_TOTAL = Number(payload.playedDaysTotal) || 0
-      DEMO_PLAYED_DAYS = null
+      WINDOW_PLAYED_DAYS = null
 
       if (payload.settings && typeof payload.settings === 'object') Object.assign(SETTINGS, payload.settings)
       if (payload.env && typeof payload.env === 'object') ENV = payload.env
@@ -2042,36 +2060,43 @@ window.__ModuleLoader__.load({
       return latest
     }
 
-    /** Days this game was played on, all time. Demo mode counts its own data. */
+    /**
+     * Fallback when the host did not send played days (older host, or the DSH
+     * process has not been restarted since the update): count from the loaded
+     * window. Exact as long as the user's history fits in `historyDays`, which
+     * is the common case; the host value always wins when it exists.
+     */
+    function windowPlayedDays() {
+      if (WINDOW_PLAYED_DAYS) return WINDOW_PLAYED_DAYS
+      const byGame = new Map()
+      const union = new Set()
+      for (const session of SESSIONS) {
+        const key = dayKey(session.start)
+        union.add(key)
+        let set = byGame.get(session.gameId)
+        if (!set) {
+          set = new Set()
+          byGame.set(session.gameId, set)
+        }
+        set.add(key)
+      }
+      WINDOW_PLAYED_DAYS = { byGame: byGame, total: union.size }
+      return WINDOW_PLAYED_DAYS
+    }
+
+    /** Days this game was played on, all time. */
     function playedDaysFor(gameId) {
       if (ALL_PLAYED_DAYS && ALL_PLAYED_DAYS[gameId] !== undefined) {
         return Number(ALL_PLAYED_DAYS[gameId]) || 0
       }
-      if (LIVE) return 0
-      if (!DEMO_PLAYED_DAYS) {
-        const counts = new Map()
-        const union = new Set()
-        for (const session of SESSIONS) {
-          const key = dayKey(session.start)
-          union.add(key)
-          let set = counts.get(session.gameId)
-          if (!set) {
-            set = new Set()
-            counts.set(session.gameId, set)
-          }
-          set.add(key)
-        }
-        DEMO_PLAYED_DAYS = { byGame: counts, total: union.size }
-      }
-      return DEMO_PLAYED_DAYS.byGame.get(gameId) ? DEMO_PLAYED_DAYS.byGame.get(gameId).size : 0
+      const fallback = windowPlayedDays().byGame.get(gameId)
+      return fallback ? fallback.size : 0
     }
 
     /** Days with play across every game, all time. */
     function playedDaysTotal() {
-      if (LIVE) return PLAYED_DAYS_TOTAL
-      const seen = new Set()
-      for (const session of SESSIONS) seen.add(dayKey(session.start))
-      return seen.size
+      if (LIVE && PLAYED_DAYS_TOTAL > 0) return PLAYED_DAYS_TOTAL
+      return windowPlayedDays().total
     }
 
     /** Earliest session anywhere; the host value wins when it exists. */
@@ -2125,6 +2150,24 @@ window.__ModuleLoader__.load({
       '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
       '.gt-label{font-size:12px;opacity:.62;letter-spacing:.2px;}',
       '.gt-value{font-size:23px;font-weight:600;line-height:1.25;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      // Stat card: value + ring on one line, the comparison line under it.
+      '.gt-stat-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}',
+      '.gt-stat-main .gt-value{flex:1 1 auto;min-width:0;}',
+      '.gt-stat-sub{display:flex;align-items:baseline;gap:4px;margin-top:4px;font-size:10.5px;line-height:1.3;min-width:0;overflow:hidden;white-space:nowrap;}',
+      '.gt-stat-sub-k{opacity:.5;font-size:10.5px;letter-spacing:.2px;}',
+      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;opacity:.95;font-weight:600;}',
+      '.gt-stat-sub-v[data-tone="over"]{color:#e35c5c;}',
+      '.gt-stat-sub-v[data-tone="under"]{color:#4fc7a6;}',
+      '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;}',
+      '.gt-ring-track{stroke:rgba(128,128,128,.22);}',
+      '.gt-ring-green{stroke:#4fc7a6;transition:stroke-dasharray .25s ease;}',
+      '.gt-ring-red{stroke:#e35c5c;}',
+      '.gt-ring-red[data-deep="true"]{stroke:#c22f3a;}',
+      '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:11px;line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
+      '.gt-ring:hover .gt-ring-tip{opacity:1;}',
+      '.gt-card-btn{font:inherit;color:inherit;text-align:left;cursor:pointer;}',
+      '.gt-card-btn:hover{background:rgba(128,128,128,.12);}',
+      '.gt-card-caret{font-size:9px;opacity:.45;margin-left:4px;}',
       '.gt-value .gt-unit{font-size:.68em;font-weight:500;opacity:.55;margin-left:1px;margin-right:3px;}',
       '.gt-section{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;margin-top:2px;}',
       '.gt-section-title{font-size:13px;font-weight:600;opacity:.9;}',
@@ -2142,8 +2185,8 @@ window.__ModuleLoader__.load({
       '.gt-hint{display:inline-flex;align-items:baseline;gap:3px;min-width:0;}',
       '.gt-hint-k{font-size:10.5px;opacity:.5;letter-spacing:.2px;}',
       '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;}',
-      '.gt-hint-v[data-tone="up"]{color:#4fc7a6;opacity:1;}',
-      '.gt-hint-v[data-tone="down"]{color:#e35c5c;opacity:1;}',
+      '.gt-hint-v[data-tone="over"]{color:#e35c5c;opacity:1;}',
+      '.gt-hint-v[data-tone="under"]{color:#4fc7a6;opacity:1;}',
       '.gt-hint-v[data-tone="flat"]{opacity:.45;}',
       '.gt-tile{display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex:0 0 auto;letter-spacing:.5px;}',
       '.gt-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
@@ -2409,6 +2452,9 @@ window.__ModuleLoader__.load({
       '.gt-shell[data-w="sm"] .gt-hint-k,.gt-shell[data-w="sm"] .gt-hint[data-rank="3"]{display:none;}',
       '.gt-shell[data-w="xs"] .gt-hint-k,.gt-shell[data-w="xs"] .gt-hint[data-rank="3"],.gt-shell[data-w="xs"] .gt-hint[data-rank="2"]{display:none;}',
       '.gt-shell[data-w="xxs"] .gt-hints{display:none;}',
+      // Same order on the stat cards: the ring goes first, then the small line.
+      '.gt-shell[data-w="sm"] .gt-ring,.gt-shell[data-w="xs"] .gt-ring,.gt-shell[data-w="xxs"] .gt-ring{display:none;}',
+      '.gt-shell[data-w="xs"] .gt-stat-sub,.gt-shell[data-w="xxs"] .gt-stat-sub{display:none;}',
       '.gt-shell[data-w="xs"] .gt-summary-4,.gt-shell[data-w="xxs"] .gt-summary-4{grid-template-columns:repeat(2,minmax(0,1fr));}',
     ].join('')
 
@@ -3498,20 +3544,104 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Stat({ label, value, seconds, unit, t }) {
+    /**
+     * A compact ring gauge. Track = the baseline (100% = "a typical day"),
+     * green = how much of it today/week used, red = the part beyond it.
+     * A circle cannot draw past 100%, so the excess is drawn as a second arc
+     * over the same track — and past 200% it gets a deeper red instead of a
+     * third lap. Hovering shows the exact numbers (`data-tip`).
+     */
+    function Ring({ ratio, tip, size, tone }) {
+      const box = Number(size) || 34
+      const stroke = Number(tone === 'thin' ? 3 : 3.5)
+      const radius = (box - stroke) / 2
+      const circumference = 2 * Math.PI * radius
+      const value = Math.max(0, Number(ratio) || 0)
+      const green = Math.min(value, 1)
+      const red = Math.max(0, Math.min(value - 1, 1))
+      const deep = value > 2
+      const center = box / 2
+      const arc = function (key, className, fraction, extra) {
+        if (fraction <= 0) return null
+        return h('circle', Object.assign({
+          key: key,
+          className: className,
+          cx: center,
+          cy: center,
+          r: radius,
+          fill: 'none',
+          strokeWidth: stroke,
+          strokeLinecap: 'round',
+          strokeDasharray: fraction * circumference + ' ' + circumference,
+          transform: 'rotate(-90 ' + center + ' ' + center + ')',
+        }, extra || {}))
+      }
       return h(
-        'div',
-        { className: 'gt-card' },
-        h('div', { className: 'gt-label' }, label),
+        'span',
+        { className: 'gt-ring', 'data-tip': tip || undefined },
         h(
-          'div',
-          { className: 'gt-value' },
-          seconds === undefined
-            ? h('span', null, value, unit ? h('span', { className: 'gt-unit' }, unit) : null)
-            : h(Duration, { seconds: seconds, t: t })
-        )
+          'svg',
+          {
+            className: 'gt-ring-svg',
+            width: box,
+            height: box,
+            viewBox: '0 0 ' + box + ' ' + box,
+            role: tip ? 'img' : undefined,
+            'aria-label': tip || undefined,
+          },
+          h('circle', {
+            className: 'gt-ring-track',
+            cx: center,
+            cy: center,
+            r: radius,
+            fill: 'none',
+            strokeWidth: stroke,
+          }),
+          arc('green', 'gt-ring-green', green),
+          arc('red', 'gt-ring-red', red, deep ? { 'data-deep': 'true' } : null)
+        ),
+        tip ? h('span', { className: 'gt-ring-tip' }, tip) : null
       )
     }
+
+    function Stat({ label, value, seconds, unit, t, sub, ring, onClick, hint }) {
+      const body = [
+        h('div', { className: 'gt-label' }, label, hint ? h('span', { className: 'gt-card-caret' }, '▾') : null),
+        h(
+          'div',
+          { className: 'gt-stat-main' },
+          h(
+            'div',
+            { className: 'gt-value' },
+            seconds === undefined
+              ? h('span', null, value, unit ? h('span', { className: 'gt-unit' }, unit) : null)
+              : h(Duration, { seconds: seconds, t: t })
+          ),
+          ring ? h(Ring, ring) : null
+        ),
+        sub
+          ? h(
+              'div',
+              { className: 'gt-stat-sub' },
+              h('span', { className: 'gt-stat-sub-v', 'data-tone': sub.tone || 'flat' }, sub.value),
+              h('span', { className: 'gt-stat-sub-k' }, sub.label)
+            )
+          : null,
+      ]
+      return onClick
+        ? h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-card gt-card-btn',
+              title: hint || undefined,
+              onClick: onClick,
+            },
+            body
+          )
+        : h('div', { className: 'gt-card' }, body)
+    }
+
 
     function Duration({ seconds, t }) {
       return h(
@@ -3868,7 +3998,9 @@ window.__ModuleLoader__.load({
       const count = Number(days) || 0
       const average = averagePerDay(total, count)
       const percent = today > 0 ? comparePercent(today, average) : null
-      const tone = percent === null || Math.abs(percent) < 0.5 ? 'flat' : percent > 0 ? 'up' : 'down'
+      // More than usual reads red, less reads green — the same rule as the ring
+      // gauge on the stat cards (green fills to the average, red is the excess).
+      const tone = percent === null || Math.abs(percent) < 0.5 ? 'flat' : percent > 0 ? 'over' : 'under'
       const compareText =
         percent === null || Math.abs(percent) < 0.5
           ? t('noData')
@@ -3897,6 +4029,107 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // Module scope, like LAST_ROUTE: switching the middle stat card to 本月 must
+    // survive leaving the panel and coming back.
+    let STATS_PERIOD = 'week'
+
+    /** "+54%" / "-12%" for the ring tooltips; empty when there is no baseline. */
+    function percentText(current, base) {
+      const percent = comparePercent(current, base)
+      if (percent === null) return ''
+      const value = Math.min(199, Math.round(Math.abs(percent)))
+      return ' · ' + (percent > 0 ? '+' : '-') + String(value) + '%'
+    }
+
+    /**
+     * The three cards above the list.
+     *
+     * 本日 compares today with "a typical day" (average per played day, today
+     * excluded so a big day cannot raise the bar it is measured against).
+     * 本周/本月 compares this period's daily average with the previous one and
+     * can be toggled by clicking the card. 总计 shows the total plus how many
+     * of the recorded days had any play. Rings are drawn by `Ring`.
+     */
+    function StatsRow({ t }) {
+      const [period, setPeriod] = React.useState(STATS_PERIOD)
+      const totalAll = totalsFor(null, 'all', NOW)
+      const today = totalsFor(null, 'day', NOW)
+      // Only closed sessions are on disk; a running session is not counted in
+      // the host's played-day total yet, so it must not be subtracted either.
+      const todayOnDisk = SESSIONS.some(function (session) {
+        return !session.live && dayKey(session.start) === dayKey(NOW)
+      })
+      const playedTotal = playedDaysTotal()
+      const avgDaily = averagePerDay(totalAll - today, playedTotal - (todayOnDisk ? 1 : 0))
+      const todayRatio = avgDaily > 0 ? today / avgDaily : 0
+      const todayTone = today > avgDaily ? 'over' : today > 0 ? 'under' : 'flat'
+
+      const bounds = rangeBounds(period, NOW)
+      const periodSessions = sessionsInRange(null, bounds.from, bounds.to, null)
+      const periodSeconds = secondsInRange(periodSessions, bounds.from, bounds.to)
+      const periodDays = activeDaysOf(periodSessions, bounds.from, bounds.to)
+      const periodAvg = averagePerDay(periodSeconds, periodDays)
+      const prevBounds = rangeBounds(period, new Date(bounds.from.getTime() - DAY_MS))
+      const prevSessions = sessionsInRange(null, prevBounds.from, prevBounds.to, null)
+      const prevSeconds = secondsInRange(prevSessions, prevBounds.from, prevBounds.to)
+      const prevDays = activeDaysOf(prevSessions, prevBounds.from, prevBounds.to)
+      const prevAvg = averagePerDay(prevSeconds, prevDays)
+      const periodRatio = prevAvg > 0 ? periodAvg / prevAvg : 0
+      const periodTone = periodAvg > prevAvg ? 'over' : periodAvg > 0 ? 'under' : 'flat'
+      const prevLabel = period === 'month' ? t('stat.lastMonthAvg') : t('stat.lastWeekAvg')
+
+      const span = recordDays()
+      const playedAll = playedDaysTotal()
+      const spanRatio = span > 0 ? playedAll / span : 0
+
+      const togglePeriod = function () {
+        STATS_PERIOD = STATS_PERIOD === 'week' ? 'month' : 'week'
+        setPeriod(STATS_PERIOD)
+      }
+      const nextPeriodName = t('range.' + (period === 'week' ? 'month' : 'week'))
+
+      const todayTip =
+        t('stat.tip.day')
+          .replace('{now}', formatDuration(today, t))
+          .replace('{avg}', formatDuration(avgDaily, t)) + percentText(today, avgDaily)
+      const periodTip =
+        t('stat.tip.' + period)
+          .replace('{now}', formatDuration(periodSeconds, t))
+          .replace('{day}', formatDuration(periodAvg, t))
+          .replace('{avg}', formatDuration(prevAvg, t)) + percentText(periodAvg, prevAvg)
+      const totalTip = t('stat.tip.total')
+        .replace('{days}', String(playedAll))
+        .replace('{total}', String(span))
+
+      return h(
+        'div',
+        { className: 'gt-stats' },
+        h(Stat, {
+          label: t('stat.today'),
+          seconds: today,
+          t: t,
+          sub: { value: '/' + (avgDaily > 0 ? compactDuration(avgDaily, t) : t('noData')), label: t('stat.avgDaily'), tone: todayTone },
+          ring: { ratio: todayRatio, tip: todayTip },
+        }),
+        h(Stat, {
+          label: t('range.' + period),
+          seconds: periodSeconds,
+          t: t,
+          sub: { value: '/' + (prevAvg > 0 ? compactDuration(prevAvg, t) : t('noData')), label: prevLabel, tone: periodTone },
+          ring: { ratio: periodRatio, tip: periodTip },
+          onClick: togglePeriod,
+          hint: t('stat.switch').replace('{name}', nextPeriodName),
+        }),
+        h(Stat, {
+          label: t('stat.total'),
+          seconds: totalAll,
+          t: t,
+          sub: { value: String(playedAll) + t('day'), label: t('stat.played'), tone: 'under' },
+          ring: { ratio: spanRatio, tip: totalTip },
+        })
+      )
+    }
+
     function TodayView({ t, onOpenGame, touch }) {
       const duplicates = duplicateMap()
       const rows = GAMES.map(function (game) {
@@ -3912,13 +4145,7 @@ window.__ModuleLoader__.load({
       return h(
         DropSurface,
         { t: t, className: 'gt-root', touch: touch },
-        h(
-          'div',
-          { className: 'gt-stats' },
-          h(Stat, { label: t('stat.today'), seconds: totalsFor(null, 'day', NOW), t: t }),
-          h(Stat, { label: t('stat.week'), seconds: totalsFor(null, 'week', NOW), t: t }),
-          h(Stat, { label: t('stat.total'), seconds: totalsFor(null, 'all', NOW), t: t })
-        ),
+        h(StatsRow, { t: t }),
         rows.length === 0
           ? h(
               'div',
@@ -7754,6 +7981,11 @@ window.__ModuleLoader__.load({
         Cropper: Cropper,
         ImageField: ImageField,
         TodayView: TodayView,
+        StatsRow: StatsRow,
+        Ring: Ring,
+        setStatsPeriod: function (next) {
+          STATS_PERIOD = next
+        },
         AllView: AllView,
         HintStrip: HintStrip,
         DetailView: DetailView,

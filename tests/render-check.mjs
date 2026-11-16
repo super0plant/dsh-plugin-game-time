@@ -793,8 +793,8 @@ if (hintNodes.length !== 3) throw new Error('a row needs exactly three hints, go
 const ranks = hintNodes.map((node) => node.props['data-rank'])
 if (ranks.join(',') !== '1,2,3') throw new Error('hint ranks must be 1,2,3 from left to right, got ' + ranks)
 const toneOne = hintNodes[0].children[1]
-if (['up', 'down', 'flat'].indexOf(toneOne.props['data-tone']) < 0) {
-  throw new Error('the compare hint needs an up/down/flat tone')
+if (['over', 'under', 'flat'].indexOf(toneOne.props['data-tone']) < 0) {
+  throw new Error('the compare hint needs an over/under/flat tone')
 }
 if (toneOne.children.join('') !== '▲50%') {
   throw new Error('5 400 s against a 3 600 s/day baseline is +50%, got ' + toneOne.children.join(''))
@@ -843,6 +843,120 @@ for (const [label, tree] of [
   if (mounted.length % 3 !== 0) throw new Error(label + ' hint strip lost a rank')
 }
 console.log('  list hints: compare / average / played days, gated by recency')
+
+// --- stat card rings -----------------------------------------------------
+//
+// 本日 / 本周 / 总计 each carry a ring: track = the baseline, green fills to
+// 100%, red is the excess (deeper past 200%). The ring maths is pure, so it
+// can be checked without a browser.
+function ringsOf(node) {
+  const found = []
+  ;(function walk(item) {
+    if (item === null || item === undefined || item === false) return
+    if (Array.isArray(item)) {
+      item.forEach(walk)
+      return
+    }
+    if (typeof item !== 'object') return
+    if (item.props && item.props.className === 'gt-ring') found.push(item)
+    walk(item.children)
+  })(node)
+  return found
+}
+function circleClass(ringNode) {
+  const out = []
+  ;(function walk(item) {
+    if (!item || typeof item !== 'object') return
+    if (Array.isArray(item)) {
+      item.forEach(walk)
+      return
+    }
+    if (item.type === 'circle') out.push(item.props.className)
+    walk(item.children)
+  })(ringNode)
+  return out
+}
+
+const halfRing = testApi.Ring({ ratio: 0.5, tip: 'half' })
+if (circleClass(halfRing).join(',') !== 'gt-ring-track,gt-ring-green') {
+  throw new Error('a half-full ring needs a track and one green arc, got ' + circleClass(halfRing))
+}
+const greenArc = halfRing.children[0].children[1]
+if (!/^[\d.]+ [\d.]+$/.test(greenArc.props.strokeDasharray)) {
+  throw new Error('the green arc must use a dash array, got ' + greenArc.props.strokeDasharray)
+}
+const greenFraction = Number(String(greenArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * greenArc.props.r)
+if (Math.abs(greenFraction - 0.5) > 0.01) throw new Error('0.5 must fill half of the ring, got ' + greenFraction)
+if (!halfRing.children[1] || halfRing.children[1].props.className !== 'gt-ring-tip') {
+  throw new Error('the ring must carry its hover tooltip')
+}
+if (halfRing.children[1].children.join('') !== 'half') throw new Error('the ring tooltip lost its text')
+
+const overRing = testApi.Ring({ ratio: 1.4, tip: 'over' })
+if (circleClass(overRing).join(',') !== 'gt-ring-track,gt-ring-green,gt-ring-red') {
+  throw new Error('over the baseline needs a red excess arc, got ' + circleClass(overRing))
+}
+const deepRing = testApi.Ring({ ratio: 2.5, tip: 'deep' })
+const deepArc = deepRing.children[0].children[2]
+if (deepArc.props['data-deep'] !== 'true') throw new Error('past 200% the excess arc gets a deeper red')
+const emptyRing = testApi.Ring({ ratio: 0, tip: 'empty' })
+if (circleClass(emptyRing).join(',') !== 'gt-ring-track') {
+  throw new Error('a zero ratio is a bare track, got ' + circleClass(emptyRing))
+}
+
+const cardTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(stats)')
+const cards = ringsOf(cardTree)
+if (cards.length !== 3) throw new Error('three stat cards, three rings, got ' + cards.length)
+
+const statSubs = []
+;(function collectSubs(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectSubs)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.props && node.props.className === 'gt-stat-sub') statSubs.push(node)
+  collectSubs(node.children)
+})(cardTree)
+if (statSubs.length !== 3) throw new Error('each stat card needs its comparison line, got ' + statSubs.length)
+const subLabels = statSubs.map((node) => node.children[1].children.join(''))
+if (subLabels.join(',') !== 'stat.avgDaily,stat.lastWeekAvg,stat.played') {
+  throw new Error('unexpected comparison labels: ' + subLabels.join(','))
+}
+
+// Clicking the middle card toggles week → month and remembers it.
+testApi.setStatsPeriod('week')
+const weekCard = render(testApi.StatsRow, { t }, 'StatsRow(week)')
+const toggleButton = []
+;(function findToggle(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(findToggle)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.props && node.props.className && String(node.props.className).indexOf('gt-card-btn') >= 0) toggleButton.push(node)
+  findToggle(node.children)
+})(weekCard)
+if (toggleButton.length !== 1) throw new Error('exactly one card is a toggle, got ' + toggleButton.length)
+if (toggleButton[0].props.title !== 'stat.switch') throw new Error('the toggle needs a hint saying it is clickable')
+toggleButton[0].props.onClick()
+const monthCard = render(testApi.StatsRow, { t }, 'StatsRow(month)')
+const monthLabels = []
+;(function collectLabels(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectLabels)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.props && node.props.className === 'gt-label') monthLabels.push(node.children.join(''))
+  collectLabels(node.children)
+})(monthCard)
+if (!monthLabels.some((label) => label.indexOf('range.month') >= 0)) throw new Error('after the click the card must read 本月')
+testApi.setStatsPeriod('week')
+console.log('  stat cards: today / week-month / total with comparison rings')
 const tiers = [
   [0, 'lg'],
   [619, 'md'],
