@@ -56,7 +56,9 @@ window.__ModuleLoader__.load({
       'range.month': '本月',
       'range.all': '全部',
       'detail.sessions': '次数',
-      'detail.average': '平均',
+      'detail.average': '平均每天',
+      'detail.playedDays': '已玩',
+      'day': '天',
       'detail.platforms': '平台分布',
       'detail.trend': '时长趋势',
       'chart.bar': '柱状',
@@ -305,7 +307,9 @@ window.__ModuleLoader__.load({
       'range.month': 'Month',
       'range.all': 'All',
       'detail.sessions': 'Sessions',
-      'detail.average': 'Average',
+      'detail.average': 'Avg/day',
+      'detail.playedDays': 'Played',
+      'day': 'd',
       'detail.platforms': 'Platforms',
       'detail.trend': 'Play time',
       'chart.bar': 'Bars',
@@ -2179,6 +2183,7 @@ window.__ModuleLoader__.load({
       '.gt-status{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;}',
       '.gt-accent{width:3px;height:22px;border-radius:2px;flex:0 0 auto;}',
       '.gt-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
+      '.gt-summary-4{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}',
       '.gt-panel-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),calc(var(--gt-surface-alpha,.05) * 0.85));flex:0 0 auto;}',
       '.gt-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}',
       '.gt-card-head-title{display:flex;align-items:baseline;gap:8px;min-width:0;}',
@@ -3461,12 +3466,18 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Stat({ label, value, seconds, t }) {
+    function Stat({ label, value, seconds, unit, t }) {
       return h(
         'div',
         { className: 'gt-card' },
         h('div', { className: 'gt-label' }, label),
-        h('div', { className: 'gt-value' }, seconds === undefined ? value : h(Duration, { seconds: seconds, t: t }))
+        h(
+          'div',
+          { className: 'gt-value' },
+          seconds === undefined
+            ? h('span', null, value, unit ? h('span', { className: 'gt-unit' }, unit) : null)
+            : h(Duration, { seconds: seconds, t: t })
+        )
       )
     }
 
@@ -5234,8 +5245,16 @@ window.__ModuleLoader__.load({
       }, [windowFrom, HISTORY_FROM, FIRST_START])
 
       const rangeSessions = sessionsInRange(game.id, bounds.from, bounds.to, allowedPlatforms(game))
-      const rangeTotal = secondsInRange(rangeSessions, bounds.from, bounds.to)
-      const average = rangeSessions.length > 0 ? rangeTotal / rangeSessions.length : 0
+      const windowTotal = secondsInRange(rangeSessions, bounds.from, bounds.to)
+      // "全部" must agree with 总计 and with the row hints, both of which are
+      // all-time; the client only holds the lazy-load window of detail.
+      const allRange = range === 'all'
+      const rangeTotal = allRange ? totalsFor(game.id, 'all', NOW) : windowTotal
+      // Days played inside the selected range — the same denominator as 平均每天.
+      const rangeDays = allRange
+        ? playedDaysFor(game.id)
+        : activeDaysOf(rangeSessions, bounds.from, bounds.to)
+      const average = averagePerDay(rangeTotal, rangeDays)
       const points = seriesFor(game.id, range, currentAnchor, null, grain)
       const breakdown = platformBreakdown(game.id, range, currentAnchor, grain)
       const groupName = groupNameOf(game)
@@ -5474,9 +5493,10 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { className: 'gt-summary' },
+          { className: 'gt-summary gt-summary-4' },
           h(Stat, { label: t('range.' + range), seconds: rangeTotal, t: t }),
           h(Stat, { label: t('detail.sessions'), value: String(rangeSessions.length) }),
+          h(Stat, { label: t('detail.playedDays'), value: String(rangeDays), unit: t('day') }),
           h(Stat, { label: t('detail.average'), seconds: average, t: t })
         ),
         h(ShareCard, {

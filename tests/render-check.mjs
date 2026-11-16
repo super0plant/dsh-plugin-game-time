@@ -712,6 +712,54 @@ if (testApi.activeMean([{ seconds: 0 }, { seconds: 3600 }, { seconds: 0 }, { sec
   throw new Error('activeMean must ignore empty buckets')
 }
 if (testApi.activeMean([]) !== 0) throw new Error('activeMean([]) must be 0')
+
+// --- game detail: played days and "average per day" ----------------------
+//
+// The detail row used to average *per session*; the panel now means "per day
+// that had play" everywhere, and the 已玩 card exposes the denominator.
+const detailTree = render(
+  testApi.DetailView,
+  {
+    t,
+    game: testApi.GAMES[0],
+    initialRange: 'all',
+    onBack() {},
+    onSettings() {},
+    onDeleted() {},
+  },
+  'DetailView(all range)'
+)
+const detailLabels = []
+const detailValues = []
+;(function collectDetail(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectDetail)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.props.className === 'gt-label') detailLabels.push(node.children.join(''))
+  if (node.props.className === 'gt-value') detailValues.push(node)
+  collectDetail(node.children)
+})(detailTree)
+if (detailLabels.indexOf('detail.playedDays') < 0) throw new Error('detail needs an 已玩天数 card')
+if (detailLabels.indexOf('detail.average') < 0) throw new Error('detail needs the 平均每天 card')
+if (detailLabels.indexOf('detail.sessions') < 0) throw new Error('detail keeps the session count card')
+
+const playedCard = detailValues[detailLabels.indexOf('detail.playedDays')]
+const playedNumber = Number(String(playedCard.children[0].children[0]))
+const playedDays = testApi.playedDaysFor(testApi.GAMES[0].id)
+if (playedNumber !== playedDays) {
+  throw new Error('已玩天数 must come from the all-time count: ' + playedNumber + ' vs ' + playedDays)
+}
+if (playedCard.children[0].children[1].children.join('') !== 'day') {
+  throw new Error('已玩天数 needs its unit next to the number')
+}
+
+const avgCard = detailValues[detailLabels.indexOf('detail.average')]
+if (!avgCard || avgCard.children[0].type !== 'span') throw new Error('平均每天 must render a duration')
+const avgMinutes = avgCard.children[0].children.join('')
+if (/NaN|Infinity/.test(avgMinutes)) throw new Error('average per day is not finite')
 const tiers = [
   [0, 'lg'],
   [619, 'md'],
