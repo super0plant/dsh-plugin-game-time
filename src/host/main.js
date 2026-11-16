@@ -19,7 +19,7 @@ import {
 import {
   ICON_SCRIPT, PICK_SCRIPT, browseExecutables, iconFromFile, pickFileViaDialog, resolveGamePath,
 } from './scripts.js'
-import { splitByDay } from './sessions.js'
+import { splitByDay, dayRangeOf } from './sessions.js'
 import { baseName, dirName, fileExists, readJson, saveAsset, writeJson } from './values.js'
 
 export const name = 'dsh-plugin-game-time'
@@ -346,8 +346,16 @@ export function apply(ctx) {
     const historyFrom = now - days * DAY_MS
     // All-time numbers travel separately from the session window: the client
     // only holds the last `historyDays` of detail, but "总计" must stay true.
+    //
+    // The block below is written to be *mergeable*: when sessions.json is later
+    // sharded by year, every field here is either a sum (seconds, played-day
+    // counts) or a min/max (firstStart, lastPlayed), so a year file can store
+    // its own copy of this shape and the reader just folds them together. A
+    // calendar day never spans two years, so summing the day counts is exact.
     const totals = { total: 0, game: Object.create(null), platform: Object.create(null) }
     const lastPlayed = Object.create(null)
+    const daySets = new Map()
+    const allDays = new Set()
     const recent = []
     let firstStart = 0
     for (const session of state.sessions) {
@@ -360,8 +368,20 @@ export function apply(ctx) {
       totals.platform[session.platformId] = (totals.platform[session.platformId] || 0) + seconds
       if (!lastPlayed[session.gameId] || end > lastPlayed[session.gameId]) lastPlayed[session.gameId] = end
       if (!firstStart || start < firstStart) firstStart = start
+      const span = dayRangeOf(start, end)
+      let set = daySets.get(session.gameId)
+      if (!set) {
+        set = new Set()
+        daySets.set(session.gameId, set)
+      }
+      for (let day = span.first; day <= span.last; day += 1) {
+        set.add(day)
+        allDays.add(day)
+      }
       if (end >= historyFrom) recent.push(session)
     }
+    const playedDays = Object.create(null)
+    for (const [gameId, set] of daySets) playedDays[gameId] = set.size
     return {
       source: 'live',
       version: 3,
@@ -396,6 +416,8 @@ export function apply(ctx) {
       firstStart: firstStart || null,
       totals,
       lastPlayed,
+      playedDays,
+      playedDaysTotal: allDays.size,
       active: Array.from(active.entries()).map(([gameId, record]) => ({
         gameId,
         platformId: record.platformId,

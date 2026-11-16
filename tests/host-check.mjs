@@ -503,6 +503,35 @@ const expectedGame = testApi
   .reduce((sum, session) => sum + (session.end - session.start) / 1000, 0)
 assert.equal(Math.round(windowed.totals.game.zzz), Math.round(expectedGame), "per-game totals stay all-time")
 
+// Played days are all-time too, and they count calendar days — two sessions on
+// one day are one day. The client cannot compute this from its 1-year window.
+const zzzDays = new Set(
+  testApi
+    .getSessions()
+    .filter((session) => session.gameId === "zzz")
+    .map((session) => {
+      const start = new Date(session.start)
+      return start.getFullYear() + "-" + start.getMonth() + "-" + start.getDate()
+    })
+)
+assert.equal(windowed.playedDays.zzz, zzzDays.size, "playedDays counts distinct local days")
+assert.ok(windowed.playedDaysTotal >= windowed.playedDays.zzz, "the union never trails one game")
+assert.ok(windowed.playedDaysTotal >= 2, "the 400-day-old session and today are two days")
+
+// Old data predates the midnight splitter: a session that crosses midnight
+// belongs to both days, otherwise "已玩天数" would quietly lose one.
+testApi.getSessions().push({
+  id: "span-1",
+  gameId: "zzz",
+  platformId: "steam",
+  source: null,
+  start: new Date(2024, 0, 2, 23, 30).getTime(),
+  end: new Date(2024, 0, 3, 0, 30).getTime(),
+})
+const spanned = testApi.snapshot()
+assert.equal(spanned.playedDays.zzz, zzzDays.size + 2, "a session across midnight counts on both days")
+testApi.getSessions().pop()
+
 // --- the lazy-load endpoint returns exactly the requested slice ----------
 
 const day = 86400000
