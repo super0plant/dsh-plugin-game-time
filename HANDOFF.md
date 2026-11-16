@@ -54,7 +54,7 @@
   - **b · 只给最近玩过的显示**：`settings.statsDays`（1–3650，默认 7），设置页「界面 → 列表提示」。判定用 `lastPlayedAt(gameId)`，超过窗口整条提示不渲染。
   - **c · 三张统计卡**：`StatsRow` + `Ring`（纯 SVG）。本日 = 今天 vs「平均每日」（**基准排除今天**，否则今天玩得多会抬高自己的基准）；本周 vs「上周日均」，点卡片切本月（`STATS_PERIOD` 放模块级，和 `LAST_ROUTE` 同理）；总计 = 总计 + `已玩 xx天`，圆轮分母是 `recordDays()`（首条记录 → 今天，含两端）。
   - **响应式**：`widthTier(shellWidth)` → `.gt-shell[data-w]`；隐藏顺序＝灰字标签 → rank3（已玩）→ rank2（平均每天）→ rank1（对比平均）；统计卡先藏圆轮再藏小字。
-  - **宿主**：`/state` 新增 `playedDays`（每游戏全量天数）+ `playedDaysTotal`；`snapshot()` 里用 `dayRangeOf()`（`src/host/sessions.js`）拿**连续整数日索引**，共享一个 `Date`（最初一版每个会话 new 两个 Date，11 万条要 41 ms；现在是 16 ms）。这一块字段**可合并**（秒数/天数相加、首末时间取 min/max），见 §10 的分片计划。
+  - **宿主**：`/state` 新增 `playedDays`（每游戏全量天数）+ `playedDaysTotal`；`snapshot()` 里用 `dayRangeOf()`（`src/host/sessions.js`）拿**连续整数日索引**，共享一个 `Date`（最初一版每个会话 new 两个 Date，慢一个数量级）。实测中位数：1 年×4 局/天 0.13 → 0.23 ms；10 年×4 局/天 0.55 → 1.77 ms；11 万条会话 4.45 → 17.8 ms（30 秒一次 ≈ 0.06% CPU）。这一块字段**可合并**（秒数/天数相加、首末时间取 min/max），见 §10 的分片计划。
   - **验证**：render-check 新增 4 组断言（平均口径、详情四卡、行提示 + 时间窗、圆轮几何 + 本周→本月切换）；host-check 新增「已玩天数按自然日去重 + 跨零点算两天 + 白名单 clamp」；四套全绿。
 
 - **2026-11-15 · 0.15.2 Steam .url 识别修复 + 拖入失败提示**：`RESOLVE_SCRIPT` 的 exe 扫描 `-Depth 2`→`4`（Alyx 的 `hlvr.exe` 在 `game\bin\win64` 4 层内），过滤词加 `install|vconsole|vrserver|vrprism|vrcompositor|vrmonitor|vrstartup|vrdashboard|vrwebhelper|vrpathreg|vrsetup`（Wallpaper Engine 之前选中 `installer.exe`，SteamVR 会选 `vrprismhost.exe`）。验证方式：用 `$env:APPDATA\...\Start Menu\Programs\Steam\*.url` 跑 `RESOLVE_SCRIPT`（powershell -File），现在 Celeste/Alyx/VRChat/Wallpaper Engine 都能解析到正确 exe。另外 `DropSurface` 加了 `note` 状态 + `.gt-drop-toast`，识别失败时显示原因（新 key `drop.badGame`），不再静默。注意：Node 里 `spawnSync` 抓 stdout 在沙箱会 EPERM，所以测试解析器要用 `powershell -File` 直接跑、结果读 JSON 文件。
@@ -564,7 +564,7 @@ node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe 三个场�
 | 双击 `start.cmd` 弹「无法验证发布者」 | 这是 Mark-of-the-Web，不是杀软；属性里勾「解除锁定」只对当次解压有效 | 发 zip 用微信/QQ（通常不带标记）或让对方 7-Zip 解压；再不行就本地新建快捷方式指向 `powershell -File launcher.ps1` |
 | 平均线的分母用「格子总数」 | 一周只玩两天，平均被摊成总量 ÷ 7，看起来像「每天才玩一会儿」 | 分母＝有记录的格子数（`activeMean` / `averagePerDay`）；「没玩」不是「玩了 0 分钟」 |
 | 用 `@media` 做响应式 | 面板在侧栏里 380 px、窗口 1400 px 时，`@media` 完全不动 | 面板是容器不是窗口：`ResizeObserver` 量 `.gt-shell` → `data-w` → CSS 分档 |
-| `snapshot()` 里每个会话 `new Date()` 两次 | 加上「已玩天数」后，11 万条会话的 `snapshot()` 从 4.9 ms 涨到 41 ms（每 30 秒一次） | 共享一个 `Date` + `getTimezoneOffset` 算整数日索引（`dayRangeOf`），回到 16 ms；热路径别按会话分配对象 |
+| `snapshot()` 里每个会话 `new Date()` 两次 | 加上「已玩天数」后，`snapshot()` 慢一个数量级（11 万条会话：4.5 ms → 41 ms，冷启动测法） | 共享一个 `Date` + `getTimezoneOffset` 算整数日索引（`dayRangeOf`），热身后 11 万条 17.8 ms、日常 1.8 ms；热路径别按会话分配对象 |
 | 新增的只读字段以为「不用重启」 | `/state` 不返回 `playedDays` 时，客户端会退回「用已加载窗口算」，老用户看不出问题、但和历史总计对不上 | 改动 `/state` 的字段一律按「宿主改动 → 重启 DSH」处理；客户端有窗口兜底但不要依赖它 |
 | 详情页「全部」用窗口时长、头部用全量总计 | 两个数字对不上（历史超过 `historyDays` 时差一整段） | 范围 = `all` 时一律读 `totalsFor(all)` / `playedDaysFor()`（全量），不要用 `sessionsInRange` 的结果 |
 
