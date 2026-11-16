@@ -658,6 +658,45 @@ if (!(allTotal > 0 && allTotal >= weekTotal && weekTotal >= dayTotal)) {
   throw new Error('implausible totals: day=' + dayTotal + ' week=' + weekTotal + ' all=' + allTotal)
 }
 
+// --- one average rule: played days only ---------------------------------
+//
+// Everything in the panel divides by "days that had play"; an empty day is
+// not a zero day. These four helpers are the single place the rule lives, so
+// a regression here shows up before any view does.
+const demoDay = testApi.rangeBounds('day', testApi.NOW)
+const demoDayDays = testApi.activeDaysOf(testApi.SESSIONS, demoDay.from, demoDay.to)
+if (demoDayDays !== 1) throw new Error('today must hold exactly one played day, got ' + demoDayDays)
+const demoSpan = testApi.activeDaysOf(testApi.SESSIONS, null, null)
+if (!(demoSpan > 100)) throw new Error('demo history should span many played days, got ' + demoSpan)
+if (testApi.averagePerDay(7200, 2) !== 3600) throw new Error('averagePerDay must divide by played days')
+if (testApi.averagePerDay(7200, 0) !== 0) throw new Error('averagePerDay(0 days) must be 0')
+if (testApi.averagePerDay(7200, -3) !== 0) throw new Error('averagePerDay must reject a negative day count')
+if (testApi.comparePercent(3, 2) !== 50) throw new Error('comparePercent(3, 2) must be 50')
+if (testApi.comparePercent(1, 0) !== null) throw new Error('comparePercent needs a baseline')
+if (testApi.activeMean([{ seconds: 0 }, { seconds: 3600 }, { seconds: 0 }, { seconds: 1800 }]) !== 2700) {
+  throw new Error('activeMean must ignore empty buckets')
+}
+if (testApi.activeMean([]) !== 0) throw new Error('activeMean([]) must be 0')
+const tiers = [
+  [0, 'lg'],
+  [619, 'md'],
+  [520, 'md'],
+  [519, 'sm'],
+  [440, 'sm'],
+  [439, 'xs'],
+  [340, 'xs'],
+  [339, 'xxs'],
+]
+for (const [width, expected] of tiers) {
+  const actual = testApi.widthTier(width)
+  if (actual !== expected) throw new Error('widthTier(' + width + ') = ' + actual + ', expected ' + expected)
+}
+if (!(testApi.playedDaysFor(testApi.GAMES[0].id) > 0)) {
+  throw new Error('demo snapshot must report played days for the first game')
+}
+if (!(testApi.playedDaysTotal() > 0)) throw new Error('demo snapshot must report total played days')
+if (!(testApi.recordDays() > 0)) throw new Error('demo snapshot must report a record span')
+
 const weekPoints = testApi.seriesFor(testApi.GAMES[0].id, 'week', testApi.NOW)
 if (weekPoints.length !== 7) throw new Error('week series must be 7 points, got ' + weekPoints.length)
 

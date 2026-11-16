@@ -551,6 +551,70 @@ window.__ModuleLoader__.load({
       return d.getFullYear() + '-' + pad2(d.getMonth() + 1)
     }
 
+    /* --- one "average" definition for the whole panel -------------------- *
+     * Every average in this plugin means "per day that actually had play".
+     * A day with no play must never lower it, and a game's all-time average
+     * must agree with its row hint, its detail page and the chart line — so
+     * these four helpers are the only place the rule is written down.
+     */
+
+    /** Distinct local days that hold at least one session inside [from, to). */
+    function activeDaysOf(sessions, from, to) {
+      const seen = new Set()
+      const startEdge = from ? from.getTime() : null
+      const endEdge = to ? to.getTime() : null
+      for (const session of Array.isArray(sessions) ? sessions : []) {
+        const start = startEdge === null ? session.start : Math.max(session.start, startEdge)
+        const end = endEdge === null ? session.end : Math.min(session.end, endEdge)
+        if (end <= start) continue
+        seen.add(dayKey(start))
+      }
+      return seen.size
+    }
+
+    /** Seconds per played day; 0 when nothing was ever played. */
+    function averagePerDay(seconds, days) {
+      const count = Number(days) || 0
+      if (count <= 0) return 0
+      return Math.max(0, Number(seconds) || 0) / count
+    }
+
+    /** Relative change in percent; null when there is no baseline to compare. */
+    function comparePercent(current, base) {
+      const edge = Number(base) || 0
+      if (edge <= 0) return null
+      return ((Number(current) || 0) - edge) / edge * 100
+    }
+
+    /** Mean of the non-empty buckets — empty buckets are not "zero days". */
+    function activeMean(points) {
+      const list = Array.isArray(points) ? points : []
+      let sum = 0
+      let count = 0
+      for (const point of list) {
+        const seconds = point && point.seconds > 0 ? point.seconds : 0
+        if (seconds <= 0) continue
+        sum += seconds
+        count += 1
+      }
+      return count > 0 ? sum / count : 0
+    }
+
+    /**
+     * Panel width → breakpoint name. The panel is a container inside DSH, not
+     * the browser window, so `@media` is the wrong tool: the same window can
+     * hold a 380 px sidebar panel or a 1200 px full-width one.
+     */
+    function widthTier(width) {
+      const value = Number(width) || 0
+      if (value <= 0) return 'lg'
+      if (value >= 620) return 'lg'
+      if (value >= 520) return 'md'
+      if (value >= 440) return 'sm'
+      if (value >= 340) return 'xs'
+      return 'xxs'
+    }
+
     function clockOf(value) {
       const d = new Date(value)
       return pad2(d.getHours()) + ':' + pad2(d.getMinutes())
@@ -1039,15 +1103,15 @@ window.__ModuleLoader__.load({
       autoArchive: { enabled: false, value: 60, unit: 'day' },
     }
 
-    /** The built-in "other" platform is shown in the current language. */
-    let TR_FN = null
-
-    function platformLabel(platform) {
-      if (!platform) return ''
-      if (platform.id === 'other' && TR_FN) return TR_FN('platform.other')
-      return platform.name
-    }
-
+    /** The built-in "other" platform is shown in the current language. */
+    let TR_FN = null
+
+    function platformLabel(platform) {
+      if (!platform) return ''
+      if (platform.id === 'other' && TR_FN) return TR_FN('platform.other')
+      return platform.name
+    }
+
     function enabledPlatforms(game) {
       const ids = []
       const add = function (id) {
@@ -1129,6 +1193,12 @@ window.__ModuleLoader__.load({
     let FIRST_START = null
     let ALL_TOTALS = null
     let LAST_PLAYED = null
+    // All-time "how many days did I play this game" per game, and the union
+    // across games. Both come from the host because the client only holds the
+    // lazy-load window; counting here would disagree with "总计" (HANDOFF §9).
+    let ALL_PLAYED_DAYS = null
+    let PLAYED_DAYS_TOTAL = 0
+    let DEMO_PLAYED_DAYS = null
     let HISTORY_REQUESTS = []
     // Module scope, not component state: the panel unmounts when you switch
     // away, so a React state would drop you back on the start page every time.
@@ -1207,6 +1277,9 @@ window.__ModuleLoader__.load({
       else if (payload.firstStart === null) FIRST_START = null
       ALL_TOTALS = payload.totals && typeof payload.totals === 'object' ? payload.totals : null
       LAST_PLAYED = payload.lastPlayed && typeof payload.lastPlayed === 'object' ? payload.lastPlayed : null
+      ALL_PLAYED_DAYS = payload.playedDays && typeof payload.playedDays === 'object' ? payload.playedDays : null
+      PLAYED_DAYS_TOTAL = Number(payload.playedDaysTotal) || 0
+      DEMO_PLAYED_DAYS = null
 
       if (payload.settings && typeof payload.settings === 'object') Object.assign(SETTINGS, payload.settings)
       if (payload.env && typeof payload.env === 'object') ENV = payload.env
@@ -1950,6 +2023,57 @@ window.__ModuleLoader__.load({
         if (end > latest) latest = end
       }
       return latest
+    }
+
+    /** Days this game was played on, all time. Demo mode counts its own data. */
+    function playedDaysFor(gameId) {
+      if (ALL_PLAYED_DAYS && ALL_PLAYED_DAYS[gameId] !== undefined) {
+        return Number(ALL_PLAYED_DAYS[gameId]) || 0
+      }
+      if (LIVE) return 0
+      if (!DEMO_PLAYED_DAYS) {
+        const counts = new Map()
+        const union = new Set()
+        for (const session of SESSIONS) {
+          const key = dayKey(session.start)
+          union.add(key)
+          let set = counts.get(session.gameId)
+          if (!set) {
+            set = new Set()
+            counts.set(session.gameId, set)
+          }
+          set.add(key)
+        }
+        DEMO_PLAYED_DAYS = { byGame: counts, total: union.size }
+      }
+      return DEMO_PLAYED_DAYS.byGame.get(gameId) ? DEMO_PLAYED_DAYS.byGame.get(gameId).size : 0
+    }
+
+    /** Days with play across every game, all time. */
+    function playedDaysTotal() {
+      if (LIVE) return PLAYED_DAYS_TOTAL
+      const seen = new Set()
+      for (const session of SESSIONS) seen.add(dayKey(session.start))
+      return seen.size
+    }
+
+    /** Earliest session anywhere; the host value wins when it exists. */
+    function firstStartAt() {
+      const first = Number(FIRST_START) || 0
+      if (first > 0) return first
+      let earliest = 0
+      for (const session of SESSIONS) {
+        if (!earliest || session.start < earliest) earliest = session.start
+      }
+      return earliest
+    }
+
+    /** Natural days from the first record through today, inclusive. */
+    function recordDays() {
+      const first = firstStartAt()
+      if (!(first > 0)) return 0
+      const span = Math.round((startOfDay(NOW).getTime() - startOfDay(first).getTime()) / DAY_MS)
+      return Math.max(1, span + 1)
     }
 
     /* ------------------------------------------------------------------ *
@@ -5472,81 +5596,81 @@ window.__ModuleLoader__.load({
       )
     }
 
-    /** Compare the shipped version with the newest GitHub release (read-only). */
-    function compareVersion(left, right) {
-      const a = String(left).split('.').map(Number)
-      const b = String(right).split('.').map(Number)
-      for (let index = 0; index < 3; index += 1) {
-        const x = a[index] || 0
-        const y = b[index] || 0
-        if (x !== y) return x > y ? 1 : -1
-      }
-      return 0
-    }
-
-    function UpdateCheck({ t }) {
-      const [state, setState] = React.useState('idle')
-      const [latest, setLatest] = React.useState('')
-      const check = function () {
-        if (typeof fetch !== 'function') {
-          setState('error')
-          return
-        }
-        setState('checking')
-        fetch('https://api.github.com/repos/super0plant/dsh-plugin-game-time/releases/latest', {
-          headers: { accept: 'application/vnd.github+json' },
-        })
-          .then(function (response) {
-            return response && response.ok ? response.json() : null
-          })
-          .then(function (payload) {
-            const tag = payload && payload.tag_name ? String(payload.tag_name).replace(/^v/i, '') : ''
-            if (!tag) {
-              setState('error')
-              return
-            }
-            setLatest(tag)
-            setState(compareVersion(tag, VERSION) > 0 ? 'found' : 'latest')
-          })
-          .catch(function () {
-            setState('error')
-          })
-      }
-      return h(
-        'div',
-        { className: 'gt-update' },
-        h('div', { className: 'gt-muted' }, t('settings.version').replace('{v}', VERSION)),
-        h(
-          'div',
-          { className: 'gt-update-row' },
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'gt-btn',
-              disabled: state === 'checking',
-              onClick: check,
-            },
-            state === 'checking' ? t('settings.update.checking') : t('settings.checkUpdate')
-          ),
-          state === 'latest' ? h('span', { className: 'gt-muted' }, t('settings.update.latest')) : null,
-          state === 'found'
-            ? h(
-                'a',
-                {
-                  className: 'gt-link',
-                  href: 'https://github.com/super0plant/dsh-plugin-game-time/releases/latest',
-                  target: '_blank',
-                  rel: 'noreferrer',
-                },
-                t('settings.update.found').replace('{v}', latest)
-              )
-            : null,
-          state === 'error' ? h('span', { className: 'gt-muted' }, t('settings.update.error')) : null
-        )
-      )
-    }
-
+    /** Compare the shipped version with the newest GitHub release (read-only). */
+    function compareVersion(left, right) {
+      const a = String(left).split('.').map(Number)
+      const b = String(right).split('.').map(Number)
+      for (let index = 0; index < 3; index += 1) {
+        const x = a[index] || 0
+        const y = b[index] || 0
+        if (x !== y) return x > y ? 1 : -1
+      }
+      return 0
+    }
+
+    function UpdateCheck({ t }) {
+      const [state, setState] = React.useState('idle')
+      const [latest, setLatest] = React.useState('')
+      const check = function () {
+        if (typeof fetch !== 'function') {
+          setState('error')
+          return
+        }
+        setState('checking')
+        fetch('https://api.github.com/repos/super0plant/dsh-plugin-game-time/releases/latest', {
+          headers: { accept: 'application/vnd.github+json' },
+        })
+          .then(function (response) {
+            return response && response.ok ? response.json() : null
+          })
+          .then(function (payload) {
+            const tag = payload && payload.tag_name ? String(payload.tag_name).replace(/^v/i, '') : ''
+            if (!tag) {
+              setState('error')
+              return
+            }
+            setLatest(tag)
+            setState(compareVersion(tag, VERSION) > 0 ? 'found' : 'latest')
+          })
+          .catch(function () {
+            setState('error')
+          })
+      }
+      return h(
+        'div',
+        { className: 'gt-update' },
+        h('div', { className: 'gt-muted' }, t('settings.version').replace('{v}', VERSION)),
+        h(
+          'div',
+          { className: 'gt-update-row' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'gt-btn',
+              disabled: state === 'checking',
+              onClick: check,
+            },
+            state === 'checking' ? t('settings.update.checking') : t('settings.checkUpdate')
+          ),
+          state === 'latest' ? h('span', { className: 'gt-muted' }, t('settings.update.latest')) : null,
+          state === 'found'
+            ? h(
+                'a',
+                {
+                  className: 'gt-link',
+                  href: 'https://github.com/super0plant/dsh-plugin-game-time/releases/latest',
+                  target: '_blank',
+                  rel: 'noreferrer',
+                },
+                t('settings.update.found').replace('{v}', latest)
+              )
+            : null,
+          state === 'error' ? h('span', { className: 'gt-muted' }, t('settings.update.error')) : null
+        )
+      )
+    }
+
     function GlobalSettings({ t, onBack, touch, onEditGame }) {
       const [newPlatformName, setNewPlatformName] = React.useState('')
       const [newPlatformPath, setNewPlatformPath] = React.useState('')
@@ -7448,6 +7572,14 @@ window.__ModuleLoader__.load({
         tipSegments: tipSegments,
         totalsFor: totalsFor,
         lastPlayedAt: lastPlayedAt,
+        activeDaysOf: activeDaysOf,
+        averagePerDay: averagePerDay,
+        comparePercent: comparePercent,
+        activeMean: activeMean,
+        widthTier: widthTier,
+        playedDaysFor: playedDaysFor,
+        playedDaysTotal: playedDaysTotal,
+        recordDays: recordDays,
         seriesFor: seriesFor,
         platformBreakdown: platformBreakdown,
         totalsByRange: totalsByRange,
