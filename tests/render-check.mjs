@@ -876,12 +876,30 @@ function circleClass(ringNode) {
   })(ringNode)
   return out
 }
+// Fake React keeps a children array as one child, so flatten before indexing.
+function ringParts(ringNode) {
+  const out = []
+  ;(function walk(item) {
+    if (item === null || item === undefined || item === false) return
+    if (Array.isArray(item)) {
+      item.forEach(walk)
+      return
+    }
+    if (typeof item !== 'object') return
+    out.push(item)
+    walk(item.children)
+  })(ringNode.children[0].children)
+  return out
+}
+function ringCircles(ringNode) {
+  return ringParts(ringNode).filter((item) => item.type === 'circle')
+}
 
 const halfRing = testApi.Ring({ ratio: 0.5, tip: 'half' })
-if (circleClass(halfRing).join(',') !== 'gt-ring-track,gt-ring-green') {
-  throw new Error('a half-full ring needs a track and one green arc, got ' + circleClass(halfRing))
+if (circleClass(halfRing).join(',') !== 'gt-ring-green') {
+  throw new Error('a half-full ring is a bare green arc (no background at 0 laps), got ' + circleClass(halfRing))
 }
-const greenArc = halfRing.children[0].children[1]
+const greenArc = ringCircles(halfRing)[0]
 if (!/^[\d.]+ [\d.]+$/.test(greenArc.props.strokeDasharray)) {
   throw new Error('the green arc must use a dash array, got ' + greenArc.props.strokeDasharray)
 }
@@ -892,16 +910,41 @@ if (!halfRing.children[1] || halfRing.children[1].props.className !== 'gt-ring-t
 }
 if (halfRing.children[1].children.join('') !== 'half') throw new Error('the ring tooltip lost its text')
 
-const overRing = testApi.Ring({ ratio: 1.4, tip: 'over' })
-if (circleClass(overRing).join(',') !== 'gt-ring-track,gt-ring-green,gt-ring-red') {
-  throw new Error('over the baseline needs a red excess arc, got ' + circleClass(overRing))
+// One full lap is a flat green ring, no arc on top.
+const oneLap = testApi.Ring({ ratio: 1, tip: 'full' })
+if (circleClass(oneLap).join(',') !== 'gt-ring-green') {
+  throw new Error('a full lap is one green ring, got ' + circleClass(oneLap))
 }
+if (ringCircles(oneLap)[0].props.strokeDasharray !== undefined) {
+  throw new Error('the finished lap must be a plain circle, not a dashed arc')
+}
+
+// Past 100 %: the ring turns green (finished lap) and a red arc draws over it.
+const overRing = testApi.Ring({ ratio: 1.4, tip: 'over' })
+if (circleClass(overRing).join(',') !== 'gt-ring-green,gt-ring-red') {
+  throw new Error('over one lap needs a green background and a red arc, got ' + circleClass(overRing))
+}
+const overArc = ringCircles(overRing)[1]
+const overFraction = Number(String(overArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * overArc.props.r)
+if (Math.abs(overFraction - 0.4) > 0.01) throw new Error('1.4 laps draws a 0.4-lap arc, got ' + overFraction)
+
+// Past 200 %: red ring, the arc cycles again, and the middle names the lap.
 const deepRing = testApi.Ring({ ratio: 2.5, tip: 'deep' })
-const deepArc = deepRing.children[0].children[2]
-if (deepArc.props['data-deep'] !== 'true') throw new Error('past 200% the excess arc gets a deeper red')
+if (circleClass(deepRing).join(',') !== 'gt-ring-red,gt-ring-green') {
+  throw new Error('past 200 % the ring is red and the arc cycles, got ' + circleClass(deepRing))
+}
+const lapLabel = ringParts(deepRing).find((item) => item.type === 'text')
+if (!lapLabel || lapLabel.props.className !== 'gt-ring-lap' || lapLabel.children.join('') !== '200%+') {
+  throw new Error('past 200 % the middle must read 200%+')
+}
+const threeLaps = testApi.Ring({ ratio: 3.2, tip: 'three' })
+const threeLabel = ringParts(threeLaps).find((item) => item.type === 'text')
+if (!threeLabel || threeLabel.children.join('') !== '300%+') {
+  throw new Error('past 300 % the middle must read 300%+')
+}
 const emptyRing = testApi.Ring({ ratio: 0, tip: 'empty' })
-if (circleClass(emptyRing).join(',') !== 'gt-ring-track') {
-  throw new Error('a zero ratio is a bare track, got ' + circleClass(emptyRing))
+if (circleClass(emptyRing).join(',') !== '') {
+  throw new Error('a zero ratio draws nothing (transparent background), got ' + circleClass(emptyRing))
 }
 
 const cardTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(stats)')
@@ -921,7 +964,7 @@ const statSubs = []
 })(cardTree)
 if (statSubs.length !== 3) throw new Error('each stat card needs its comparison line, got ' + statSubs.length)
 const subLabels = statSubs.map((node) => node.children[1].children.join(''))
-if (subLabels.join(',') !== 'stat.avgDaily,stat.lastWeekAvg,stat.played') {
+if (subLabels.join(',') !== 'stat.avgDaily,stat.lastWeekSum,stat.played') {
   throw new Error('unexpected comparison labels: ' + subLabels.join(','))
 }
 

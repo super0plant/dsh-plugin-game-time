@@ -25,13 +25,13 @@ window.__ModuleLoader__.load({
       'stat.week': '本周',
       'stat.total': '总计',
       'stat.avgDaily': '平均每日',
-      'stat.lastWeekAvg': '上周平均',
-      'stat.lastMonthAvg': '上月平均',
+      'stat.lastWeekSum': '上周总和',
+      'stat.lastMonthSum': '上月总和',
       'stat.played': '已玩',
       'stat.switch': '点击切换为{name}',
       'stat.tip.day': '今日 {now} · 平均每日 {avg}',
-      'stat.tip.week': '本周 {now} · 日均 {day} · 上周日均 {avg}',
-      'stat.tip.month': '本月 {now} · 日均 {day} · 上月日均 {avg}',
+      'stat.tip.week': '本周 {now} · 上周总和 {avg}',
+      'stat.tip.month': '本月 {now} · 上月总和 {avg}',
       'stat.tip.total': '已玩 {days} 天 · 共 {total} 天',
       'empty.title': '今天还没有玩游戏',
       'empty.body': '如要添加新游戏，把游戏 exe 或快捷方式拖到面板里',
@@ -291,13 +291,13 @@ window.__ModuleLoader__.load({
       'stat.week': 'This week',
       'stat.total': 'Total',
       'stat.avgDaily': 'avg/day',
-      'stat.lastWeekAvg': 'last week',
-      'stat.lastMonthAvg': 'last month',
+      'stat.lastWeekSum': 'last week',
+      'stat.lastMonthSum': 'last month',
       'stat.played': 'played',
       'stat.switch': 'Click to show {name}',
       'stat.tip.day': 'Today {now} · avg/day {avg}',
-      'stat.tip.week': 'This week {now} · per day {day} · last week {avg}',
-      'stat.tip.month': 'This month {now} · per day {day} · last month {avg}',
+      'stat.tip.week': 'This week {now} · last week {avg}',
+      'stat.tip.month': 'This month {now} · last month {avg}',
       'stat.tip.total': 'Played {days} days of {total}',
       'empty.title': 'No games played today',
       'empty.body': 'To add a new game, drop its exe or shortcut on this panel',
@@ -2159,10 +2159,12 @@ window.__ModuleLoader__.load({
       '.gt-stat-sub-v[data-tone="over"]{color:#e35c5c;}',
       '.gt-stat-sub-v[data-tone="under"]{color:#4fc7a6;}',
       '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;}',
-      '.gt-ring-track{stroke:rgba(128,128,128,.22);}',
-      '.gt-ring-green{stroke:#4fc7a6;transition:stroke-dasharray .25s ease;}',
-      '.gt-ring-red{stroke:#e35c5c;}',
-      '.gt-ring-red[data-deep="true"]{stroke:#c22f3a;}',
+      '.gt-ring-svg{display:block;overflow:visible;}',
+      // Single flat stroke, no track/outline: green fills to 100 %, then the
+      // ring becomes the "finished lap" colour and the next lap draws on top.
+      '.gt-ring-green{stroke:#4fc7a6;transition:stroke .2s ease;}',
+      '.gt-ring-red{stroke:#e35c5c;transition:stroke .2s ease;}',
+      '.gt-ring-lap{fill:currentColor;opacity:.85;font-size:9px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px;}',
       '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:11px;line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
       '.gt-ring:hover .gt-ring-tip{opacity:1;}',
       '.gt-card-btn{font:inherit;color:inherit;text-align:left;cursor:pointer;}',
@@ -3545,36 +3547,74 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * A compact ring gauge. Track = the baseline (100% = "a typical day"),
-     * green = how much of it today/week used, red = the part beyond it.
-     * A circle cannot draw past 100%, so the excess is drawn as a second arc
-     * over the same track — and past 200% it gets a deeper red instead of a
-     * third lap. Hovering shows the exact numbers (`data-tip`).
+     * Ring gauge that counts laps (100 % = one lap).
+     *
+     * - 0–100 %: no background at all; a green arc grows from 12 o'clock.
+     * - 100–200 %: the ring is green (the finished lap) and a red arc grows on it.
+     * - 200 %+: the ring is red and the arc cycles again (green), because a
+     *   circle cannot show two laps. The middle prints 200%+ / 300%+ so the lap
+     *   count stays readable.
+     *
+     * Drawn as a single stroke: no track, no outline, no rounded caps, and an
+     * integer stroke width (40 px box, 6 px stroke, r = 17) so the edge lands on
+     * whole pixels instead of looking jagged.
      */
-    function Ring({ ratio, tip, size, tone }) {
-      const box = Number(size) || 34
-      const stroke = Number(tone === 'thin' ? 3 : 3.5)
+    function Ring({ ratio, tip, size }) {
+      const box = Number(size) || 40
+      const stroke = 6
       const radius = (box - stroke) / 2
       const circumference = 2 * Math.PI * radius
       const value = Math.max(0, Number(ratio) || 0)
-      const green = Math.min(value, 1)
-      const red = Math.max(0, Math.min(value - 1, 1))
-      const deep = value > 2
+      const laps = Math.floor(value)
+      const rest = value - laps
       const center = box / 2
-      const arc = function (key, className, fraction, extra) {
-        if (fraction <= 0) return null
-        return h('circle', Object.assign({
-          key: key,
-          className: className,
-          cx: center,
-          cy: center,
-          r: radius,
-          fill: 'none',
-          strokeWidth: stroke,
-          strokeLinecap: 'round',
-          strokeDasharray: fraction * circumference + ' ' + circumference,
-          transform: 'rotate(-90 ' + center + ' ' + center + ')',
-        }, extra || {}))
+      const background = laps <= 0 ? null : laps === 1 ? 'gt-ring-green' : 'gt-ring-red'
+      const foreground = laps === 1 ? 'gt-ring-red' : 'gt-ring-green'
+      const lapText = laps >= 2 ? laps * 100 + '%+' : ''
+      const parts = []
+      if (background) {
+        parts.push(
+          h('circle', {
+            key: 'lap',
+            className: background,
+            cx: center,
+            cy: center,
+            r: radius,
+            fill: 'none',
+            strokeWidth: stroke,
+          })
+        )
+      }
+      if (rest > 0) {
+        parts.push(
+          h('circle', {
+            key: 'arc',
+            className: foreground,
+            cx: center,
+            cy: center,
+            r: radius,
+            fill: 'none',
+            strokeWidth: stroke,
+            strokeDasharray: rest * circumference + ' ' + circumference,
+            transform: 'rotate(-90 ' + center + ' ' + center + ')',
+          })
+        )
+      }
+      if (lapText) {
+        parts.push(
+          h(
+            'text',
+            {
+              key: 'lap-text',
+              className: 'gt-ring-lap',
+              x: center,
+              y: center,
+              textAnchor: 'middle',
+              dominantBaseline: 'central',
+            },
+            lapText
+          )
+        )
       }
       return h(
         'span',
@@ -3589,16 +3629,7 @@ window.__ModuleLoader__.load({
             role: tip ? 'img' : undefined,
             'aria-label': tip || undefined,
           },
-          h('circle', {
-            className: 'gt-ring-track',
-            cx: center,
-            cy: center,
-            r: radius,
-            fill: 'none',
-            strokeWidth: stroke,
-          }),
-          arc('green', 'gt-ring-green', green),
-          arc('red', 'gt-ring-red', red, deep ? { 'data-deep': 'true' } : null)
+          parts
         ),
         tip ? h('span', { className: 'gt-ring-tip' }, tip) : null
       )
@@ -4067,16 +4098,14 @@ window.__ModuleLoader__.load({
       const bounds = rangeBounds(period, NOW)
       const periodSessions = sessionsInRange(null, bounds.from, bounds.to, null)
       const periodSeconds = secondsInRange(periodSessions, bounds.from, bounds.to)
-      const periodDays = activeDaysOf(periodSessions, bounds.from, bounds.to)
-      const periodAvg = averagePerDay(periodSeconds, periodDays)
       const prevBounds = rangeBounds(period, new Date(bounds.from.getTime() - DAY_MS))
       const prevSessions = sessionsInRange(null, prevBounds.from, prevBounds.to, null)
+      // Straight totals, not averages: "this week played / last week's total"
+      // is what the card claims, so both sides of the ratio must be totals.
       const prevSeconds = secondsInRange(prevSessions, prevBounds.from, prevBounds.to)
-      const prevDays = activeDaysOf(prevSessions, prevBounds.from, prevBounds.to)
-      const prevAvg = averagePerDay(prevSeconds, prevDays)
-      const periodRatio = prevAvg > 0 ? periodAvg / prevAvg : 0
-      const periodTone = periodAvg > prevAvg ? 'over' : periodAvg > 0 ? 'under' : 'flat'
-      const prevLabel = period === 'month' ? t('stat.lastMonthAvg') : t('stat.lastWeekAvg')
+      const periodRatio = prevSeconds > 0 ? periodSeconds / prevSeconds : 0
+      const periodTone = periodSeconds > prevSeconds ? 'over' : periodSeconds > 0 ? 'under' : 'flat'
+      const prevLabel = period === 'month' ? t('stat.lastMonthSum') : t('stat.lastWeekSum')
 
       const span = recordDays()
       const playedAll = playedDaysTotal()
@@ -4095,8 +4124,7 @@ window.__ModuleLoader__.load({
       const periodTip =
         t('stat.tip.' + period)
           .replace('{now}', formatDuration(periodSeconds, t))
-          .replace('{day}', formatDuration(periodAvg, t))
-          .replace('{avg}', formatDuration(prevAvg, t)) + percentText(periodAvg, prevAvg)
+          .replace('{avg}', formatDuration(prevSeconds, t)) + percentText(periodSeconds, prevSeconds)
       const totalTip = t('stat.tip.total')
         .replace('{days}', String(playedAll))
         .replace('{total}', String(span))
@@ -4115,7 +4143,7 @@ window.__ModuleLoader__.load({
           label: t('range.' + period),
           seconds: periodSeconds,
           t: t,
-          sub: { value: '/' + (prevAvg > 0 ? compactDuration(prevAvg, t) : t('noData')), label: prevLabel, tone: periodTone },
+          sub: { value: '/' + (prevSeconds > 0 ? compactDuration(prevSeconds, t) : t('noData')), label: prevLabel, tone: periodTone },
           ring: { ratio: periodRatio, tip: periodTip },
           onClick: togglePeriod,
           hint: t('stat.switch').replace('{name}', nextPeriodName),
