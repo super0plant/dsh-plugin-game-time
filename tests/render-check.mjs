@@ -345,6 +345,41 @@ if (axisAvgValue.length === 0) {
   if (!near) throw new Error('average label dropped without a collision')
 }
 
+// --- the average line ignores empty buckets ------------------------------
+// A week with two played days is "average per played day", not "total / 7".
+// Two charts with the same non-empty values must put the line at the same y
+// whether or not empty buckets are present.
+function averageLineY(points) {
+  const tree = testApi.Chart({ t: axisT, points: points, chartType: 'bar', selectedKey: null, onSelect() {} })
+  let found = null
+  ;(function walk(node) {
+    if (found || node === null || node === undefined || node === false) return
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
+    if (typeof node !== 'object') return
+    if (node.type === 'line' && node.props.className === 'gt-chart-avg') found = node.props.y1
+    walk(node.children)
+  })(tree)
+  return found
+}
+const withEmpties = averageLineY([
+  { key: 'a', label: '一', seconds: 7200, parts: [] },
+  { key: 'b', label: '二', seconds: 0, parts: [] },
+  { key: 'c', label: '三', seconds: 0, parts: [] },
+  { key: 'd', label: '四', seconds: 10800, parts: [] },
+])
+const withoutEmpties = averageLineY([
+  { key: 'a', label: '一', seconds: 7200, parts: [] },
+  { key: 'd', label: '四', seconds: 10800, parts: [] },
+])
+if (withEmpties === null || withoutEmpties === null) throw new Error('average line missing in the empty-bucket fixture')
+if (Math.abs(withEmpties - withoutEmpties) > 0.01) {
+  throw new Error('empty buckets must not drag the average line: ' + withEmpties + ' vs ' + withoutEmpties)
+}
+console.log('  average line: divides by played buckets only')
+
 // --- overview analysis ---------------------------------------------------
 
 const overviewTree = render(testApi.AllView, { t, onOpenGame() {} }, 'AllView(overview)')

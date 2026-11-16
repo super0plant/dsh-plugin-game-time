@@ -4467,11 +4467,11 @@ window.__ModuleLoader__.load({
         return p.seconds <= 0
       })
 
-      const mean = points.length
-        ? points.reduce(function (sum, point) {
-            return sum + point.seconds
-          }, 0) / points.length
-        : 0
+      // The average is per *active* bucket: a day (or hour) with no play is not
+      // a zero-value data point, so it must not drag the line down. Points that
+      // exist but are empty are skipped; the denominator is the count of the
+      // rest. Same rule as averagePerDay() — see the helpers at the top.
+      const mean = activeMean(points)
 
       const avgY = yOf(mean)
       // The average gets its own tick. It may take over a ladder label when the
