@@ -1174,13 +1174,19 @@ window.__ModuleLoader__.load({
         { gameId: 'genshin', platformId: 'mihoyo', until: 260, minutes: 32 },
         { gameId: 'lol-cn', platformId: 'tencent', until: 540, minutes: 47 },
       ]
+      // Demo "today" sessions must stay inside today: anchoring them to
+      // `NOW - minutes` puts them on yesterday when the panel is opened just
+      // after midnight, which flips the demo to "nothing played today".
+      const todayStart = startOfDay(NOW).getTime()
+      const todaySpan = Math.max(MINUTE, NOW.getTime() - todayStart)
       todayPlan.forEach(function (item, index) {
-        const end = NOW.getTime() - item.until * MINUTE
+        const end = Math.min(NOW.getTime(), todayStart + Math.round(todaySpan * (0.35 + 0.18 * index)))
+        const start = Math.max(todayStart, end - item.minutes * MINUTE)
         out.push({
           id: 'today-' + index,
           gameId: item.gameId,
           platformId: item.platformId,
-          start: end - item.minutes * MINUTE,
+          start: start,
           end: end,
         })
       })
