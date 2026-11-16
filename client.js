@@ -2132,7 +2132,7 @@ window.__ModuleLoader__.load({
       // uses these four sizes and two accent colours — do not add a fifth size
       // or a third accent for a single element, that is what made the old UI
       // look inconsistent.
-      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;--gt-fs-1:10px;--gt-fs-2:11px;--gt-fs-3:13px;--gt-fs-4:20px;--gt-green:#4fc7a6;--gt-red:#e35c5c;--gt-red-dim:#8f2a31;--gt-muted:.55;font-variant-numeric:tabular-nums;}',
+      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;--gt-fs-1:10px;--gt-fs-2:11px;--gt-fs-3:13px;--gt-fs-4:20px;--gt-green:#4fc7a6;--gt-red:#e35c5c;--gt-muted:.55;font-variant-numeric:tabular-nums;}',
       '.gt-top{padding:18px 22px 0;flex:0 0 auto;}',
       '.gt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
       '.gt-head-left{display:flex;align-items:center;gap:10px;min-width:0;}',
@@ -2166,7 +2166,7 @@ window.__ModuleLoader__.load({
       '.gt-stat-line .gt-value{flex:0 0 auto;margin-top:0;}',
       '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:3px;padding:1px 7px;border:1px solid rgba(255,255,255,.2);border-color:color-mix(in srgb,currentColor 22%,transparent);border-radius:6px;background:rgba(255,255,255,.05);font-size:var(--gt-fs-2);line-height:1.35;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
       '.gt-stat-sub-k{opacity:var(--gt-muted);font-size:var(--gt-fs-2);letter-spacing:.2px;}',
-      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);}',
+      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);font-weight:500;}',
       '.gt-stat-sub-v[data-tone="over"]{color:var(--gt-red);}',
       '.gt-stat-sub-v[data-tone="under"]{color:var(--gt-green);}',
       '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;margin-left:auto;}',
@@ -2176,8 +2176,7 @@ window.__ModuleLoader__.load({
       '.gt-ring-gray{stroke:rgba(128,128,128,.24);}',
       '.gt-ring-green{stroke:var(--gt-green);transition:stroke .2s ease;}',
       '.gt-ring-red{stroke:var(--gt-red);transition:stroke .2s ease;}',
-      '.gt-ring-red-dim{stroke:var(--gt-red-dim);transition:stroke .2s ease;}',
-      '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:var(--gt-fs-1);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}',
+      '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:8.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}',
       '.gt-ring-lap[data-tone="over"]{fill:var(--gt-red);opacity:1;}',
       '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:var(--gt-fs-2);line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
       '.gt-ring:hover .gt-ring-tip{opacity:1;}',
@@ -2209,10 +2208,9 @@ window.__ModuleLoader__.load({
       '.gt-compact .gt-hints{font-size:var(--gt-fs-2);}',
       '.gt-hint-k{opacity:.5;font-size:var(--gt-fs-2);letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;}',
       // The value is the data: same size as the row's number columns, full strength.
-      '.gt-hint-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);opacity:1;flex:0 0 auto;}',
+      '.gt-hint-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);font-weight:500;opacity:1;flex:0 0 auto;}',
       '.gt-hint-v[data-tone="over"]{color:var(--gt-red);opacity:1;}',
       '.gt-hint-v[data-tone="under"]{color:var(--gt-green);opacity:1;}',
-      '.gt-hint-v[data-tone="flat"]{opacity:.45;}',
       '.gt-tile{display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex:0 0 auto;letter-spacing:.5px;}',
       '.gt-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       '.gt-name-wrap{display:flex;flex-direction:column;gap:3px;min-width:0;}',
@@ -3587,59 +3585,77 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Ring gauge with the percentage in the middle.
+     * Ring gauge: inner ring = how much of the target was reached (0–100 %),
+     * outer thin ring = the overflow past 100 % (drawn outside, so the second
+     * hundred is a real second track instead of a colour change on the same
+     * circle). Past 200 % the overflow ring is full and the inner ring dims to
+     * become its background, with the percentage in the middle carrying the
+     * exact number ("250 %", capped at "999 %+").
      *
-     * - under 100 %: a grey track with a green arc growing from 12 o'clock.
-     * - 100–199 %: the track turns green and the overflow is drawn as a red arc.
-     * - 200 % and up: the overflow fills the ring, so it is simply all red.
-     *
-     * The middle prints the percentage ("85 %", "154 %"), turns red past 100 %,
-     * and caps the text at 999 %+ so a runaway ratio cannot break the layout.
-     *
-     * Drawn as a single stroke: no outline, no rounded caps, integer stroke
-     * width (40 px box, 6 px stroke) and one pixel of margin, so the edge lands
-     * on whole pixels instead of looking jagged.
+     * Two tracks at different radii, integer geometry (44 px box, inner ring
+     * r 13 with a 4 px stroke, outer ring r 19 with a 2 px stroke, 2 px margin)
+     * so nothing is clipped and the edge stays crisp.
      */
     function Ring({ ratio, tip, size }) {
-      const box = Number(size) || 40
-      const stroke = 6
-      // One pixel of margin inside the viewBox: a stroke tangent to the edge
-      // gets clipped by the SVG bounds and reads as a jagged rim.
-      const radius = (box - stroke) / 2 - 1
-      const circumference = 2 * Math.PI * radius
-      const value = Math.max(0, Number(ratio) || 0)
+      const box = Number(size) || 44
       const center = box / 2
+      const innerStroke = 4
+      const innerR = center - 9
+      const outerStroke = 2
+      const outerR = center - 3
+      const innerC = 2 * Math.PI * innerR
+      const outerC = 2 * Math.PI * outerR
+      const value = Math.max(0, Number(ratio) || 0)
       const percent = Math.round(value * 100)
-      // Track colour = the colour of the stage reached so far: grey before the
-      // average, green between 100 % and 200 %, red past that (the previous
-      // stage's colour becomes the base). The arc is always the next stage in a
-      // darker shade, so a lap past 200 % is dark red on red.
-      const track = value >= 2 ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : 'gt-ring-gray'
-      const arcColor = value >= 2 ? 'gt-ring-red-dim' : value >= 1 ? 'gt-ring-red' : 'gt-ring-green'
-      const arcFraction = value >= 2 ? Math.min(value - 2, 1) : value >= 1 ? value - 1 : value
+      const reached = Math.min(value, 1)
+      const overflow = Math.max(0, Math.min(value - 1, 1))
+      const innerColor = value >= 2 ? 'gt-ring-red' : 'gt-ring-green'
       const label = percent > 999 ? '999%+' : String(percent) + '%'
-      const parts = [
-        h('circle', {
-          key: 'track',
-          className: track,
-          cx: center,
-          cy: center,
-          r: radius,
-          fill: 'none',
-          strokeWidth: stroke,
-        }),
-      ]
-      if (arcFraction > 0) {
+      const parts = []
+      if (value < 1) {
         parts.push(
           h('circle', {
-            key: 'arc',
-            className: arcColor,
+            key: 'track',
+            className: 'gt-ring-gray',
             cx: center,
             cy: center,
-            r: radius,
+            r: innerR,
             fill: 'none',
-            strokeWidth: stroke,
-            strokeDasharray: arcFraction * circumference + ' ' + circumference,
+            strokeWidth: innerStroke,
+          })
+        )
+      }
+      if (reached > 0) {
+        parts.push(
+          h('circle', {
+            key: 'inner',
+            'data-layer': 'inner',
+            className: innerColor,
+            cx: center,
+            cy: center,
+            r: innerR,
+            fill: 'none',
+            strokeWidth: innerStroke,
+            // Past 200 % the inner ring is the background for the overflow:
+            // same red, dimmed, so the complete ring still reads as "past".
+            strokeOpacity: value >= 2 ? 0.4 : 1,
+            strokeDasharray: reached * innerC + ' ' + innerC,
+            transform: 'rotate(-90 ' + center + ' ' + center + ')',
+          })
+        )
+      }
+      if (overflow > 0) {
+        parts.push(
+          h('circle', {
+            key: 'overflow',
+            'data-layer': 'overflow',
+            className: 'gt-ring-red',
+            cx: center,
+            cy: center,
+            r: outerR,
+            fill: 'none',
+            strokeWidth: outerStroke,
+            strokeDasharray: overflow * outerC + ' ' + outerC,
             transform: 'rotate(-90 ' + center + ' ' + center + ')',
           })
         )

@@ -900,17 +900,22 @@ function ringParts(ringNode) {
 function ringCircles(ringNode) {
   return ringParts(ringNode).filter((item) => item.type === 'circle')
 }
+function ringLayers(ringNode) {
+  return ringCircles(ringNode).map((node) => node.props['data-layer'] || 'track')
+}
+function dashFraction(node) {
+  if (node.props.strokeDasharray === undefined) return null
+  return Number(String(node.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * node.props.r)
+}
 
 const halfRing = testApi.Ring({ ratio: 0.5, tip: 'half' })
-if (circleClass(halfRing).join(',') !== 'gt-ring-gray,gt-ring-green') {
-  throw new Error('under one lap the ring is a grey track plus a green arc, got ' + circleClass(halfRing))
+if (ringLayers(halfRing).join(',') !== 'track,inner') {
+  throw new Error('under one lap is a grey track plus the green inner arc, got ' + ringLayers(halfRing))
 }
-const greenArc = ringCircles(halfRing)[1]
-if (!/^[\d.]+ [\d.]+$/.test(greenArc.props.strokeDasharray)) {
-  throw new Error('the green arc must use a dash array, got ' + greenArc.props.strokeDasharray)
+const innerArc = ringCircles(halfRing)[1]
+if (Math.abs(dashFraction(innerArc) - 0.5) > 0.01) {
+  throw new Error('0.5 must fill half of the inner ring, got ' + dashFraction(innerArc))
 }
-const greenFraction = Number(String(greenArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * greenArc.props.r)
-if (Math.abs(greenFraction - 0.5) > 0.01) throw new Error('0.5 must fill half of the ring, got ' + greenFraction)
 if (!halfRing.children[1] || halfRing.children[1].props.className !== 'gt-ring-tip') {
   throw new Error('the ring must carry its hover tooltip')
 }
@@ -926,49 +931,56 @@ const halfLabel = ringLabel(halfRing)
 if (!halfLabel || halfLabel.children.join('') !== '50%') throw new Error('the middle must read 50%')
 if (halfLabel.props['data-tone'] !== 'flat') throw new Error('under 100 % the percentage stays neutral')
 
-// One full lap is a flat green ring with a neutral 100 %.
+// One full lap: the inner ring closes, no overflow track is drawn.
 const oneLap = testApi.Ring({ ratio: 1, tip: 'full' })
-if (circleClass(oneLap).join(',') !== 'gt-ring-green') {
-  throw new Error('a full lap is one green ring, got ' + circleClass(oneLap))
+if (ringLayers(oneLap).join(',') !== 'inner') {
+  throw new Error('a full lap is one inner ring, got ' + ringLayers(oneLap))
 }
-if (ringCircles(oneLap)[0].props.strokeDasharray !== undefined) {
-  throw new Error('the finished lap must be a plain circle, not a dashed arc')
+if (Math.abs(dashFraction(ringCircles(oneLap)[0]) - 1) > 0.001) {
+  throw new Error('the inner ring must close at 100 %')
 }
 if (ringLabel(oneLap).children.join('') !== '100%') throw new Error('one lap must read 100%')
 
-// Past 100 %: green ring, red arc, red percentage.
+// Past 100 %: the inner ring is full green, the overflow is a separate outer
+// red track — that is the "second hundred" the circle otherwise cannot show.
 const overRing = testApi.Ring({ ratio: 1.4, tip: 'over' })
-if (circleClass(overRing).join(',') !== 'gt-ring-green,gt-ring-red') {
-  throw new Error('over one lap needs a green background and a red arc, got ' + circleClass(overRing))
+if (ringLayers(overRing).join(',') !== 'inner,overflow') {
+  throw new Error('over one lap needs the outer overflow track, got ' + ringLayers(overRing))
 }
-const overArc = ringCircles(overRing)[1]
-const overFraction = Number(String(overArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * overArc.props.r)
-if (Math.abs(overFraction - 0.4) > 0.01) throw new Error('1.4 laps draws a 0.4-lap arc, got ' + overFraction)
+const overInner = ringCircles(overRing)[0]
+const overOuter = ringCircles(overRing)[1]
+if (overInner.props.className !== 'gt-ring-green' || overOuter.props.className !== 'gt-ring-red') {
+  throw new Error('past 100 % the inner ring is green and the overflow is red')
+}
+if (overOuter.props.r <= overInner.props.r) throw new Error('the overflow track must sit outside the inner ring')
+if (Math.abs(dashFraction(overOuter) - 0.4) > 0.01) {
+  throw new Error('1.4 fills 0.4 of the overflow track, got ' + dashFraction(overOuter))
+}
 const overLabel = ringLabel(overRing)
 if (overLabel.children.join('') !== '140%') throw new Error('1.4 must read 140%')
 if (overLabel.props['data-tone'] !== 'over') throw new Error('past 100 % the percentage must turn red')
 
-// Past 200 %: red base, and the extra lap continues in a darker red.
+// Past 200 %: the overflow track is full, and the inner ring dims into its
+// background so "completely over" is unmistakable.
 const deepRing = testApi.Ring({ ratio: 2.5, tip: 'deep' })
-if (circleClass(deepRing).join(',') !== 'gt-ring-red,gt-ring-red-dim') {
-  throw new Error('past 200 % the base is red and the arc is a darker red, got ' + circleClass(deepRing))
+const deepInner = ringCircles(deepRing)[0]
+if (deepInner.props.className !== 'gt-ring-red' || deepInner.props.strokeOpacity !== 0.4) {
+  throw new Error('past 200 % the inner ring is a dimmed red background')
 }
-const deepArc = ringCircles(deepRing)[1]
-const deepFraction = Number(String(deepArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * deepArc.props.r)
-if (Math.abs(deepFraction - 0.5) > 0.01) throw new Error('2.5 laps draws a 0.5-lap dark red arc, got ' + deepFraction)
+if (Math.abs(dashFraction(ringCircles(deepRing)[1]) - 1) > 0.001) {
+  throw new Error('past 200 % the overflow track is full')
+}
 if (ringLabel(deepRing).children.join('') !== '250%') throw new Error('2.5 must read 250%')
-if (ringLabel(deepRing).props['data-tone'] !== 'over') throw new Error('past 200 % the percentage stays red')
 
 // The label caps out so a runaway ratio cannot break the ring.
 const runaway = testApi.Ring({ ratio: 12.34, tip: 'runaway' })
 if (ringLabel(runaway).children.join('') !== '999%+') throw new Error('past 999 % the label caps at 999%+')
 
 const emptyRing = testApi.Ring({ ratio: 0, tip: 'empty' })
-if (circleClass(emptyRing).join(',') !== 'gt-ring-gray') {
-  throw new Error('a zero ratio is a bare grey track, got ' + circleClass(emptyRing))
+if (ringLayers(emptyRing).join(',') !== 'track') {
+  throw new Error('a zero ratio is a bare grey track, got ' + ringLayers(emptyRing))
 }
 if (ringLabel(emptyRing).children.join('') !== '0%') throw new Error('a zero ratio still reads 0%')
-
 const cardTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(stats)')
 const cards = ringsOf(cardTree)
 if (cards.length !== 3) throw new Error('three stat cards, three rings, got ' + cards.length)
