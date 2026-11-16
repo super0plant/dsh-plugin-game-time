@@ -8,16 +8,18 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.14.0；GitHub 已发布到 v0.14.0；**npm 尚未发布**（账号注册卡住）。
+- **版本**：0.16.0；GitHub 已发布到 v0.15.2；**npm 尚未发布**（账号注册卡住）。
 - **形态**：只有 DSH 插件。独立网页版/桌面外壳已在 0.14.0 移除（`standalone/`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都删了）。
-- **测试**：五套（render / host / exit / restore / standalone），`npm test` 一条命令；**一定看退出码**。
-- **今日页**：统计卡 → 今天玩过 → 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
+- **测试**：**四套**（render / host / exit / restore），`npm test` 一条命令；**一定看退出码**。
+- **今日页**：三张对比卡（本日 / 本周·本月 / 总计，带圆轮）→ 今天玩过（行中间有三段灰字提示）→ 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
 - **时间窗**：今日 / 近 7 天 / 近 1 月 / 全部；`last7`、`last30` 是**定长可平移**窗口。
+- **平均**：全站只有一个口径——**有玩的那一天**的平均（`averagePerDay` / `activeDaysOf` / `activeMean`）；没玩的日子不进分母。改平均先改这三个函数。
+- **列表提示**：`对比平均 / 平均每天 / 已玩` 只给最近 `settings.statsDays`（默认 7）天内玩过的游戏显示。
+- **响应式**：`Page` 用 `ResizeObserver` 量 `.gt-shell` → `data-w="lg|md|sm|xs|xxs"` → CSS 分档隐藏。**不要用 `@media`**（面板宽度 ≠ 窗口宽度）。
 - **背景**：不透明纯色底（`settings.baseColor`）+ 图片（`imageOpacity`）；每个游戏可独立背景。
-- **偏好**：`settings.todayChartHours` / `todayChartRange` / `todayWindow`，存在 config.json（不是 localStorage）。
+- **偏好**：`settings.todayChartHours` / `todayChartRange` / `todayWindow` / `statsDays`，存在 config.json（不是 localStorage）。
 - **改哪里生效**：`client.js` → 刷新页面；`src/host/*`、`index.js` → 重启 DSH；**新增配置字段必须先加白名单再重启**。
 - **备份/还原**：`backup.cmd` / `restore.cmd`（数据快照 + 代码 tag；`backups/` 已 gitignore）。
-- **已知短板**：无自动发现、双采集器无硬互斥、无 CI、无英文 README、`foregroundOnly` 已移除但替代方案未做。
 - **发布**：流程见 `docs/RELEASING.md`，下一版文案见 `docs/RELEASE-NEXT.md`。
 - **历史**：改动细节按版本记在 §1（最近）与 `CHANGELOG.md`（全量）。
 
@@ -43,6 +45,17 @@
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-16 · 0.16.0 平均口径统一 + 列表提示 + 对比圆轮 + 详情页天数（a/b/c/d/e 五件事）**：按用户要求做成**五个可分别 revert 的提交**（`cc7cf3c` 共用函数 → `a13c4b7` 宿主天数 → `2f96d52` 图表平均 → `a9da03a` 详情页 → `c30e230` 行提示 → `686adf8` 提示时间窗设置 → `f528ea1` 圆轮）。
+
+  - **e · 图表平均忽略 0**：`Chart` 的 `mean` 改调 `activeMean(points)`（分母 = 非零格子数）。`render-check` 新增「同一组非零值、有没有空格子，平均线 y 必须相同」。
+  - **d · 详情页**：新增「已玩 xx天」（跟随范围；`全部` 用宿主全量天数）、「平均」→「平均每天」（范围时长 ÷ 范围天数）。`.gt-summary` 变四列（`.gt-summary-4`），窄屏 2×2。`全部` 的时长改用 `totalsFor(all)`（以前是「已加载窗口」的时长，和头部全量总计不一致）。
+  - **a · 列表行提示**：新组件 `HintStrip`（两处列表共用）：`对比平均`（▲/▼ + 百分比；今天没玩显示 `—`）、`平均每天`（`compactDuration`）、`已玩 xx天`。**超过平均 = 红，低于 = 绿**——和圆轮「超出是红色」保持同一套语义（和常见「涨绿跌红」相反，是有意的）。
+  - **b · 只给最近玩过的显示**：`settings.statsDays`（1–3650，默认 7），设置页「界面 → 列表提示」。判定用 `lastPlayedAt(gameId)`，超过窗口整条提示不渲染。
+  - **c · 三张统计卡**：`StatsRow` + `Ring`（纯 SVG）。本日 = 今天 vs「平均每日」（**基准排除今天**，否则今天玩得多会抬高自己的基准）；本周 vs「上周日均」，点卡片切本月（`STATS_PERIOD` 放模块级，和 `LAST_ROUTE` 同理）；总计 = 总计 + `已玩 xx天`，圆轮分母是 `recordDays()`（首条记录 → 今天，含两端）。
+  - **响应式**：`widthTier(shellWidth)` → `.gt-shell[data-w]`；隐藏顺序＝灰字标签 → rank3（已玩）→ rank2（平均每天）→ rank1（对比平均）；统计卡先藏圆轮再藏小字。
+  - **宿主**：`/state` 新增 `playedDays`（每游戏全量天数）+ `playedDaysTotal`；`snapshot()` 里用 `dayRangeOf()`（`src/host/sessions.js`）拿**连续整数日索引**，共享一个 `Date`（最初一版每个会话 new 两个 Date，11 万条要 41 ms；现在是 16 ms）。这一块字段**可合并**（秒数/天数相加、首末时间取 min/max），见 §10 的分片计划。
+  - **验证**：render-check 新增 4 组断言（平均口径、详情四卡、行提示 + 时间窗、圆轮几何 + 本周→本月切换）；host-check 新增「已玩天数按自然日去重 + 跨零点算两天 + 白名单 clamp」；四套全绿。
 
 - **2026-11-15 · 0.15.2 Steam .url 识别修复 + 拖入失败提示**：`RESOLVE_SCRIPT` 的 exe 扫描 `-Depth 2`→`4`（Alyx 的 `hlvr.exe` 在 `game\bin\win64` 4 层内），过滤词加 `install|vconsole|vrserver|vrprism|vrcompositor|vrmonitor|vrstartup|vrdashboard|vrwebhelper|vrpathreg|vrsetup`（Wallpaper Engine 之前选中 `installer.exe`，SteamVR 会选 `vrprismhost.exe`）。验证方式：用 `$env:APPDATA\...\Start Menu\Programs\Steam\*.url` 跑 `RESOLVE_SCRIPT`（powershell -File），现在 Celeste/Alyx/VRChat/Wallpaper Engine 都能解析到正确 exe。另外 `DropSurface` 加了 `note` 状态 + `.gt-drop-toast`，识别失败时显示原因（新 key `drop.badGame`），不再静默。注意：Node 里 `spawnSync` 抓 stdout 在沙箱会 EPERM，所以测试解析器要用 `powershell -File` 直接跑、结果读 JSON 文件。
 
@@ -72,13 +85,21 @@
 
 - **2026-11-14 · 0.11.2 趋势图模块化 + 偏好记忆**：ChartCard 新增 defaultType / prefKey 两个可选属性（不传就还是柱状、不记忆，不影响「全部」页）；storedPref/setStoredPref 包一层 localStorage。今日页两张卡传 defaultType:'line' + prefKey:'gt-today-chart'，所以默认曲线、点柱状后记住；7/30 天窗口也存 gt-today-window，滚轮切换时写入。两张卡包进 .gt-trend-module，标题「趋势图」+ 说明，模块 order-top 与列表分隔。验证：render-check 断言「两张卡默认 line」「模块只有一个」+ 五套全绿。**纯前端。**
 
-- **2026-11-14 · 0.11.1 今日页双趋势图定稿**：① 顺序改成 统计卡 → 今天玩过列表 → 趋势图（用户要求「今日玩过放在表格上面」）；② 左图 = ange:'day' + GRAIN.h1（24 根小时柱），右图 = last7/last30 + GRAIN.d1，TodayTrend 用 onWheel（280ms 防抖）在 7/30 天之间切换，去掉了原来的「周/月」分段按钮；③ windowBounds 去掉「滚动窗口忽略 anchor」的特判，last7/last30 恢复成可平移的定长窗口（angeLabelOf 的特判同步删除，注意别把 const unit = grainOf(...) 一起删掉——这次就删错过一次，靠 render-check 抓到）；④ AllView/DetailView 的 olling ? undefined 门控全部移除，平移/缩放/重置恢复。验证：五套全绿。**纯前端，刷新即可。**
+- **2026-11-14 · 0.11.1 今日页双趋势图定稿**：① 顺序改成 统计卡 → 今天玩过列表 → 趋势图（用户要求「今日玩过放在表格上面」）；② 左图 = 
+ange:'day' + GRAIN.h1（24 根小时柱），右图 = last7/last30 + GRAIN.d1，TodayTrend 用 onWheel（280ms 防抖）在 7/30 天之间切换，去掉了原来的「周/月」分段按钮；③ windowBounds 去掉「滚动窗口忽略 anchor」的特判，last7/last30 恢复成可平移的定长窗口（
+angeLabelOf 的特判同步删除，注意别把 const unit = grainOf(...) 一起删掉——这次就删错过一次，靠 render-check 抓到）；④ AllView/DetailView 的 
+olling ? undefined 门控全部移除，平移/缩放/重置恢复。验证：五套全绿。**纯前端，刷新即可。**
 
-- **2026-11-14 · 0.11.0 滚动窗口 + 今日页双趋势图（从 0.9.0 重新做，避开 0.10.0）**：0.10.0 的今日页（正在游玩卡/同期对比/小图）在真机出问题，已整体 git reset --hard v0.9.0 回退，本版只在 0.9.0 上加趋势图。数据层新增 last7 / last30：angeBounds 给 7/30 天，GRAIN_LEVELS.last7=[d1]、last30=[w1,mo]，windowLength 7/30，defaultAnchor 明天零点；windowBounds 对滚动窗口**特判**（恒定结束于明天零点、不受 anchor 影响），angeLabelOf 也特判；ucketLabel 里 last7 按天显示星期。因为滚动窗口不翻页，AllView/DetailView 的 onPan/onZoom/onReset 在 olling 时传 undefined（ChartCard 自动不渲染对应按钮）。今日页新增 TodayTrend（内部复用 ChartCard），两列网格 .gt-trend-row：左 last7/d1，右 last30/w1（可切月）。验证：新增「last7 跨 7 天 / 7 个日桶 / last30 五个周桶 / 标签含日期 / 今日页两张趋势卡」断言；五套全绿。**纯前端，刷新即可。**
+- **2026-11-14 · 0.11.0 滚动窗口 + 今日页双趋势图（从 0.9.0 重新做，避开 0.10.0）**：0.10.0 的今日页（正在游玩卡/同期对比/小图）在真机出问题，已整体 git reset --hard v0.9.0 回退，本版只在 0.9.0 上加趋势图。数据层新增 last7 / last30：
+angeBounds 给 7/30 天，GRAIN_LEVELS.last7=[d1]、last30=[w1,mo]，windowLength 7/30，defaultAnchor 明天零点；windowBounds 对滚动窗口**特判**（恒定结束于明天零点、不受 anchor 影响），
+angeLabelOf 也特判；ucketLabel 里 last7 按天显示星期。因为滚动窗口不翻页，AllView/DetailView 的 onPan/onZoom/onReset 在 
+olling 时传 undefined（ChartCard 自动不渲染对应按钮）。今日页新增 TodayTrend（内部复用 ChartCard），两列网格 .gt-trend-row：左 last7/d1，右 last30/w1（可切月）。验证：新增「last7 跨 7 天 / 7 个日桶 / last30 五个周桶 / 标签含日期 / 今日页两张趋势卡」断言；五套全绿。**纯前端，刷新即可。**
 
-- **2026-11-14 · 0.9.0 曲线改成堆叠色带**：用户要「曲线里也要有柱状图那种分块，颜色同一套逻辑」。做法：按 order（和柱状完全相同的切片顺序）累加每个切片的上下边界，andPath(lower, upper) = 上边界平滑路径 + 反向的下边界平滑路径 + Z，每个 band 用 sliceColor(id) 填充、opacity .82；顶部再画一条 1.2 px 总时长线（原来 1.7）。只有一个切片时仍走原来的渐变面积分支。点更小（3 / 1.7 px）。验证：ender-check 新增「曲线 band 数 == 可见切片数 + 只有一条总时长线 + 线宽 ≤1.3」；五套全绿。**纯前端，刷新即可。**
+- **2026-11-14 · 0.9.0 曲线改成堆叠色带**：用户要「曲线里也要有柱状图那种分块，颜色同一套逻辑」。做法：按 order（和柱状完全相同的切片顺序）累加每个切片的上下边界，andPath(lower, upper) = 上边界平滑路径 + 反向的下边界平滑路径 + Z，每个 band 用 sliceColor(id) 填充、opacity .82；顶部再画一条 1.2 px 总时长线（原来 1.7）。只有一个切片时仍走原来的渐变面积分支。点更小（3 / 1.7 px）。验证：
+ender-check 新增「曲线 band 数 == 可见切片数 + 只有一条总时长线 + 线宽 ≤1.3」；五套全绿。**纯前端，刷新即可。**
 
-- **2026-11-14 · 0.8.0 曲线图重做（精致度）**：新增三个纯函数 smoothPath（Fritsch–Carlson 单调三次，保证不过冲）、arTopPath（顶部圆角柱，半径 2.5，堆叠只圆最上一段）、chartColor（存储色提亮 14%，不写回配置）。曲线：渐变面积（24%→0）+ 双层描边（4px@16% 底 + 1.7px 亮线）+ 点数 ≤40 才画点（外圈光晕）+ 悬停竖直参考线。交互改成一块透明命中区统一处理 hover/click（indexAt() 用 viewBox 换算），柱子/圆点不再各自绑事件，零值柱子直接不画。验证：ender-check 的柱状断言改成「path 数组 + 闭合路径」，新增平滑/圆角/取色断言；五套全绿（注意：**
+- **2026-11-14 · 0.8.0 曲线图重做（精致度）**：新增三个纯函数 smoothPath（Fritsch–Carlson 单调三次，保证不过冲）、arTopPath（顶部圆角柱，半径 2.5，堆叠只圆最上一段）、chartColor（存储色提亮 14%，不写回配置）。曲线：渐变面积（24%→0）+ 双层描边（4px@16% 底 + 1.7px 亮线）+ 点数 ≤40 才画点（外圈光晕）+ 悬停竖直参考线。交互改成一块透明命中区统一处理 hover/click（indexAt() 用 viewBox 换算），柱子/圆点不再各自绑事件，零值柱子直接不画。验证：
+ender-check 的柱状断言改成「path 数组 + 闭合路径」，新增平滑/圆角/取色断言；五套全绿（注意：**
 pm test 的退出码要真检查**，这次差点被 Select-Object -First N 吞掉失败）。**纯前端，刷新即可。**
 
 - **2026-11-14 · 0.7.1 悬停卡片换行顺序**：用户截图显示长游戏名把「1时16分」挤成两行。改 CSS：.gt-tip-dur 加 white-space:nowrap;flex:0 0 auto，.gt-tip-name 改成最多两行（-webkit-line-clamp:2）+ 断词，行内 lign-items:flex-start 让色块/时间贴第一行，卡片 max-width 220→248。纯 CSS。
@@ -165,7 +186,6 @@ pm test 的退出码要真检查**，这次差点被 Select-Object -First N 吞�
 |---|---|
 | `index.js`（宿主） | **必须重启 DSH**（模块启动时 import 一次） |
 | `client.js`（界面） | **刷新页面** 即可（`Ctrl+F5`） |
-| `standalone/`（网页版） | 改前端刷新页面；改 `server.mjs` / `loader.js` 重启 `start.cmd` |
 | 配置数据（游戏/平台/背景） | 立即生效，走 HTTP 接口 |
 | 新增游戏 / 设置字段（如 `group`、`archived`） | 先加进 `src/host/config.js` 的白名单，**再重启**；否则保存时被洗掉 |
 
@@ -179,35 +199,25 @@ plugins/game-time/
   cordis.patch.yml    插入 ID 为 game-time 的插件行
   index.js            宿主入口（11 行，只 re-export src/host/main.js）
   src/host/
-    main.js           采集循环、快照、路由装配（~740 行）
+    main.js           采集循环、快照（含 playedDays 聚合）、路由装配（~770 行）
     constants.js      路径、默认配置、懒加载窗口、心跳过期
     values.js         取值/校验、JSON 与资产读写、路径工具
-    config.js         v1/v2→v3 迁移、sanitizeConfig、预置
-    sessions.js       跨零点拆分
+    config.js         v1/v2→v3 迁移、sanitizeConfig（白名单）、预置
+    sessions.js       跨零点拆分 + 自然日索引 dayRangeOf（本地时区，整数天）
     processes.js      tasklist 扫描、路径查询、启动器归属（启动入口顺序 + 是否在运行）
     scripts.js        PowerShell：exe 图标、选文件、目录浏览
-  client.js           前端：全部 UI（约 6.4k 行，未拆；内部分层见 §7）
+  client.js           前端：全部 UI（约 7k 行，未拆；内部分层见 §7）
   icon.png / icon.ico 作者提供的应用图标（1024 PNG；.ico 含 16–256 七档）；插件列表仍读 icon.svg
-  standalone/        **已冻结（0.4.0）**：网页版外壳，详细说明全部搬到 docs/WEB-FROZEN.md
-    server.mjs        独立版入口：假 ctx 复用 apply()、静态白名单、固定 45917、单实例、退出落盘、POST shutdown
-    launcher.ps1      桌面外壳：隐藏起服务 + Edge --app 窗口 + 托盘（打开/自启/退出），互斥量防多托盘
-    start.cmd         双击入口：隐藏启动 launcher.ps1（不留黑框）
-    stop.cmd          兜底退出：curl POST /shutdown（托盘被折叠时用）
-    index.html        独立页面壳（暗/亮跟随系统，主题变量、启动报错显示）
-    loader.js         __ModuleLoader__ shim：locale / slots(effect) / main 挂载
-    icon-256.png      独立版 favicon / 触屏图标
-    vendor/           react.production.min.js + react-dom.production.min.js（18.3.1 UMD, MIT）
-  docs/WEB-FROZEN.md  网页版的全部文档：冻结原因、文件清单、恢复步骤、历史坑
   locale/zh.json      插件管理器显示的名称/描述
   locale/en.json
   icon.svg            插件图标
   tests/render-check.mjs   渲染测试（Node + 假 React，约 60 条渲染路径）
-  tests/host-check.mjs     宿主测试（路由、迁移、归属、一次完整 tick）
+  tests/host-check.mjs     宿主测试（路由、迁移、归属、一次完整 tick、playedDays）
   tests/exit-check.mjs     退出落盘（防抖 + process.exit 同步写）
   tests/restore-check.mjs  崩溃重启恢复（gone / running / dupe）
-  tests/standalone-check.mjs 独立版：loader 挂载（zh/en）+ HTTP 契约 + 单实例；包里没有 standalone/ 时跳过
-  scripts/build.mjs    出两个包：DSH 插件包（不含 standalone/）与网页包（含 client/src/standalone）
 ```
+
+> 独立网页版在 0.14.0 整体删除（`standalone/`、`launcher.ps1`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都没了）；§1 里 0.14.0 之前的条目提到它们属于历史记录。
 
 宿主依赖方向是单向的：`constants ← values ← config ← main`，`processes/scripts/sessions` 互不依赖。
 
@@ -263,6 +273,7 @@ plugins/game-time/
   intervalSec, autostart, density,               // autostart 只服务已冻结的网页版（界面 0.4.0 起注释掉）
   // foregroundOnly 已废弃（0.4.0）：从未实现过逻辑，设置界面已移除，宿主白名单里的那行也注释了
   historyDays,                                   // 懒加载窗口，默认 365，范围 30–1825
+  statsDays,                                     // 列表提示（对比平均/平均每天/已玩）只显示给最近 N 天玩过的游戏，默认 7，范围 1–3650
   baseColor,                                   // 面板最底层的不透明纯色（替代原来的蒙版）
   background, backgroundFit, imageOpacity,      // 背景图 + 铺法 + 图片透明度（0–1）
   headerBackground, headerHeight, headerFade,
@@ -288,7 +299,7 @@ plugins/game-time/
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
-| GET | `/api/game-time/state` | 全量快照（`sessions` 只是 `historyDays` 窗口；另带 `historyFrom`、`firstStart`、`totals`、`lastPlayed`、`active`、`env`、`lastError`） |
+| GET | `/api/game-time/state` | 全量快照（`sessions` 只是 `historyDays` 窗口；另带 `historyFrom`、`firstStart`、`totals`、`lastPlayed`、`playedDays`、`playedDaysTotal`、`active`、`env`、`lastError`） |
 | GET | `/api/game-time/sessions?from=&to=` | 懒加载：返回与 `[from, to)` 重叠的会话（epoch ms）；客户端补旧页用 |
 | GET/POST | `/api/game-time/autostart` | 查询 / 设置开机自启；不可写时（DSH、非 Windows、入口缺失）GET 返回 `supported:false`，POST 返回 409 |
 | POST | `/api/game-time/shutdown` | **仅独立版**：托盘「退出」用，`server.close` → `process.exit` 同步落盘；GET 405 |
@@ -468,7 +479,10 @@ CSS 变量（在 `.gt-shell` 上设置）：
 9. **图表不引第三方库**（理由见 §7）；要新形态优先让 `Chart`/`ChartCard` 参数化，别复制第二份画图代码。
 10. **图表视觉**：平均线、辅助线用中性灰 + 低透明度，**不要借用游戏主题色**（会和平台色混淆）；SVG 轴文字必须写 `fill:currentColor`；刻度单位同时出现在标题和 X 轴左缘。
 11. **图表交互**：拖动一格 = 一根柱子，滚轮一格 = 一级刻度；步长必须由「当前刻度」推出来，**按视图写死步长会导致今日一次跳一整天**。
-12. **页面状态放模块级**：`LAST_ROUTE` 存"哪一页"，面板卸载重挂时恢复；**不要塞回 `Page` 的 `useState`**，否则切走面板就回起始页。设置页的展开状态（`gamesExpanded/platformsExpanded`）仍在组件内，切走会重置，这是有意的。
+12. **页面状态放模块级**：`LAST_ROUTE` 存"哪一页"，面板卸载重挂时恢复；**不要塞回 `Page` 的 `useState`**，否则切走面板就回起始页。设置页的展开状态（`gamesExpanded/platformsExpanded`）仍在组件内，切走会重置，这是有意的。`STATS_PERIOD`（本周/本月）同理放模块级。
+13. **平均只有一个实现**：`averagePerDay()`（秒 ÷ 有玩天数）、`activeDaysOf()`（范围内有记录的天数）、`activeMean()`（非零桶的平均）、`comparePercent()`。图表平均线、列表提示、统计卡、详情页**四处都必须调它们**；新增一处平均就多一个口径，用户会看到两个不一样的「平均」。
+14. **响应式按容器宽度**：`widthTier(shellWidth)` 写在 `.gt-shell` 的 `data-w` 上，隐藏顺序在 `STYLE` 末尾按档位级联（`[data-w="sm"] …`）。**禁止 `@media`**：面板是侧栏里的容器，窗口 1400 px 时面板可能只有 380 px。隐藏顺序：灰字标签 → 已玩 → 平均每天 → 对比平均；统计卡先圆轮后小字。
+15. **红绿语义**：超过平均 = 红，低于 = 绿（行提示的 `data-tone="over|under"`、圆轮的绿→红都是这一套）。不要顺手改成「涨绿跌红」，圆轮描的是「超出」。
 
 > 判断一条 UI 改动要不要记下来：**下一个人不知道这条，会不会把它改回去？** 会，就记成约定；不会，就不用记。
 
@@ -482,7 +496,6 @@ node tests/render-check.mjs    # 假 React 渲染全部视图，约 60 条路径
 node tests/host-check.mjs      # 路由、迁移、归属、完整 tick
 node tests/exit-check.mjs      # 关一局的防抖落盘 + process.exit() 时的同步落盘
 node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe 三个场景
-node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单实例（DSH 包内会跳过）
 ```
 
 `render-check` 用 `globalThis.__GT_TEST__` 暴露内部函数；`host-check` 用 `__GT_HOST_TEST__` 暴露 `tick / setLister / sanitizeConfig / migrate / attributePlatform` 等（`setLister` 在模块加载时就可用，其余在 `apply()` 之后）。`__GT_TEST__.setNow(ms)` 可以把模块时钟拨到任意时刻——测跨天 / 跨周的行为用它，不要依赖真实系统时间（「midnight rollover」那条就是这么测的）。
@@ -491,7 +504,7 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 
 **改宿主后至少跑一次 host-check + exit-check + restore-check；改 UI 后跑 render-check。** 都过再让你重启/刷新。
 
-**打包**：`node scripts/build.mjs` 出两个包，别在解压目录里改代码（那边是快照，改了就和源码分叉）。网页包只带 `standalone-check`；DSH 包不带 `standalone/`，所以那一套会打印 skipped。
+**打包**：`node scripts/build.mjs` 只出一个 DSH 插件包；别在解压目录里改代码（那边是快照，改了就和源码分叉）。
 
 ### 性能与内存（2026-11-10 实测）
 
@@ -549,6 +562,11 @@ node tests/standalone-check.mjs # 独立版：假 DOM 挂载 + HTTP 契约 + 单
 | 代理隧道下载 vendor 忘了 de-chunk | 页面白屏，控制台 `Cannot read properties of undefined (reading 'createElement')`；JS 首行是 `1641` 这样的十六进制尺寸 | HTTP 是 `Transfer-Encoding: chunked`，必须按块解码；测试里用 `new vm.Script()` 编译一遍 vendor 文件 |
 | 用任务管理器强杀网页版 | 当前这一局丢最多 30 秒（`process.exit` 钩子没跑） | 退出走托盘「退出」→ `POST /shutdown`；文档里写死这条 |
 | 双击 `start.cmd` 弹「无法验证发布者」 | 这是 Mark-of-the-Web，不是杀软；属性里勾「解除锁定」只对当次解压有效 | 发 zip 用微信/QQ（通常不带标记）或让对方 7-Zip 解压；再不行就本地新建快捷方式指向 `powershell -File launcher.ps1` |
+| 平均线的分母用「格子总数」 | 一周只玩两天，平均被摊成总量 ÷ 7，看起来像「每天才玩一会儿」 | 分母＝有记录的格子数（`activeMean` / `averagePerDay`）；「没玩」不是「玩了 0 分钟」 |
+| 用 `@media` 做响应式 | 面板在侧栏里 380 px、窗口 1400 px 时，`@media` 完全不动 | 面板是容器不是窗口：`ResizeObserver` 量 `.gt-shell` → `data-w` → CSS 分档 |
+| `snapshot()` 里每个会话 `new Date()` 两次 | 加上「已玩天数」后，11 万条会话的 `snapshot()` 从 4.9 ms 涨到 41 ms（每 30 秒一次） | 共享一个 `Date` + `getTimezoneOffset` 算整数日索引（`dayRangeOf`），回到 16 ms；热路径别按会话分配对象 |
+| 新增的只读字段以为「不用重启」 | `/state` 不返回 `playedDays` 时，客户端会退回「用已加载窗口算」，老用户看不出问题、但和历史总计对不上 | 改动 `/state` 的字段一律按「宿主改动 → 重启 DSH」处理；客户端有窗口兜底但不要依赖它 |
+| 详情页「全部」用窗口时长、头部用全量总计 | 两个数字对不上（历史超过 `historyDays` 时差一整段） | 范围 = `all` 时一律读 `totalsFor(all)` / `playedDaysFor()`（全量），不要用 `sessionsInRange` 的结果 |
 
 ---
 
@@ -616,6 +634,19 @@ storages/game-time/
 3. **跨年那一下** —— 见上面 5 步，顺序反了会丢一整年的数据。
 
 **与懒加载的关系**：不冲突，是同一件事的两层。懒加载是"前端按时间范围要数据"，分片是"后端按文件存数据"。合并做法：**接口不变，把 `/state` 和 `/sessions` 的数据源从 `state.sessions` 换成一个 store 层**，前端 `client.js` **零改动**。
+
+### 聚合块已经为分片留好接口（0.16.0，已实现）
+
+`snapshot()` 里给客户端的「全量数字」这一块，字段全部是**可合并**的：
+
+| 字段 | 合并方式 | 说明 |
+|---|---|---|
+| `totals.total` / `totals.game` / `totals.platform` | 相加 | 秒数 |
+| `playedDays[gameId]` / `playedDaysTotal` | 相加 | **自然日**计数；一个日历日只属于一年，所以按年文件相加不会重复（跨零点的会话在 `splitByDay` 时已经拆到两天） |
+| `firstStart` | 取 min | |
+| `lastPlayed[gameId]` | 取 max | |
+
+所以分片落地时**不用重新算**：`sessions-2026.json` 旁边存一份同形状的聚合头（或写进 `index.json`），读的时候把各年相加/取 min-max 即可，`/state` 现成的字段照旧下发（客户端零改动）。这是**现在就能定的接口**，不需要提前实现分片；真要提前做，只需把 `snapshot()` 里那段循环抽成 `aggregateOf(sessions)` 并给每份分片单独跑一次（约 30 行）。**不要**把日计数改成「按年存一个 Set 再求并集」——按年相加已经精确，存 Set 只会让文件变大。
 
 **落地顺序（必须按这个来，任何时候都能回退）**
 
@@ -731,14 +762,14 @@ Remove-Item "$env:USERPROFILE\.dsh\storages\game-time\presets.json"
 - 归属按每个游戏自己的「启动入口」顺序（0.3.1）。
 - 会话永久保留（不再 31 天删除/日汇总）+ 懒加载（默认 1 年，设置可改 30–1825 天）。
 - 宿主 /state 只回 settings.historyDays 窗口，另带 totals / firstStart / lastPlayed / historyFrom；GET /api/game-time/sessions?from=&to= 补旧页；客户端 ensureHistory 按 id 去重，只保留当前 GAMES 的页。
-- git 仓库在 plugins/game-time/.git，main 分支；五套测试：render-check / host-check / exit-check / restore-check / standalone-check。
+- git 仓库在 plugins/game-time/.git，main 分支；四套测试：render-check / host-check / exit-check / restore-check。
 
 硬规则：
 1. 不要删会话、不要恢复日汇总；「总计」必须保持全量。
 2. 改宿主（index.js / src/host/*）要重启 DSH；只改 client.js 刷新页面即可。
 3. 新设置/游戏字段先加 src/host/config.js 白名单，再重启。
 4. 不要引 npm 图表库；图表/数据层只有一个序列构建器。
-5. 改完跑对应测试：UI 改 client 跑 render-check；宿主跑 host + exit + restore（+ standalone）。
+5. 改完跑对应测试：UI 改 client 跑 render-check；宿主跑 host + exit + restore。
 6. 关键改动手记 HANDOFF §1；新坑记 §9；待办变化记 §10。
 
 已知风险：
