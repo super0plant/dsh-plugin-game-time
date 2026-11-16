@@ -8,7 +8,7 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.16.0（本地已提交 + 已打 tag `v0.16.0`，**未推送**：沙箱里没有可用的 GitHub 凭据，见 §10）；GitHub 线上最新仍是 **v0.15.2**；**npm 未发布** —— 包名空闲（`npm view` 404），但 `%USERPROFILE%\.npmrc` 里的 token 已失效（`npm whoami` 401、`publish` E404），需要换一个新 token。
+- **版本**：0.16.0。**GitHub 已发布 v0.16.0**（Release + 资产 `dsh-plugin-game-time.zip`，199,755 B，与本地 `dist/` 的构建 sha256 一致；下载链接 `releases/latest/download/dsh-plugin-game-time.zip` 1 次）。**npm 仍未发布**：账号被 npm 临时冻结（`npm publish` → 403 `temporarily suspended due to a recent security-sensitive action`，`npm whoami` 正常返回 `super0plant`，包名仍是 404）。等邮件/2FA 处理完、冻结解除后再 `npm publish`，别反复重试。
 - **形态**：只有 DSH 插件。独立网页版/桌面外壳已在 0.14.0 移除（`standalone/`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都删了）。
 - **测试**：**四套**（render / host / exit / restore），`npm test` 一条命令；**一定看退出码**。
 - **今日页**：三张对比卡（本日 / 本周·本月 / 总计，带圆轮）→ 今天玩过（行中间有三段灰字提示）→ 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
