@@ -642,10 +642,10 @@ window.__ModuleLoader__.load({
     function widthTier(width) {
       const value = Number(width) || 0
       if (value <= 0) return 'lg'
-      if (value >= 620) return 'lg'
-      if (value >= 520) return 'md'
-      if (value >= 440) return 'sm'
-      if (value >= 340) return 'xs'
+      if (value >= 700) return 'lg'
+      if (value >= 600) return 'md'
+      if (value >= 500) return 'sm'
+      if (value >= 400) return 'xs'
       return 'xxs'
     }
 
