@@ -551,4 +551,15 @@ const clampedDays = testApi.sanitizeConfig({ version: 3, games: [], platforms: {
 assert.equal(clampedDays.settings.historyDays, 1825, "historyDays clamps to five years")
 const smallDays = testApi.sanitizeConfig({ version: 3, games: [], platforms: {}, settings: { historyDays: 1 } })
 assert.equal(smallDays.settings.historyDays, 30, "historyDays clamps to one month")
+
+// The row-hint window is a whitelisted setting: it must survive a save (the
+// whitelist is the usual way a new field silently disappears) and clamp.
+const hintDefault = testApi.sanitizeConfig({ version: 3, games: [], platforms: {}, settings: {} })
+assert.equal(hintDefault.settings.statsDays, 7, "row hints default to one week")
+const hintKept = testApi.sanitizeConfig({ version: 3, games: [], platforms: {}, settings: { statsDays: 14 } })
+assert.equal(hintKept.settings.statsDays, 14, "statsDays survives sanitising")
+const hintFloor = testApi.sanitizeConfig({ version: 3, games: [], platforms: {}, settings: { statsDays: 0 } })
+assert.equal(hintFloor.settings.statsDays, 1, "statsDays never goes below one day")
+const hintCeil = testApi.sanitizeConfig({ version: 3, games: [], platforms: {}, settings: { statsDays: 99999 } })
+assert.equal(hintCeil.settings.statsDays, 3650, "statsDays clamps at ten years")
 console.log("  lazy history: old sessions kept, /state windowed, totals all-time, slice endpoint OK")

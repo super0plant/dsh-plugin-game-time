@@ -119,6 +119,9 @@ window.__ModuleLoader__.load({
       'settings.density.hint': '紧凑会收紧行距、字号和内边距，一屏能多看一行。',
       'settings.language': '语言',
       'settings.language.hint': '默认跟随系统；这里只影响这个面板。',
+      'settings.statsDays': '列表提示',
+      'settings.statsDays.hint': '只给最近这段时间玩过的游戏显示「对比平均 / 平均每天 / 已玩」；很久没玩的游戏不再显示。',
+      'settings.statsDays.days': '{n} 天',
       'language.auto': '跟随系统',
       'platform.other': '其他',
       'settings.platforms': '启动平台',
@@ -373,6 +376,9 @@ window.__ModuleLoader__.load({
       'settings.density.hint': 'Compact tightens rows, type and padding so one more line fits on screen.',
       'settings.language': 'Language',
       'settings.language.hint': 'Follows the system by default; this only affects this panel.',
+      'settings.statsDays': 'Row hints',
+      'settings.statsDays.hint': 'Show 对比平均 / 平均每天 / 已玩 on rows of games played within this window; games untouched for longer keep their rows plain.',
+      'settings.statsDays.days': '{n} d',
       'language.auto': 'System',
       'platform.other': 'Other',
       'settings.platforms': 'Platforms',
@@ -6446,6 +6452,20 @@ window.__ModuleLoader__.load({
                 ],
                 onChange: function (value) {
                   setSetting('language', value)
+                },
+              })
+            ),
+            h(
+              Field,
+              { label: t('settings.statsDays'), hint: t('settings.statsDays.hint') },
+              h(Dropdown, {
+                value: String(SETTINGS.statsDays || 7),
+                minWidth: 86,
+                options: [1, 3, 7, 14, 30, 90, 365].map(function (days) {
+                  return { value: String(days), label: t('settings.statsDays.days').replace('{n}', String(days)) }
+                }),
+                onChange: function (value) {
+                  setSetting('statsDays', Number(value))
                 },
               })
             )

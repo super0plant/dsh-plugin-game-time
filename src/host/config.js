@@ -223,6 +223,11 @@ export function sanitizeConfig(input) {
       todayChartRange: settings.todayChartRange === 'bar' ? 'bar' : 'line',
       todayWindow: settings.todayWindow === 'last30' ? 'last30' : 'last7',
       historyDays: clampRange(settings.historyDays, HISTORY_DAYS_MIN, HISTORY_DAYS_MAX, HISTORY_DAYS),
+      // How recently a game must have been played for the list row hints
+      // (对比平均 / 平均每天 / 已玩) to show. 0 would mean "always", but the row
+      // hints are noise for a game nobody touched in months, so the range
+      // starts at one day.
+      statsDays: clampRange(settings.statsDays, 1, 3650, 7),
       groupColors: groupColorsOf(settings.groupColors),
       autoArchive: {
         enabled: bool(rawArchive.enabled, false),
