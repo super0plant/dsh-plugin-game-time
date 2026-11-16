@@ -2161,7 +2161,7 @@ window.__ModuleLoader__.load({
       '.gt-stat-main{display:flex;align-items:center;gap:8px;min-width:0;}',
       '.gt-stat-line{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden;}',
       '.gt-stat-line .gt-value{flex:0 0 auto;margin-top:0;}',
-      '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:3px;font-size:var(--gt-fs-2);line-height:1.3;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
+      '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:2px;padding:1px 6px;border:1px solid rgba(128,128,128,.16);border-radius:6px;background:rgba(128,128,128,.07);font-size:var(--gt-fs-2);line-height:1.45;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
       '.gt-stat-sub-k{opacity:var(--gt-muted);font-size:var(--gt-fs-2);letter-spacing:.2px;}',
       '.gt-stat-sub-v{font-variant-numeric:tabular-nums;}',
       '.gt-stat-sub-v[data-tone="over"]{color:var(--gt-red);}',
@@ -2197,12 +2197,13 @@ window.__ModuleLoader__.load({
       '.gt-row-main{display:flex;align-items:center;gap:10px;min-width:0;}',
       // Fixed name block: long names truncate instead of pushing the hints, so
       // every row keeps the same hint columns however the panel is resized.
-      '.gt-row-main .gt-name-wrap{flex:0 0 180px;min-width:0;}',
+      '.gt-row-main .gt-name-wrap{flex:0 1 180px;min-width:0;}',
       // Row hints take the space the fixed name leaves, split into equal
       // columns: equal fractions of the same row width line up across rows, and
       // right-aligned values line up in a column at any panel width.
-      '.gt-hints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:baseline;gap:8px;margin-left:auto;padding-left:8px;min-width:0;flex:1 1 auto;font-size:var(--gt-fs-2);line-height:1.25;}',
+      '.gt-hints{display:grid;grid-template-columns:80px 62px 80px;align-items:baseline;gap:6px;margin-left:auto;padding:1px 8px;border:1px solid rgba(128,128,128,.16);border-radius:8px;background:rgba(128,128,128,.07);min-width:0;flex:0 0 auto;font-size:var(--gt-fs-2);line-height:1.45;}',
       '.gt-hint{display:flex;align-items:baseline;gap:2px;justify-content:flex-end;min-width:0;overflow:hidden;white-space:nowrap;}',
+      '.gt-compact .gt-hints{font-size:var(--gt-fs-2);}',
       '.gt-hint-k{opacity:.5;font-size:var(--gt-fs-2);letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;}',
       '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;flex:0 0 auto;}',
       '.gt-hint-v[data-tone="over"]{color:var(--gt-red);opacity:1;}',
@@ -2463,7 +2464,7 @@ window.__ModuleLoader__.load({
       '.gt-compact .gt-panel-card{padding:8px 10px;}',
       '.gt-compact .gt-list-row{padding:4px 7px;font-size:12px;}',
       '.gt-compact .gt-section-title{font-size:12px;}',
-      '.gt-compact .gt-hints{font-size:var(--gt-fs-2);gap:8px;}',
+      
       // Responsive by container width, not by window width: the panel is a
       // sidebar and the browser can be 1400 px wide while the panel is 380 px.
       // Page measures .gt-shell with a ResizeObserver and writes data-w, and
@@ -2476,13 +2477,14 @@ window.__ModuleLoader__.load({
       // name block shrinks in the same steps and the hint grid drops tracks so
       // every remaining value keeps the same column across rows.
       '.gt-shell[data-w="md"] .gt-hint-k{display:none;}',
-      '.gt-shell[data-w="md"] .gt-row-main .gt-name-wrap{flex-basis:150px;}',
+      '.gt-shell[data-w="md"] .gt-hints{grid-template-columns:34px 26px 46px;}',
+      '.gt-shell[data-w="md"] .gt-row-main .gt-name-wrap{flex:0 1 150px;}',
       '.gt-shell[data-w="sm"] .gt-hint-k,.gt-shell[data-w="sm"] .gt-hint[data-rank="3"]{display:none;}',
-      '.gt-shell[data-w="sm"] .gt-hints{grid-template-columns:repeat(2,minmax(0,1fr));}',
-      '.gt-shell[data-w="sm"] .gt-row-main .gt-name-wrap{flex-basis:140px;}',
+      '.gt-shell[data-w="sm"] .gt-hints{grid-template-columns:34px 46px;}',
+      '.gt-shell[data-w="sm"] .gt-row-main .gt-name-wrap{flex:0 1 140px;}',
       '.gt-shell[data-w="xs"] .gt-hint-k,.gt-shell[data-w="xs"] .gt-hint[data-rank="3"],.gt-shell[data-w="xs"] .gt-hint[data-rank="2"]{display:none;}',
-      '.gt-shell[data-w="xs"] .gt-hints{grid-template-columns:repeat(1,minmax(0,1fr));}',
-      '.gt-shell[data-w="xs"] .gt-row-main .gt-name-wrap{flex-basis:120px;}',
+      '.gt-shell[data-w="xs"] .gt-hints{grid-template-columns:46px;}',
+      '.gt-shell[data-w="xs"] .gt-row-main .gt-name-wrap{flex:0 1 120px;}',
       '.gt-shell[data-w="xxs"] .gt-hints{display:none;}',
       // Once the hints are gone the name gets the whole width back.
       '.gt-shell[data-w="xxs"] .gt-row-main .gt-name-wrap{flex:1 1 auto;}',
@@ -3688,7 +3690,7 @@ window.__ModuleLoader__.load({
           ? h(
               'div',
               { className: 'gt-stat-sub' },
-              h('span', { className: 'gt-stat-sub-k' }, sub.label + '：'),
+              h('span', { className: 'gt-stat-sub-k' }, sub.label + ':'),
               h('span', { className: 'gt-stat-sub-v', 'data-tone': sub.tone || 'flat' }, sub.value)
             )
           : null,
@@ -4089,7 +4091,7 @@ window.__ModuleLoader__.load({
           return h(
             'span',
             { key: item.rank, className: 'gt-hint', 'data-rank': String(item.rank) },
-            h('span', { className: 'gt-hint-k' }, item.label + '：'),
+            h('span', { className: 'gt-hint-k' }, item.label + ':'),
             h('span', { className: 'gt-hint-v', 'data-tone': item.tone }, item.value)
           )
         })

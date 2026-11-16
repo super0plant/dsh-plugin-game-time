@@ -795,7 +795,7 @@ const ranks = hintNodes.map((node) => node.props['data-rank'])
 // one that survives longest when the panel narrows.
 if (ranks.join(',') !== '2,3,1') throw new Error('hint order must be avg/day, total days, comparison (ranks 2,3,1), got ' + ranks)
 const labels = hintNodes.map((node) => node.children[0].children.join(''))
-if (labels.join(',') !== 'list.hint.avgDay：,list.hint.days：,list.hint.vsAvg：') {
+if (labels.join(',') !== 'list.hint.avgDay:,list.hint.days:,list.hint.vsAvg:') {
   throw new Error('every hint needs its label and a colon, got ' + labels.join(','))
 }
 const toneOne = hintNodes[2].children[1]
@@ -1008,7 +1008,7 @@ const statSubs = []
 })(cardTree)
 if (statSubs.length !== 3) throw new Error('each stat card needs its comparison line, got ' + statSubs.length)
 const subLabels = statSubs.map((node) => node.children[0].children.join(''))
-if (subLabels.join(',') !== 'stat.avgDaily：,stat.lastWeekSum：,stat.played：') {
+if (subLabels.join(',') !== 'stat.avgDaily:,stat.lastWeekSum:,stat.played:') {
   throw new Error('unexpected comparison labels: ' + subLabels.join(','))
 }
 
