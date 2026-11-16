@@ -32,6 +32,9 @@ window.__ModuleLoader__.load({
       'today.col.day': '本日',
       'today.col.week': '本周',
       'today.col.total': '总计',
+      'list.hint.vsAvg': '对比平均',
+      'list.hint.avgDay': '平均每天',
+      'list.hint.played': '已玩',
       'today.trend': '趋势图',
       'today.trend.hint': '左 24 小时 · 右 7/30 天，滚轮切换',
       'today.hours': '今日时段',
@@ -283,6 +286,9 @@ window.__ModuleLoader__.load({
       'today.col.day': 'Today',
       'today.col.week': 'Week',
       'today.col.total': 'Total',
+      'list.hint.vsAvg': 'vs avg',
+      'list.hint.avgDay': 'avg/day',
+      'list.hint.played': 'played',
       'today.trend': 'Trend',
       'today.trend.hint': 'Left 24 hours · right 7/30 days, wheel to switch',
       'today.hours': 'Today by hour',
@@ -1099,6 +1105,7 @@ window.__ModuleLoader__.load({
       density: 'comfortable',
       language: 'auto',
       historyDays: 365,
+      statsDays: 7,
       baseColor: '#0b0b0c',
       imageOpacity: 1,
       todayChartHours: 'line',
@@ -2124,6 +2131,14 @@ window.__ModuleLoader__.load({
       '.gt-row:hover{background:rgba(128,128,128,.09);}',
       '.gt-row:active{background:rgba(128,128,128,.14);}',
       '.gt-row-main{display:flex;align-items:center;gap:10px;min-width:0;}',
+      // Row hints: three ranked grey labels, hidden by rank in narrow panels.
+      '.gt-hints{display:flex;align-items:baseline;gap:9px;margin-left:auto;padding-left:10px;min-width:0;overflow:hidden;white-space:nowrap;font-size:11px;line-height:1.25;}',
+      '.gt-hint{display:inline-flex;align-items:baseline;gap:3px;min-width:0;}',
+      '.gt-hint-k{font-size:10.5px;opacity:.5;letter-spacing:.2px;}',
+      '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;}',
+      '.gt-hint-v[data-tone="up"]{color:#4fc7a6;opacity:1;}',
+      '.gt-hint-v[data-tone="down"]{color:#e35c5c;opacity:1;}',
+      '.gt-hint-v[data-tone="flat"]{opacity:.45;}',
       '.gt-tile{display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex:0 0 auto;letter-spacing:.5px;}',
       '.gt-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       '.gt-name-wrap{display:flex;flex-direction:column;gap:3px;min-width:0;}',
@@ -2378,6 +2393,17 @@ window.__ModuleLoader__.load({
       '.gt-compact .gt-panel-card{padding:8px 10px;}',
       '.gt-compact .gt-list-row{padding:4px 7px;font-size:12px;}',
       '.gt-compact .gt-section-title{font-size:12px;}',
+      '.gt-compact .gt-hints{font-size:10.5px;gap:7px;}',
+      // Responsive by container width, not by window width: the panel is a
+      // sidebar and the browser can be 1400 px wide while the panel is 380 px.
+      // Page measures .gt-shell with a ResizeObserver and writes data-w, and
+      // these rules hide hints in the agreed order — grey labels first, then
+      // rank 3 (已玩), then 2 (平均每天), then 1 (对比平均).
+      '.gt-shell[data-w="md"] .gt-hint-k{display:none;}',
+      '.gt-shell[data-w="sm"] .gt-hint-k,.gt-shell[data-w="sm"] .gt-hint[data-rank="3"]{display:none;}',
+      '.gt-shell[data-w="xs"] .gt-hint-k,.gt-shell[data-w="xs"] .gt-hint[data-rank="3"],.gt-shell[data-w="xs"] .gt-hint[data-rank="2"]{display:none;}',
+      '.gt-shell[data-w="xxs"] .gt-hints{display:none;}',
+      '.gt-shell[data-w="xs"] .gt-summary-4,.gt-shell[data-w="xxs"] .gt-summary-4{grid-template-columns:repeat(2,minmax(0,1fr));}',
     ].join('')
 
     /* ------------------------------------------------------------------ *
@@ -3818,6 +3844,53 @@ window.__ModuleLoader__.load({
     }
 
 
+    /**
+     * The middle of a list row: how today compares with this game's typical
+     * day, what that typical day is, and how many days it has been played.
+     *
+     * Three ranked hints, not a second table: the panel is often a narrow
+     * sidebar, so CSS hides them by rank as it narrows (labels first, then 3,
+     * 2, 1). See the `data-w` rules in STYLE — the breakpoints measure the
+     * panel, not the browser window.
+     */
+    function HintStrip({ t, game, today, total, days, lastPlayed }) {
+      const limitDays = Number(SETTINGS.statsDays) || 0
+      if (limitDays > 0) {
+        const seen = Number(lastPlayed) || 0
+        if (!seen || NOW.getTime() - seen > limitDays * DAY_MS) return null
+      }
+      const count = Number(days) || 0
+      const average = averagePerDay(total, count)
+      const percent = today > 0 ? comparePercent(today, average) : null
+      const tone = percent === null || Math.abs(percent) < 0.5 ? 'flat' : percent > 0 ? 'up' : 'down'
+      const compareText =
+        percent === null || Math.abs(percent) < 0.5
+          ? t('noData')
+          : (percent > 0 ? '▲' : '▼') + String(Math.min(199, Math.round(Math.abs(percent)))) + '%'
+      return h(
+        'div',
+        { className: 'gt-hints', 'aria-label': t('list.hint.vsAvg') },
+        h(
+          'span',
+          { className: 'gt-hint', 'data-rank': '1' },
+          h('span', { className: 'gt-hint-k' }, t('list.hint.vsAvg')),
+          h('span', { className: 'gt-hint-v', 'data-tone': tone }, compareText)
+        ),
+        h(
+          'span',
+          { className: 'gt-hint', 'data-rank': '2' },
+          h('span', { className: 'gt-hint-k' }, t('list.hint.avgDay')),
+          h('span', { className: 'gt-hint-v' }, count > 0 ? compactDuration(average, t) : t('noData'))
+        ),
+        h(
+          'span',
+          { className: 'gt-hint', 'data-rank': '3' },
+          h('span', { className: 'gt-hint-k' }, t('list.hint.played')),
+          h('span', { className: 'gt-hint-v' }, count > 0 ? String(count) + t('day') : t('noData'))
+        )
+      )
+    }
+
     function TodayView({ t, onOpenGame, touch }) {
       const duplicates = duplicateMap()
       const rows = GAMES.map(function (game) {
@@ -3885,7 +3958,15 @@ window.__ModuleLoader__.load({
                       { className: 'gt-name-wrap' },
                       h('div', { className: 'gt-name' }, row.game.name),
                       h(Badges, { platformIds: enabledPlatforms(row.game) })
-                    )
+                    ),
+                    h(HintStrip, {
+                      t: t,
+                      game: row.game,
+                      today: row.day,
+                      total: row.total,
+                      days: playedDaysFor(row.game.id),
+                      lastPlayed: lastPlayedAt(row.game.id),
+                    })
                   ),
                   h('div', { className: 'gt-num' }, h(Duration, { seconds: row.day, t: t })),
                   h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t })),
@@ -3956,6 +4037,7 @@ window.__ModuleLoader__.load({
       const toRow = function (game) {
         return {
           game: game,
+          today: totalsFor(game.id, 'day', NOW),
           total: totalsFor(game.id, 'all', NOW),
           week: totalsFor(game.id, 'week', NOW),
           recent: lastPlayedAt(game.id),
@@ -4029,7 +4111,15 @@ window.__ModuleLoader__.load({
               { className: 'gt-name-wrap' },
               h('div', { className: 'gt-name' }, row.game.name, h(DuplicateTag, { t: t, duplicate: duplicates.get(row.game.id) })),
               h(Badges, { platformIds: enabledPlatforms(row.game) })
-            )
+            ),
+            h(HintStrip, {
+              t: t,
+              game: row.game,
+              today: row.today,
+              total: row.total,
+              days: playedDaysFor(row.game.id),
+              lastPlayed: row.recent,
+            })
           ),
           h('div', { className: 'gt-num' }, h(Duration, { seconds: row.total, t: t })),
           h('div', { className: 'gt-num' }, h(Duration, { seconds: row.week, t: t })),
@@ -7443,6 +7533,9 @@ window.__ModuleLoader__.load({
         {
           ref: shellRef,
           className: 'gt-shell' + (SETTINGS.density === 'compact' ? ' gt-compact' : ''),
+          // Width tier drives every container-width rule (see STYLE): the panel
+          // is not the browser window, so `@media` would be wrong here.
+          'data-w': widthTier(shellWidth),
           style: {
             backgroundColor: baseColor,
             '--gt-surface-alpha': '0.18',
@@ -7642,6 +7735,7 @@ window.__ModuleLoader__.load({
         ImageField: ImageField,
         TodayView: TodayView,
         AllView: AllView,
+        HintStrip: HintStrip,
         DetailView: DetailView,
         GlobalSettings: GlobalSettings,
         GameSettings: GameSettings,
