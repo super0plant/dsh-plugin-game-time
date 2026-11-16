@@ -948,11 +948,14 @@ const overLabel = ringLabel(overRing)
 if (overLabel.children.join('') !== '140%') throw new Error('1.4 must read 140%')
 if (overLabel.props['data-tone'] !== 'over') throw new Error('past 100 % the percentage must turn red')
 
-// Past 200 %: the whole ring is red and there is no arc any more.
+// Past 200 %: red base, and the extra lap continues in a darker red.
 const deepRing = testApi.Ring({ ratio: 2.5, tip: 'deep' })
-if (circleClass(deepRing).join(',') !== 'gt-ring-red') {
-  throw new Error('past 200 % the ring is entirely red, got ' + circleClass(deepRing))
+if (circleClass(deepRing).join(',') !== 'gt-ring-red,gt-ring-red-dim') {
+  throw new Error('past 200 % the base is red and the arc is a darker red, got ' + circleClass(deepRing))
 }
+const deepArc = ringCircles(deepRing)[1]
+const deepFraction = Number(String(deepArc.props.strokeDasharray).split(' ')[0]) / (2 * Math.PI * deepArc.props.r)
+if (Math.abs(deepFraction - 0.5) > 0.01) throw new Error('2.5 laps draws a 0.5-lap dark red arc, got ' + deepFraction)
 if (ringLabel(deepRing).children.join('') !== '250%') throw new Error('2.5 must read 250%')
 if (ringLabel(deepRing).props['data-tone'] !== 'over') throw new Error('past 200 % the percentage stays red')
 

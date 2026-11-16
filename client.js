@@ -2132,7 +2132,7 @@ window.__ModuleLoader__.load({
       // uses these four sizes and two accent colours — do not add a fifth size
       // or a third accent for a single element, that is what made the old UI
       // look inconsistent.
-      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;--gt-fs-1:10px;--gt-fs-2:11px;--gt-fs-3:13px;--gt-fs-4:20px;--gt-green:#4fc7a6;--gt-red:#e35c5c;--gt-muted:.55;font-variant-numeric:tabular-nums;}',
+      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;--gt-fs-1:10px;--gt-fs-2:11px;--gt-fs-3:13px;--gt-fs-4:20px;--gt-green:#4fc7a6;--gt-red:#e35c5c;--gt-red-dim:#8f2a31;--gt-muted:.55;font-variant-numeric:tabular-nums;}',
       '.gt-top{padding:18px 22px 0;flex:0 0 auto;}',
       '.gt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
       '.gt-head-left{display:flex;align-items:center;gap:10px;min-width:0;}',
@@ -2164,9 +2164,9 @@ window.__ModuleLoader__.load({
       '.gt-stat-main{display:flex;align-items:center;gap:8px;min-width:0;}',
       '.gt-stat-line{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden;}',
       '.gt-stat-line .gt-value{flex:0 0 auto;margin-top:0;}',
-      '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:2px;padding:1px 6px;border:1px solid rgba(128,128,128,.16);border-radius:6px;background:rgba(128,128,128,.07);font-size:var(--gt-fs-2);line-height:1.45;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
+      '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:3px;padding:1px 7px;border:1px solid rgba(255,255,255,.2);border-color:color-mix(in srgb,currentColor 22%,transparent);border-radius:6px;background:rgba(255,255,255,.05);font-size:var(--gt-fs-2);line-height:1.35;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
       '.gt-stat-sub-k{opacity:var(--gt-muted);font-size:var(--gt-fs-2);letter-spacing:.2px;}',
-      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;}',
+      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);}',
       '.gt-stat-sub-v[data-tone="over"]{color:var(--gt-red);}',
       '.gt-stat-sub-v[data-tone="under"]{color:var(--gt-green);}',
       '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;margin-left:auto;}',
@@ -2176,6 +2176,7 @@ window.__ModuleLoader__.load({
       '.gt-ring-gray{stroke:rgba(128,128,128,.24);}',
       '.gt-ring-green{stroke:var(--gt-green);transition:stroke .2s ease;}',
       '.gt-ring-red{stroke:var(--gt-red);transition:stroke .2s ease;}',
+      '.gt-ring-red-dim{stroke:var(--gt-red-dim);transition:stroke .2s ease;}',
       '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:var(--gt-fs-1);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}',
       '.gt-ring-lap[data-tone="over"]{fill:var(--gt-red);opacity:1;}',
       '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:var(--gt-fs-2);line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
@@ -2201,14 +2202,14 @@ window.__ModuleLoader__.load({
       // Fixed name block: long names truncate instead of pushing the hints, so
       // every row keeps the same hint columns however the panel is resized.
       '.gt-row-main .gt-name-wrap{flex:0 1 180px;min-width:0;}',
-      // Row hints take the space the fixed name leaves, split into equal
-      // columns: equal fractions of the same row width line up across rows, and
-      // right-aligned values line up in a column at any panel width.
-      '.gt-hints{display:grid;grid-template-columns:80px 62px 80px;align-items:baseline;gap:6px;margin-left:auto;padding:1px 8px;border:1px solid rgba(128,128,128,.16);border-radius:8px;background:rgba(128,128,128,.07);min-width:0;flex:0 0 auto;font-size:var(--gt-fs-2);line-height:1.45;}',
-      '.gt-hint{display:flex;align-items:baseline;gap:2px;justify-content:flex-end;min-width:0;overflow:hidden;white-space:nowrap;}',
+      // Row hints are one chip: fixed columns so the data lines up across rows,
+      // left-aligned labels + values, and a white hairline frame.
+      '.gt-hints{display:grid;grid-template-columns:88px 64px 84px;align-items:baseline;gap:8px;margin-left:auto;padding:2px 10px;border:1px solid rgba(255,255,255,.2);border-color:color-mix(in srgb,currentColor 22%,transparent);border-radius:8px;background:rgba(255,255,255,.05);min-width:0;flex:0 0 auto;font-size:var(--gt-fs-2);line-height:1.35;}',
+      '.gt-hint{display:flex;align-items:baseline;gap:2px;justify-content:flex-start;min-width:0;overflow:hidden;white-space:nowrap;}',
       '.gt-compact .gt-hints{font-size:var(--gt-fs-2);}',
       '.gt-hint-k{opacity:.5;font-size:var(--gt-fs-2);letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;}',
-      '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;flex:0 0 auto;}',
+      // The value is the data: same size as the row's number columns, full strength.
+      '.gt-hint-v{font-variant-numeric:tabular-nums;font-size:var(--gt-fs-3);opacity:1;flex:0 0 auto;}',
       '.gt-hint-v[data-tone="over"]{color:var(--gt-red);opacity:1;}',
       '.gt-hint-v[data-tone="under"]{color:var(--gt-green);opacity:1;}',
       '.gt-hint-v[data-tone="flat"]{opacity:.45;}',
@@ -2480,13 +2481,13 @@ window.__ModuleLoader__.load({
       // name block shrinks in the same steps and the hint grid drops tracks so
       // every remaining value keeps the same column across rows.
       '.gt-shell[data-w="md"] .gt-hint-k{display:none;}',
-      '.gt-shell[data-w="md"] .gt-hints{grid-template-columns:34px 26px 46px;}',
+      '.gt-shell[data-w="md"] .gt-hints{grid-template-columns:44px 28px 40px;}',
       '.gt-shell[data-w="md"] .gt-row-main .gt-name-wrap{flex:0 1 150px;}',
       '.gt-shell[data-w="sm"] .gt-hint-k,.gt-shell[data-w="sm"] .gt-hint[data-rank="3"]{display:none;}',
-      '.gt-shell[data-w="sm"] .gt-hints{grid-template-columns:34px 46px;}',
+      '.gt-shell[data-w="sm"] .gt-hints{grid-template-columns:44px 40px;}',
       '.gt-shell[data-w="sm"] .gt-row-main .gt-name-wrap{flex:0 1 140px;}',
       '.gt-shell[data-w="xs"] .gt-hint-k,.gt-shell[data-w="xs"] .gt-hint[data-rank="3"],.gt-shell[data-w="xs"] .gt-hint[data-rank="2"]{display:none;}',
-      '.gt-shell[data-w="xs"] .gt-hints{grid-template-columns:46px;}',
+      '.gt-shell[data-w="xs"] .gt-hints{grid-template-columns:40px;}',
       '.gt-shell[data-w="xs"] .gt-row-main .gt-name-wrap{flex:0 1 120px;}',
       '.gt-shell[data-w="xxs"] .gt-hints{display:none;}',
       // Once the hints are gone the name gets the whole width back.
@@ -3609,14 +3610,13 @@ window.__ModuleLoader__.load({
       const value = Math.max(0, Number(ratio) || 0)
       const center = box / 2
       const percent = Math.round(value * 100)
-      const allRed = value >= 2
-      // Track colour = what the ring is "filled with" so far: grey until the
-      // average is reached, green once it is, red once the overflow filled it.
-      const track = allRed ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : 'gt-ring-gray'
-      // The arc is the part in flight: green under one lap, red on top of the
-      // green lap, and nothing once the ring is entirely red.
-      const arcColor = value >= 1 ? 'gt-ring-red' : 'gt-ring-green'
-      const arcFraction = allRed ? 0 : value >= 1 ? value - 1 : value
+      // Track colour = the colour of the stage reached so far: grey before the
+      // average, green between 100 % and 200 %, red past that (the previous
+      // stage's colour becomes the base). The arc is always the next stage in a
+      // darker shade, so a lap past 200 % is dark red on red.
+      const track = value >= 2 ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : 'gt-ring-gray'
+      const arcColor = value >= 2 ? 'gt-ring-red-dim' : value >= 1 ? 'gt-ring-red' : 'gt-ring-green'
+      const arcFraction = value >= 2 ? Math.min(value - 2, 1) : value >= 1 ? value - 1 : value
       const label = percent > 999 ? '999%+' : String(percent) + '%'
       const parts = [
         h('circle', {
