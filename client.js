@@ -642,10 +642,10 @@ window.__ModuleLoader__.load({
     function widthTier(width) {
       const value = Number(width) || 0
       if (value <= 0) return 'lg'
-      if (value >= 700) return 'lg'
-      if (value >= 600) return 'md'
-      if (value >= 500) return 'sm'
-      if (value >= 400) return 'xs'
+      if (value >= 820) return 'lg'
+      if (value >= 700) return 'md'
+      if (value >= 620) return 'sm'
+      if (value >= 540) return 'xs'
       return 'xxs'
     }
 
@@ -2123,14 +2123,18 @@ window.__ModuleLoader__.load({
      * ------------------------------------------------------------------ */
 
     const STYLE = [
-      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;}',
+      // One set of type sizes and accents for the whole panel. Everything below
+      // uses these four sizes and two accent colours — do not add a fifth size
+      // or a third accent for a single element, that is what made the old UI
+      // look inconsistent.
+      '.gt-shell{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font:inherit;color:inherit;overflow:hidden;--gt-fs-1:10px;--gt-fs-2:11px;--gt-fs-3:13px;--gt-fs-4:20px;--gt-green:#4fc7a6;--gt-red:#e35c5c;--gt-muted:.55;font-variant-numeric:tabular-nums;}',
       '.gt-top{padding:18px 22px 0;flex:0 0 auto;}',
       '.gt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
       '.gt-head-left{display:flex;align-items:center;gap:10px;min-width:0;}',
       '.gt-head-right{display:flex;align-items:center;gap:8px;}',
       '.gt-title{font-size:17px;font-weight:600;letter-spacing:.2px;margin:0;}',
       '.gt-live-on{display:inline-flex;align-items:center;gap:5px;font-size:11px;opacity:.8;}',
-      '.gt-dot{width:6px;height:6px;border-radius:50%;background:#3ccf7a;flex:0 0 auto;}',
+      '.gt-dot{width:6px;height:6px;border-radius:50%;background:var(--gt-green);flex:0 0 auto;}',
       '.gt-demo{font-size:11px;line-height:1;padding:4px 7px;border-radius:999px;border:1px solid rgba(128,128,128,.3);opacity:.55;white-space:nowrap;}',
       '.gt-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:rgba(128,128,128,.10);flex:0 0 auto;}',
       '.gt-tab{font:inherit;font-size:13px;line-height:1;color:inherit;background:transparent;border:0;border-radius:8px;padding:7px 14px;cursor:pointer;opacity:.62;}',
@@ -2147,49 +2151,57 @@ window.__ModuleLoader__.load({
       '.gt-trend-cell{display:flex;flex-direction:column;gap:4px;min-width:450px;}',
       '.gt-trend-seg{align-self:flex-end;}',
       '.gt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:0 0 auto;}',
-      '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:12px 14px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
-      '.gt-label{font-size:12px;opacity:.62;letter-spacing:.2px;}',
-      '.gt-value{font-size:23px;font-weight:600;line-height:1.25;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-      // Stat card: value + ring on one line, the comparison line under it.
-      '.gt-stat-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}',
-      '.gt-stat-main .gt-value{flex:1 1 auto;min-width:0;}',
-      '.gt-stat-sub{display:flex;align-items:baseline;gap:4px;margin-top:4px;font-size:10.5px;line-height:1.3;min-width:0;overflow:hidden;white-space:nowrap;}',
-      '.gt-stat-sub-k{opacity:.5;font-size:10.5px;letter-spacing:.2px;}',
-      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;opacity:.95;font-weight:600;}',
-      '.gt-stat-sub-v[data-tone="over"]{color:#e35c5c;}',
-      '.gt-stat-sub-v[data-tone="under"]{color:#4fc7a6;}',
-      '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;}',
+      '.gt-card{border:1px solid rgba(128,128,128,.22);border-radius:12px;padding:11px 13px;background:rgba(var(--gt-surface-color,128,128,128),var(--gt-surface-alpha,.05));min-width:0;}',
+      '.gt-label{font-size:var(--gt-fs-2);opacity:var(--gt-muted);letter-spacing:.2px;}',
+      '.gt-value{font-size:var(--gt-fs-4);font-weight:600;line-height:1.2;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      // Stat card: time + comparison + ring on one line, so the card is two
+      // lines tall instead of three and the small text reads as part of the number.
+      '.gt-stat-main{display:flex;align-items:center;gap:8px;min-width:0;}',
+      '.gt-stat-line{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;overflow:hidden;}',
+      '.gt-stat-line .gt-value{flex:0 0 auto;margin-top:0;}',
+      '.gt-stat-sub{display:inline-flex;align-items:baseline;gap:3px;font-size:var(--gt-fs-2);line-height:1.3;min-width:0;overflow:hidden;white-space:nowrap;flex:0 1 auto;}',
+      '.gt-stat-sub-k{opacity:var(--gt-muted);font-size:var(--gt-fs-2);letter-spacing:.2px;}',
+      '.gt-stat-sub-v{font-variant-numeric:tabular-nums;}',
+      '.gt-stat-sub-v[data-tone="over"]{color:var(--gt-red);}',
+      '.gt-stat-sub-v[data-tone="under"]{color:var(--gt-green);}',
+      '.gt-ring{position:relative;display:inline-flex;flex:0 0 auto;margin-left:auto;}',
       '.gt-ring-svg{display:block;overflow:visible;}',
-      // Single flat stroke, no track/outline: green fills to 100 %, then the
-      // ring becomes the "finished lap" colour and the next lap draws on top.
-      '.gt-ring-green{stroke:#4fc7a6;transition:stroke .2s ease;}',
-      '.gt-ring-red{stroke:#e35c5c;transition:stroke .2s ease;}',
-      '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}',
-      '.gt-ring-lap[data-tone="over"]{fill:#e35c5c;opacity:1;}',
-      '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:11px;line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
+      // One flat stroke: grey track until the average, green track with a red
+      // overflow arc past 100 %, all red once the overflow filled the ring.
+      '.gt-ring-gray{stroke:rgba(128,128,128,.24);}',
+      '.gt-ring-green{stroke:var(--gt-green);transition:stroke .2s ease;}',
+      '.gt-ring-red{stroke:var(--gt-red);transition:stroke .2s ease;}',
+      '.gt-ring-lap{fill:currentColor;opacity:.8;font-size:var(--gt-fs-1);font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}',
+      '.gt-ring-lap[data-tone="over"]{fill:var(--gt-red);opacity:1;}',
+      '.gt-ring-tip{position:absolute;top:calc(100% + 6px);right:0;z-index:6;padding:5px 8px;border-radius:8px;border:1px solid rgba(128,128,128,.26);background:var(--dsw-alias-bg-overlay,Canvas);box-shadow:0 6px 14px rgba(0,0,0,.18);font-size:var(--gt-fs-2);line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s ease;}',
       '.gt-ring:hover .gt-ring-tip{opacity:1;}',
       '.gt-card-btn{font:inherit;color:inherit;text-align:left;cursor:pointer;}',
       '.gt-card-btn:hover{background:rgba(128,128,128,.12);}',
-      '.gt-card-caret{font-size:9px;opacity:.45;margin-left:4px;}',
-      '.gt-value .gt-unit{font-size:.68em;font-weight:500;opacity:.55;margin-left:1px;margin-right:3px;}',
+      '.gt-card-caret{font-size:var(--gt-fs-1);opacity:.45;margin-left:4px;}',
+      '.gt-value .gt-unit{font-size:.68em;font-weight:500;opacity:var(--gt-muted);margin-left:1px;margin-right:3px;}',
       '.gt-section{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;margin-top:2px;}',
-      '.gt-section-title{font-size:13px;font-weight:600;opacity:.9;}',
-      '.gt-muted{font-size:12px;opacity:.55;}',
+      '.gt-section-title{font-size:var(--gt-fs-3);font-weight:600;opacity:.9;}',
+      '.gt-muted{font-size:var(--gt-fs-2);opacity:var(--gt-muted);}',
       '.gt-grid-head,.gt-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 72px 72px;gap:8px;align-items:center;}',
-      '.gt-grid-head{font-size:11px;opacity:.5;padding:0 10px 2px;letter-spacing:.2px;}',
-      '.gt-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12.5px;letter-spacing:-.1px;}',
+      '.gt-grid-head{font-size:var(--gt-fs-2);opacity:.5;padding:0 10px 2px;letter-spacing:.2px;}',
+      '.gt-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:var(--gt-fs-3);letter-spacing:-.1px;}',
       '.gt-num .gt-unit{font-size:.78em;opacity:.5;margin-left:1px;margin-right:2px;font-weight:500;}',
       '.gt-row{font:inherit;color:inherit;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;padding:9px 10px;cursor:pointer;width:100%;}',
       '.gt-row:hover{background:rgba(128,128,128,.09);}',
       '.gt-row:active{background:rgba(128,128,128,.14);}',
       '.gt-row-main{display:flex;align-items:center;gap:10px;min-width:0;}',
-      // Row hints: three ranked grey labels, hidden by rank in narrow panels.
-      '.gt-hints{display:flex;align-items:baseline;gap:9px;margin-left:auto;padding-left:10px;min-width:0;overflow:hidden;white-space:nowrap;font-size:11px;line-height:1.25;}',
-      '.gt-hint{display:inline-flex;align-items:baseline;gap:3px;min-width:0;}',
-      '.gt-hint-k{font-size:10.5px;opacity:.5;letter-spacing:.2px;}',
-      '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;}',
-      '.gt-hint-v[data-tone="over"]{color:#e35c5c;opacity:1;}',
-      '.gt-hint-v[data-tone="under"]{color:#4fc7a6;opacity:1;}',
+      // Fixed name block: long names truncate instead of pushing the hints, so
+      // every row keeps the same hint columns however the panel is resized.
+      '.gt-row-main .gt-name-wrap{flex:0 0 180px;min-width:0;}',
+      // Row hints take the space the fixed name leaves, split into equal
+      // columns: equal fractions of the same row width line up across rows, and
+      // right-aligned values line up in a column at any panel width.
+      '.gt-hints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:baseline;gap:10px;margin-left:auto;padding-left:10px;min-width:0;flex:1 1 auto;font-size:var(--gt-fs-2);line-height:1.25;}',
+      '.gt-hint{display:flex;align-items:baseline;gap:3px;justify-content:flex-end;min-width:0;overflow:hidden;white-space:nowrap;}',
+      '.gt-hint-k{opacity:.5;font-size:var(--gt-fs-2);letter-spacing:.2px;overflow:hidden;text-overflow:ellipsis;}',
+      '.gt-hint-v{font-variant-numeric:tabular-nums;opacity:.92;flex:0 0 auto;}',
+      '.gt-hint-v[data-tone="over"]{color:var(--gt-red);opacity:1;}',
+      '.gt-hint-v[data-tone="under"]{color:var(--gt-green);opacity:1;}',
       '.gt-hint-v[data-tone="flat"]{opacity:.45;}',
       '.gt-tile{display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex:0 0 auto;letter-spacing:.5px;}',
       '.gt-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
@@ -2409,7 +2421,7 @@ window.__ModuleLoader__.load({
       '.gt-chips{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 10px;}',
       '.gt-note{font-size:11px;opacity:.5;line-height:1.5;letter-spacing:.1px;}',
       '.gt-credit{font-size:11px;opacity:.32;text-align:center;letter-spacing:.3px;padding:2px 0 14px;}',
-      '.gt-warn{color:#ff6b6b;opacity:.95;}',
+      '.gt-warn{color:var(--gt-red);opacity:.95;}',
       '.gt-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;font:inherit;color:inherit;background:transparent;border:0;border-radius:8px;padding:0;cursor:pointer;text-align:left;}',
       '.gt-group-head:hover{background:rgba(128,128,128,.07);}',
       '.gt-group-head:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(128,128,128,.35);}',
@@ -2439,22 +2451,35 @@ window.__ModuleLoader__.load({
       '.gt-compact .gt-title{font-size:15px;}',
       '.gt-compact .gt-tab{padding:5px 10px;font-size:12px;}',
       '.gt-compact .gt-row{padding:4px 7px;}',
-      '.gt-compact .gt-name{font-size:12px;}',
-      '.gt-compact .gt-value{font-size:18px;margin-top:3px;}',
+      '.gt-compact .gt-name{font-size:calc(var(--gt-fs-3) - 1px);}',
+      '.gt-compact .gt-value{font-size:calc(var(--gt-fs-4) * .9);margin-top:3px;}',
       '.gt-compact .gt-card{padding:8px 10px;}',
       '.gt-compact .gt-panel-card{padding:8px 10px;}',
       '.gt-compact .gt-list-row{padding:4px 7px;font-size:12px;}',
       '.gt-compact .gt-section-title{font-size:12px;}',
-      '.gt-compact .gt-hints{font-size:10.5px;gap:7px;}',
+      '.gt-compact .gt-hints{font-size:var(--gt-fs-2);gap:8px;}',
       // Responsive by container width, not by window width: the panel is a
       // sidebar and the browser can be 1400 px wide while the panel is 380 px.
       // Page measures .gt-shell with a ResizeObserver and writes data-w, and
       // these rules hide hints in the agreed order — grey labels first, then
       // rank 3 (已玩), then 2 (平均每天), then 1 (对比平均).
+      // Responsive by container width, not by window width: the panel is a
+      // sidebar and the browser can be 1400 px wide while the panel is 380 px.
+      // Page measures .gt-shell with a ResizeObserver and writes data-w.
+      // Order: grey labels first, then 已玩, then 平均每天, then 对比平均; the
+      // name block shrinks in the same steps and the hint grid drops tracks so
+      // every remaining value keeps the same column across rows.
       '.gt-shell[data-w="md"] .gt-hint-k{display:none;}',
+      '.gt-shell[data-w="md"] .gt-row-main .gt-name-wrap{flex-basis:150px;}',
       '.gt-shell[data-w="sm"] .gt-hint-k,.gt-shell[data-w="sm"] .gt-hint[data-rank="3"]{display:none;}',
+      '.gt-shell[data-w="sm"] .gt-hints{grid-template-columns:repeat(2,minmax(0,1fr));}',
+      '.gt-shell[data-w="sm"] .gt-row-main .gt-name-wrap{flex-basis:140px;}',
       '.gt-shell[data-w="xs"] .gt-hint-k,.gt-shell[data-w="xs"] .gt-hint[data-rank="3"],.gt-shell[data-w="xs"] .gt-hint[data-rank="2"]{display:none;}',
+      '.gt-shell[data-w="xs"] .gt-hints{grid-template-columns:repeat(1,minmax(0,1fr));}',
+      '.gt-shell[data-w="xs"] .gt-row-main .gt-name-wrap{flex-basis:120px;}',
       '.gt-shell[data-w="xxs"] .gt-hints{display:none;}',
+      // Once the hints are gone the name gets the whole width back.
+      '.gt-shell[data-w="xxs"] .gt-row-main .gt-name-wrap{flex:1 1 auto;}',
       // Same order on the stat cards: the ring goes first, then the small line.
       '.gt-shell[data-w="sm"] .gt-ring,.gt-shell[data-w="xs"] .gt-ring,.gt-shell[data-w="xxs"] .gt-ring{display:none;}',
       '.gt-shell[data-w="xs"] .gt-stat-sub,.gt-shell[data-w="xxs"] .gt-stat-sub{display:none;}',
@@ -3550,18 +3575,16 @@ window.__ModuleLoader__.load({
     /**
      * Ring gauge with the percentage in the middle.
      *
-     * - under 100 %: no background, a green arc grows from 12 o'clock.
-     * - 100–200 %: the ring is green (a finished lap) and a red arc grows on it.
-     * - 200 % and up: the whole ring is red, no arc — the middle number carries
-     *   the rest.
+     * - under 100 %: a grey track with a green arc growing from 12 o'clock.
+     * - 100–199 %: the track turns green and the overflow is drawn as a red arc.
+     * - 200 % and up: the overflow fills the ring, so it is simply all red.
      *
-     * The middle always prints the percentage ("85 %", "154 %"), turns red past
-     * 100 %, and caps the text at 999 %+ so a runaway ratio cannot break the
-     * layout.
+     * The middle prints the percentage ("85 %", "154 %"), turns red past 100 %,
+     * and caps the text at 999 %+ so a runaway ratio cannot break the layout.
      *
-     * Drawn as a single stroke: no track, no outline, no rounded caps, integer
-     * stroke width (40 px box, 6 px stroke) and one pixel of margin, so the edge
-     * lands on whole pixels instead of looking jagged.
+     * Drawn as a single stroke: no outline, no rounded caps, integer stroke
+     * width (40 px box, 6 px stroke) and one pixel of margin, so the edge lands
+     * on whole pixels instead of looking jagged.
      */
     function Ring({ ratio, tip, size }) {
       const box = Number(size) || 40
@@ -3574,26 +3597,25 @@ window.__ModuleLoader__.load({
       const center = box / 2
       const percent = Math.round(value * 100)
       const allRed = value >= 2
-      const background = allRed ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : null
-      // The arc is the part of the lap in flight: green below one lap, red on
-      // top of the green lap, and nothing once the ring is entirely red.
+      // Track colour = what the ring is "filled with" so far: grey until the
+      // average is reached, green once it is, red once the overflow filled it.
+      const track = allRed ? 'gt-ring-red' : value >= 1 ? 'gt-ring-green' : 'gt-ring-gray'
+      // The arc is the part in flight: green under one lap, red on top of the
+      // green lap, and nothing once the ring is entirely red.
       const arcColor = value >= 1 ? 'gt-ring-red' : 'gt-ring-green'
       const arcFraction = allRed ? 0 : value >= 1 ? value - 1 : value
       const label = percent > 999 ? '999%+' : String(percent) + '%'
-      const parts = []
-      if (background) {
-        parts.push(
-          h('circle', {
-            key: 'lap',
-            className: background,
-            cx: center,
-            cy: center,
-            r: radius,
-            fill: 'none',
-            strokeWidth: stroke,
-          })
-        )
-      }
+      const parts = [
+        h('circle', {
+          key: 'track',
+          className: track,
+          cx: center,
+          cy: center,
+          r: radius,
+          fill: 'none',
+          strokeWidth: stroke,
+        }),
+      ]
       if (arcFraction > 0) {
         parts.push(
           h('circle', {
@@ -3644,19 +3666,15 @@ window.__ModuleLoader__.load({
     }
 
     function Stat({ label, value, seconds, unit, t, sub, ring, onClick, hint }) {
-      const body = [
-        h('div', { className: 'gt-label' }, label, hint ? h('span', { className: 'gt-card-caret' }, '▾') : null),
+      // The comparison line sits next to the time ("3时2分 /1.5时 平均每日"), not
+      // under it: it belongs to the number and the card stays two lines tall.
+      const line = [
         h(
           'div',
-          { className: 'gt-stat-main' },
-          h(
-            'div',
-            { className: 'gt-value' },
-            seconds === undefined
-              ? h('span', null, value, unit ? h('span', { className: 'gt-unit' }, unit) : null)
-              : h(Duration, { seconds: seconds, t: t })
-          ),
-          ring ? h(Ring, ring) : null
+          { className: 'gt-value' },
+          seconds === undefined
+            ? h('span', null, value, unit ? h('span', { className: 'gt-unit' }, unit) : null)
+            : h(Duration, { seconds: seconds, t: t })
         ),
         sub
           ? h(
@@ -3666,6 +3684,10 @@ window.__ModuleLoader__.load({
               h('span', { className: 'gt-stat-sub-k' }, sub.label)
             )
           : null,
+      ]
+      const body = [
+        h('div', { className: 'gt-label' }, label, hint ? h('span', { className: 'gt-card-caret' }, '▾') : null),
+        h('div', { className: 'gt-stat-main' }, h('div', { className: 'gt-stat-line' }, line), ring ? h(Ring, ring) : null),
       ]
       return onClick
         ? h(
@@ -8029,6 +8051,7 @@ window.__ModuleLoader__.load({
         GameSettings: GameSettings,
         Chart: Chart,
         Page: Page,
+        STYLE: STYLE,
       })
     }
 

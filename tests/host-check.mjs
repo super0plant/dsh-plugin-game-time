@@ -477,8 +477,10 @@ console.log("  tick: opens and closes a session without errors")
 
 // --- history is kept; /state ships a window and the all-time totals ------
 
-const oldStart = Date.now() - 400 * 86400000
-const recentStart = Date.now() - 2 * 3600000
+const midday = new Date()
+midday.setHours(12, 0, 0, 0)
+const oldStart = midday.getTime() - 400 * 86400000
+const recentStart = midday.getTime() - 2 * 3600000
 testApi.getSessions().push(
   { id: "old-1", gameId: "zzz", platformId: "steam", source: null, start: oldStart, end: oldStart + 3600000 },
   { id: "recent-1", gameId: "zzz", platformId: "steam", source: null, start: recentStart, end: recentStart + 1800000 }
@@ -505,15 +507,31 @@ assert.equal(Math.round(windowed.totals.game.zzz), Math.round(expectedGame), "pe
 
 // Played days are all-time too, and they count calendar days — two sessions on
 // one day are one day. The client cannot compute this from its 1-year window.
-const zzzDays = new Set(
-  testApi
-    .getSessions()
-    .filter((session) => session.gameId === "zzz")
-    .map((session) => {
-      const start = new Date(session.start)
-      return start.getFullYear() + "-" + start.getMonth() + "-" + start.getDate()
-    })
-)
+// The fixture uses local mid-day starts so the expectation does not depend on
+// what time of day the suite runs; a session that crosses midnight is counted
+// on both days, exactly like the host does.
+function localDayKeysOf(startMs, endMs) {
+  const keys = []
+  let cursor = startMs
+  for (let guard = 0; guard < 400 && cursor < endMs; guard += 1) {
+    const day = new Date(cursor)
+    keys.push(day.getFullYear() + "-" + day.getMonth() + "-" + day.getDate())
+    day.setHours(24, 0, 0, 0)
+    const next = Math.min(day.getTime(), endMs)
+    if (next <= cursor) break
+    cursor = next
+  }
+  if (keys.length === 0) {
+    const day = new Date(startMs)
+    keys.push(day.getFullYear() + "-" + day.getMonth() + "-" + day.getDate())
+  }
+  return keys
+}
+const zzzDays = new Set()
+for (const session of testApi.getSessions()) {
+  if (session.gameId !== "zzz") continue
+  for (const key of localDayKeysOf(session.start, session.end)) zzzDays.add(key)
+}
 assert.equal(windowed.playedDays.zzz, zzzDays.size, "playedDays counts distinct local days")
 assert.ok(windowed.playedDaysTotal >= windowed.playedDays.zzz, "the union never trails one game")
 assert.ok(windowed.playedDaysTotal >= 2, "the 400-day-old session and today are two days")

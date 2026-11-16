@@ -896,10 +896,10 @@ function ringCircles(ringNode) {
 }
 
 const halfRing = testApi.Ring({ ratio: 0.5, tip: 'half' })
-if (circleClass(halfRing).join(',') !== 'gt-ring-green') {
-  throw new Error('a half-full ring is a bare green arc (no background under one lap), got ' + circleClass(halfRing))
+if (circleClass(halfRing).join(',') !== 'gt-ring-gray,gt-ring-green') {
+  throw new Error('under one lap the ring is a grey track plus a green arc, got ' + circleClass(halfRing))
 }
-const greenArc = ringCircles(halfRing)[0]
+const greenArc = ringCircles(halfRing)[1]
 if (!/^[\d.]+ [\d.]+$/.test(greenArc.props.strokeDasharray)) {
   throw new Error('the green arc must use a dash array, got ' + greenArc.props.strokeDasharray)
 }
@@ -955,14 +955,39 @@ const runaway = testApi.Ring({ ratio: 12.34, tip: 'runaway' })
 if (ringLabel(runaway).children.join('') !== '999%+') throw new Error('past 999 % the label caps at 999%+')
 
 const emptyRing = testApi.Ring({ ratio: 0, tip: 'empty' })
-if (circleClass(emptyRing).join(',') !== '') {
-  throw new Error('a zero ratio draws nothing (transparent background), got ' + circleClass(emptyRing))
+if (circleClass(emptyRing).join(',') !== 'gt-ring-gray') {
+  throw new Error('a zero ratio is a bare grey track, got ' + circleClass(emptyRing))
 }
 if (ringLabel(emptyRing).children.join('') !== '0%') throw new Error('a zero ratio still reads 0%')
 
 const cardTree = render(testApi.TodayView, { t, onOpenGame() {} }, 'TodayView(stats)')
 const cards = ringsOf(cardTree)
 if (cards.length !== 3) throw new Error('three stat cards, three rings, got ' + cards.length)
+
+// The comparison line shares the line with the time, not a third row.
+const statLines = []
+;(function collectLines(node) {
+  if (node === null || node === undefined || node === false) return
+  if (Array.isArray(node)) {
+    node.forEach(collectLines)
+    return
+  }
+  if (typeof node !== 'object') return
+  if (node.props && node.props.className === 'gt-stat-line') statLines.push(node)
+  collectLines(node.children)
+})(cardTree)
+if (statLines.length !== 3) throw new Error('each stat card puts time + comparison on one line, got ' + statLines.length)
+const lineHasSub = statLines.every(function (line) {
+  let found = false
+  ;(function walk(node) {
+    if (!node || typeof node !== 'object') return
+    if (Array.isArray(node)) return node.forEach(walk)
+    if (node.props && node.props.className === 'gt-stat-sub') found = true
+    walk(node.children)
+  })(line)
+  return found
+})
+if (!lineHasSub) throw new Error('the /avg + 平均每日 text must sit on the same line as the time')
 
 const statSubs = []
 ;(function collectSubs(node) {
@@ -1015,13 +1040,13 @@ testApi.setStatsPeriod('week')
 console.log('  stat cards: today / week-month / total with comparison rings')
 const tiers = [
   [0, 'lg'],
-  [699, 'md'],
-  [600, 'md'],
-  [599, 'sm'],
-  [500, 'sm'],
-  [499, 'xs'],
-  [400, 'xs'],
-  [399, 'xxs'],
+  [819, 'md'],
+  [700, 'md'],
+  [699, 'sm'],
+  [620, 'sm'],
+  [619, 'xs'],
+  [540, 'xs'],
+  [539, 'xxs'],
 ]
 for (const [width, expected] of tiers) {
   const actual = testApi.widthTier(width)
