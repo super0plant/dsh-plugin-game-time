@@ -4094,7 +4094,7 @@ window.__ModuleLoader__.load({
       const compareText =
         percent === null || Math.abs(percent) < 0.5
           ? t('noData')
-          : (percent > 0 ? '▲' : '▼') + String(Math.min(199, Math.round(Math.abs(percent)))) + '%'
+          : percentDeltaText(percent, true)
       // Display order is avg/day → total days → comparison, but the ranks are
       // by importance: the comparison is the last one to disappear when the
       // panel narrows (rank 3 goes first, then 2, then 1).
@@ -4121,12 +4121,24 @@ window.__ModuleLoader__.load({
     // survive leaving the panel and coming back.
     let STATS_PERIOD = 'week'
 
-    /** "+54%" / "-12%" for the ring tooltips; empty when there is no baseline. */
+    /**
+     * A relative change: "▲62%" (arrow, for the list) or "+62%" (signed, for
+     * tooltips). Real magnitudes only — a +800 % day must read 800 %, not a
+     * 199 % display cap. Past a thousand it collapses to ">999 %" / "<-999 %"
+     * so the chip cannot grow without bound.
+     */
+    function percentDeltaText(percent, arrow) {
+      const value = Math.round(Math.abs(Number(percent) || 0))
+      if (value > 999) return percent >= 0 ? '>999%' : '<-999%'
+      const sign = arrow ? (percent > 0 ? '▲' : '▼') : percent > 0 ? '+' : '-'
+      return sign + String(value) + '%'
+    }
+
+    /** " · +54%" for the ring tooltips; empty when there is no baseline. */
     function percentText(current, base) {
       const percent = comparePercent(current, base)
       if (percent === null) return ''
-      const value = Math.min(199, Math.round(Math.abs(percent)))
-      return ' · ' + (percent > 0 ? '+' : '-') + String(value) + '%'
+      return ' · ' + percentDeltaText(percent, false)
     }
 
     /**
@@ -8022,6 +8034,7 @@ window.__ModuleLoader__.load({
         comparePercent: comparePercent,
         activeMean: activeMean,
         widthTier: widthTier,
+        percentDeltaText: percentDeltaText,
         playedDaysFor: playedDaysFor,
         playedDaysTotal: playedDaysTotal,
         recordDays: recordDays,

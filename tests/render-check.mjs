@@ -805,6 +805,17 @@ if (['over', 'under', 'flat'].indexOf(toneOne.props['data-tone']) < 0) {
 if (toneOne.children.join('') !== '▲50%') {
   throw new Error('5 400 s against a 3 600 s/day baseline is +50%, got ' + toneOne.children.join(''))
 }
+
+// Real magnitudes only — the old +199 % cap hid anything above it.
+if (testApi.percentDeltaText(62, true) !== '▲62%') throw new Error('a small delta keeps its arrow and value')
+if (testApi.percentDeltaText(62, false) !== '+62%') throw new Error('tooltips use a signed delta')
+if (testApi.percentDeltaText(-800, false) !== '-800%') throw new Error('a real -800 % must read -800 %')
+if (testApi.percentDeltaText(1234, false) !== '>999%') throw new Error('past 999 % the delta collapses to >999%')
+if (testApi.percentDeltaText(-1234, true) !== '<-999%') throw new Error('past -999 % it collapses to <-999%')
+const huge = hintsOf(testApi.HintStrip({ t, game: testApi.GAMES[0], today: 3600, total: 60, days: 1, lastPlayed: testApi.NOW.getTime() }))
+if (huge[2].children[1].children.join('') !== '>999%') {
+  throw new Error('a 60x day must read >999%, got ' + huge[2].children[1].children.join(''))
+}
 const avgHint = hintNodes[0].children[1].children.join('')
 if (avgHint !== '1hour') throw new Error('平均/天 must show the per-day value, got ' + avgHint)
 if (hintNodes[1].children[1].children.join('') !== '2day') {
