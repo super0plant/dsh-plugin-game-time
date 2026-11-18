@@ -49,7 +49,10 @@
     "locale/*.json",
     "icon.svg",
     "icon.ico",
+    "screenshots.json",
+    "docs/screenshots",
     "README.md",
+    "README.en.md",
     "LICENSE",
     "CHANGELOG.md"
   ],

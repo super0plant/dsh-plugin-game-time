@@ -47,6 +47,7 @@
 ### 最近改动（按时间倒序，新条目加在最上面）
 
 - **2026-11-19 · 0.16.1 文案与打包清理（无逻辑改动）**：`package.json` 的 `description` 去掉「or a standalone web app」（0.14.0 已删独立版，但 npm 元数据和市场卡片一直挂着这句）；README 设置表删掉两条已下线的行（「仅前台计时」0.4.0 删、「开机自启」界面整块注释），补上「语言」「列表提示」，自启小节缩成一句话；README.en.md 安装段补 npm / zip 两条正规路径，并新增 Settings 表；`scripts/build.mjs` 删掉 0.14.0 遗留的 `writeWebManifest`（死代码，`bundles` 里早就没有网页包）。版本号两处 → 0.16.1。验证：四套测试全绿 + `node scripts/build.mjs` 出包。
+- **2026-11-19 · 截图进包 + `screenshots.json`**：`package.json` 的 `files` 加 `docs/screenshots` / `screenshots.json` / `README.en.md`（README 里的图原来在 npm 包内不存在，npm 页面和市场详情页都是裂图）；仓库根新增 `screenshots.json` 指向 4 张截图——awesome-dsh-plugin 的[贡献指南](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/contributing.md)要求「截图声明放在自己仓库的 package.json 旁边」，市场详情页才会按 App Store 式展示。`build.mjs` 的 `SHARED` 同步。
 
 - **2026-11-16 · 0.16.0 平均口径统一 + 列表提示 + 对比圆轮 + 详情页天数（a/b/c/d/e 五件事）**：按用户要求做成**五个可分别 revert 的提交**（`cc7cf3c` 共用函数 → `a13c4b7` 宿主天数 → `2f96d52` 图表平均 → `a9da03a` 详情页 → `c30e230` 行提示 → `686adf8` 提示时间窗设置 → `f528ea1` 圆轮）。
 

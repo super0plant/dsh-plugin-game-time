@@ -19,7 +19,7 @@ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 const version = pkg.version
 
 /* Everything that both bundles need. */
-const SHARED = ['client.js', 'src', 'README.md', 'LICENSE', 'CHANGELOG.md']
+const SHARED = ['client.js', 'src', 'README.md', 'README.en.md', 'screenshots.json', 'docs/screenshots', 'LICENSE', 'CHANGELOG.md']
 /* DSH-only shell: manifest, host entry, dictionaries, plugin icon, tests, handoff. */
 const DSH = ['index.js', 'package.json', 'cordis.patch.yml', 'locale', 'icon.svg', 'tests', 'HANDOFF.md']
 const bundles = [
