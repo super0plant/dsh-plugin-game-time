@@ -8,7 +8,7 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.16.0。**GitHub 已发布 v0.16.0**（Release + 资产 `dsh-plugin-game-time.zip`，199,755 B，与本地 `dist/` 的构建 sha256 一致；下载链接 `releases/latest/download/dsh-plugin-game-time.zip` 1 次）。**npm 仍未发布**：账号被 npm 临时冻结（`npm publish` → 403 `temporarily suspended due to a recent security-sensitive action`，`npm whoami` 正常返回 `super0plant`，包名仍是 404）。等邮件/2FA 处理完、冻结解除后再 `npm publish`，别反复重试。
+- **版本**：0.16.1（2026-11-19，**只改文案与打包清理，无逻辑改动**，未发布）。**npm 已发布 0.16.0**（2026-11-19 06:30，20 个文件 / 204.8 kB，shasum `07f4a987…`；本机 `npm pack` + `npm install --prefix` 实测都能装）。**0.16.1 待发**：`~/.npmrc` 的 token 现在 401（`npm whoami` → E401），要重新 `npm login` 或换 Automation token。**GitHub 最新 Release 仍是 v0.16.0**（0.16.1 还没打 tag）。
 - **形态**：只有 DSH 插件。独立网页版/桌面外壳已在 0.14.0 移除（`standalone/`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都删了）。
 - **测试**：**四套**（render / host / exit / restore），`npm test` 一条命令；**一定看退出码**。
 - **今日页**：三张对比卡（本日 / 本周·本月 / 总计，带圆轮）→ 今天玩过（行中间有三段灰字提示）→ 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
@@ -35,7 +35,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.11.6；今日页趋势模块、滚动窗口、背景纯色底、选择框修复均已上线；**网页版/桌面外壳已删除**。已发布 v0.11.6（GitHub Release）。**未完成**：npm 发布、awesome 投稿、自动发现（§11）、双采集器硬互斥、按游戏的后台暂停（替代 §10 #5）、CI、英文 README。
+**当前状态**：源码 0.16.1（文案版）；今日页趋势模块、滚动窗口、双轨圆轮、行内提示均已上线；**网页版/桌面外壳已删除**。已发布 v0.16.0（GitHub Release + npm）。**未完成**：0.16.1 发布、awesome 投稿、自动发现（§11）、按游戏的后台暂停（替代 §10 #5）、CI。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -45,6 +45,8 @@
 - 约定：功能/修复 + 测试通过 + 文档同步后自动 commit；**push、改历史、删分支/标签必须先问用户**；只跟踪源码，**不跟踪** `%USERPROFILE%\.dsh` 里的游玩数据。
 
 ### 最近改动（按时间倒序，新条目加在最上面）
+
+- **2026-11-19 · 0.16.1 文案与打包清理（无逻辑改动）**：`package.json` 的 `description` 去掉「or a standalone web app」（0.14.0 已删独立版，但 npm 元数据和市场卡片一直挂着这句）；README 设置表删掉两条已下线的行（「仅前台计时」0.4.0 删、「开机自启」界面整块注释），补上「语言」「列表提示」，自启小节缩成一句话；README.en.md 安装段补 npm / zip 两条正规路径，并新增 Settings 表；`scripts/build.mjs` 删掉 0.14.0 遗留的 `writeWebManifest`（死代码，`bundles` 里早就没有网页包）。版本号两处 → 0.16.1。验证：四套测试全绿 + `node scripts/build.mjs` 出包。
 
 - **2026-11-16 · 0.16.0 平均口径统一 + 列表提示 + 对比圆轮 + 详情页天数（a/b/c/d/e 五件事）**：按用户要求做成**五个可分别 revert 的提交**（`cc7cf3c` 共用函数 → `a13c4b7` 宿主天数 → `2f96d52` 图表平均 → `a9da03a` 详情页 → `c30e230` 行提示 → `686adf8` 提示时间窗设置 → `f528ea1` 圆轮）。
 

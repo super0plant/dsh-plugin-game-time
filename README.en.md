@@ -19,9 +19,19 @@ A DSH sidebar panel that tracks how long you actually play: it watches game proc
 
 ## Install
 
-1. Drop the plugin folder into your DSH plugins directory, or install the package from a release zip.
-2. Restart DSH and enable **Game Time** in the plugin list.
-3. Open the panel from the sidebar.
+**From npm (recommended)**
+
+- Desktop: DSH → Settings → Plugins → search `dsh-plugin-game-time` → install → restart DSH.
+- CLI: `dsh plugin --profile <profile> add dsh-plugin-game-time` (the desktop profile is usually `desktop`).
+
+**From the release zip (no npm)**
+
+1. Download [dsh-plugin-game-time.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/dsh-plugin-game-time.zip) and unpack it anywhere, e.g. `D:\Tools\dsh-plugin-game-time`.
+2. DSH → Settings → Plugins → Add plugin → paste the unpacked folder path.
+3. Restart DSH (the host code is loaded once at startup).
+4. The **Game Time** icon shows up in the sidebar.
+
+> Keep the folder where it is: the DSH profile stores a link to that path.
 
 ## First run
 
@@ -36,6 +46,18 @@ You do not need to scan your library. Dragging a shortcut or pasting a path is e
 - A trend module: a 24-hour chart on the left, a 7-day chart on the right that becomes 30 days on the wheel.
 - Hover a column for its value; click for the breakdown; click outside to close.
 - Each chart remembers its own bar/line choice and the 7/30-day window.
+
+## Settings
+
+| Setting | What it does |
+|---|---|
+| Polling interval | How often running processes are checked (10 s by default). |
+| History window | How much history is loaded at start (1 month to 5 years); older sessions load on demand and totals stay all-time. |
+| Density | Comfortable or compact. |
+| Language | Follow system, Chinese or English. |
+| Row hints | The `avg/day`, `days played` and `vs average` chip is only shown for games played within N days (7 by default). |
+| Backgrounds | Panel and header images, cropped per image. |
+| Auto-archive | Fold games that have not been played for N days; playing once brings them back. |
 
 ## Screenshots
 

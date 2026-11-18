@@ -1,7 +1,31 @@
-# 0.16.0 发布文案（GitHub Release 用）
+# 发布文案（GitHub Release 用）
 
 > 用途：发版时整段贴进 GitHub Release。`CHANGELOG.md` 里仍按版本分条保留完整中文记录。
 > 资产只挂一个：`dsh-plugin-game-time.zip`（名字不带版本号，`latest/download/` 永久有效）。
+
+---
+
+## Game Time 0.16.1
+
+### English
+
+Docs and packaging only — no behaviour changes. Restart is **not** needed.
+
+- The npm description no longer mentions a standalone web app (removed back in 0.14.0).
+- The README drops two settings that are not in the UI any more (foreground-only timing, autostart) and documents the two that are there (language, row hints).
+- The English README now has npm and zip install steps plus a settings table.
+
+**Known limits**: Windows only; no game auto-discovery; no "foreground only" timing; data stays local in `%USERPROFILE%\.dsh\storages\game-time\`.
+
+### 中文（简版）
+
+只改文档和打包，没有功能改动，**不用重启 DSH**。
+
+- npm 包描述不再写「独立网页版」（0.14.0 已删除）。
+- README 去掉两个界面上已经不在的设置项（仅前台计时、开机自启），补上语言和列表提示。
+- 英文 README 补了安装步骤和设置表。
+
+**已知限制**：仅 Windows；没有自动发现游戏；没有"仅前台计时"；数据只在本机。
 
 ---
 

@@ -28,7 +28,7 @@
 
 - 插件包：[dsh-plugin-game-time.zip](https://github.com/super0plant/dsh-plugin-game-time/releases/latest/download/dsh-plugin-game-time.zip) → 解压，然后按下面「从目录安装」添加。
 
-这两个链接永远指向**最新版**（文件名不带版本号，所以不会随发版失效）。
+这个链接永远指向**最新版**（文件名不带版本号，所以不会随发版失效）。
 
 **从 npm 安装（推荐）**
 
@@ -62,18 +62,15 @@
 |---|---|
 | 监控间隔 | 轮询进程的间隔，默认 10 秒；越短起止越准，开销略高。 |
 | 历史加载窗口 | 启动时只加载最近这段记录，默认 1 年（可选 1 个月到 5 年）；往回翻时按需加载更早的，总计不受影响。 |
-| 仅在游戏窗口位于前台时计时 | **当前版本尚未实现**，开关不会影响计时。 |
-| 开机自启 | 仅独立界面可操作。DSH 内为灰色：插件由 DSH 启动，这里写系统自启只会变成「让 DSH 随登录启动」，不属于本插件。详见下方说明。 |
 | 界面密度 | 舒适 / 紧凑。 |
+| 语言 | 跟随系统 / 中文 / English；默认跟随系统（由 DSH 决定）。 |
+| 列表提示 | 每行的「平均/天 · 总天数 · 比平均」只给最近 N 天内玩过的游戏显示，默认 7 天（可选 1/3/7/14/30/90/365 天）。 |
 | 背景、标题背景 | 全局外观，支持裁剪与区块透明度。 |
 | 自动归档 | 超过 N 天（或 N 个月）没玩的游戏自动折叠；玩一次自动恢复。 |
 
 ### 关于开机自启
 
-- **默认不写登录项**：只有你在独立版里打开这个开关时才会写入（注册表是唯一真源，界面显示的就是注册表的实际状态）。
-- **DSH 里不可选**：DSH 自己会启动本插件，再写一条登录项没有意义，还会和你的 DSH 启动方式冲突。
-- **不开自启的后果**：只有手动打开程序后才开始计时，从开机到你打开之间的游玩不会计入。
-- **关闭的影响**：只移除本程序自己的登录启动项（`HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 下的 `GameTime`），不影响其他软件，之后随时可以再打开。
+当前版本**不提供**开机自启：插件由 DSH 启动，单独写一条系统登录项只会变成「让 DSH 随登录启动」，和你的启动方式冲突。想让它跟着系统起来，把 DSH 自己设成开机启动即可。
 
 ## 数据与隐私
 
@@ -130,7 +127,7 @@ node tests/render-check.mjs    # 假 React 渲染全部视图（约 60 条路径
 node tests/host-check.mjs      # 路由、迁移、归属、配置读写、一次完整 tick
 node tests/exit-check.mjs      # 关一局的防抖落盘 + process.exit 时同步落盘
 node tests/restore-check.mjs   # 崩溃重启：gone / running / dupe
-node scripts/build.mjs         # 打包：dist/dsh-plugin-game-time-*.zip（网页包仍在，只是不宣传）
+node scripts/build.mjs         # 打包：dist/dsh-plugin-game-time-<版本>.zip（只有插件包）
 ```
 
 改 `index.js` / `src/host/*` 需要**重启 DSH**；改 `client.js` 只需刷新页面。

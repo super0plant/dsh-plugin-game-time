@@ -8,7 +8,7 @@
  *
  * Usage: node scripts/build.mjs [--keep-staging]
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -40,21 +40,6 @@ function copyInto(staging, bundle) {
     })
   }
   return target
-}
-
-/** The web bundle must not advertise itself as a DSH plugin. */
-function writeWebManifest(target) {
-  const manifest = {
-    name: 'game-time-web',
-    version: version,
-    private: true,
-    type: 'module',
-    description: 'Local play-time tracking — standalone web build (no DSH).',
-    author: pkg.author,
-    license: pkg.license,
-    scripts: { start: 'node standalone/server.mjs' },
-  }
-  writeFileSync(join(target, 'package.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8')
 }
 
 function zipBundle(staging, bundle) {
