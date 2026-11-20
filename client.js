@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
      * Dictionaries
      * ------------------------------------------------------------------ */
 
-    const VERSION = '0.16.1'
+    const VERSION = '0.16.2'
 
     const zh = {
       'panel': '游戏时长',

@@ -81,11 +81,13 @@
 
 ## 截图
 
-| 今日 | 全部 |
+| 今日 | 游戏详情 |
 |---|---|
-| ![今日页](docs/screenshots/today-zh.jpg) | ![全部分析](docs/screenshots/all-zh.jpg) |
-| **设置** | **游戏详情** |
-| ![设置](docs/screenshots/settings-zh.jpg) | ![游戏详情](docs/screenshots/detail-zh.jpg) |
+| ![今日页](docs/screenshots/today-zh.webp) | ![游戏详情](docs/screenshots/detail-zh.webp) |
+| **全部游戏** | **全部分析** |
+| ![全部游戏](docs/screenshots/all-zh.webp) | ![全部分析](docs/screenshots/stats-zh.webp) |
+| **设置** | **英文界面** |
+| ![设置](docs/screenshots/settings-zh.webp) | ![英文界面](docs/screenshots/stats-en.webp) |
 
 ## 常见问题
 

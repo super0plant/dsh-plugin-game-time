@@ -8,7 +8,7 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.16.1（2026-11-19，**只改文案、搜索关键词与打包清理，无逻辑改动**，未发布）。**npm 已发布 0.16.0**（2026-11-19 06:30，20 个文件 / 204.8 kB，shasum `07f4a987…`；本机 `npm pack` + `npm install --prefix` 实测都能装）。**0.16.1 待发**：`~/.npmrc` 的 token 现在 401（`npm whoami` → E401），要重新 `npm login` 或换 Automation token。**GitHub 最新 Release 仍是 v0.16.0**（0.16.1 还没打 tag）。0.16.1 还补了搜索词：npm `description`/`keywords`、两份 README、投稿条目中文描述都覆盖「游戏时长 / 游玩时长 / 游戏统计 / 时长统计 / 游戏计时」与 `game stats` / `playtime stats` / `game timer`。
+- **版本**：0.16.2（2026-11-20，**换 6 张 1462×1027 的 WebP 截图，无逻辑改动**，未发布）。**npm 已发布 0.16.1**（2026-11-20 13:50，26 个文件 / 478.7 kB；`gitHead` = `22e586b`）。发 0.16.1 时踩到 `EOTP`：账号开了 2FA，`npm publish` 每次都要现取的 6 位验证码，与登录无关（`npm whoami` 一直有效）。**GitHub 最新 Release 仍是 v0.16.0**（v0.16.1 只有 tag，没建 Release，zip 链接还指向 0.16.0）。**awesome 投稿 PR #17155 已开**（2026-11-20，等合并）。0.16.1 补过搜索词：npm `description`/`keywords`、两份 README、投稿条目中文描述都覆盖「游戏时长 / 游玩时长 / 游戏统计 / 时长统计 / 游戏计时」与 `game stats` / `playtime stats` / `game timer`。
 - **形态**：只有 DSH 插件。独立网页版/桌面外壳已在 0.14.0 移除（`standalone/`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都删了）。
 - **测试**：**四套**（render / host / exit / restore），`npm test` 一条命令；**一定看退出码**。
 - **今日页**：三张对比卡（本日 / 本周·本月 / 总计，带圆轮）→ 今天玩过（行中间有三段灰字提示）→ 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。

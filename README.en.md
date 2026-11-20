@@ -61,11 +61,13 @@ You do not need to scan your library. Dragging a shortcut or pasting a path is e
 
 ## Screenshots
 
-| Today (English UI) | Settings |
+| Today | Game detail |
 |---|---|
-| ![Today](docs/screenshots/today-en.jpg) | ![Settings](docs/screenshots/settings-zh.jpg) |
-| **All games** | **Game detail** |
-| ![All](docs/screenshots/all-zh.jpg) | ![Detail](docs/screenshots/detail-zh.jpg) |
+| ![Today](docs/screenshots/today-zh.webp) | ![Detail](docs/screenshots/detail-zh.webp) |
+| **All games** | **Breakdown** |
+| ![All games](docs/screenshots/all-zh.webp) | ![Breakdown](docs/screenshots/stats-zh.webp) |
+| **Settings** | **English UI** |
+| ![Settings](docs/screenshots/settings-zh.webp) | ![English UI](docs/screenshots/stats-en.webp) |
 
 ## Common questions
 

@@ -5,6 +5,30 @@
 
 ---
 
+## Game Time 0.16.2
+
+### English
+
+Screenshots only — no behaviour changes, no restart needed.
+
+- All five old screenshots replaced with six new 1462×1027 WebP shots: today, game detail, all games, breakdown, settings, and one English UI.
+- The English shot sits last, so the Chinese first screen still leads the carousel.
+- `screenshots.json` and both READMEs point at the new files; the market storefront reads that list for its carousel.
+
+**Known limits**: Windows only; no game auto-discovery; no "foreground only" timing; data stays local in `%USERPROFILE%\.dsh\storages\game-time\`.
+
+### 中文（简版）
+
+只换截图，没有功能改动，**不用重启 DSH**。
+
+- 5 张旧截图换成 6 张 1462×1027 的 WebP：今日 / 游戏详情 / 全部游戏 / 全部分析 / 设置 / 英文界面。
+- 英文界面那张放最后，中文首页仍然是轮播第一张。
+- `screenshots.json` 和两份 README 都指向新文件，市场详情页按这份清单轮播。
+
+**已知限制**：仅 Windows；没有自动发现游戏；没有"仅前台计时"；数据只在本机。
+
+---
+
 ## Game Time 0.16.1
 
 ### English
