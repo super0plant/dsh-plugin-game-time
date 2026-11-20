@@ -8,7 +8,7 @@ url: https://github.com/super0plant/dsh-plugin-game-time
 name: super0plant/dsh-plugin-game-time
 category: fun # 娱乐；不要用 usage（那是「用量与计费」）
 description:
-  en: Per-game playtime tracker for Windows: a game timer that follows each game's running process, charting daily, weekly, monthly and all-time game stats and playtime stats. Data stays on this machine.
-  zh: 在 DSH 侧边栏里做游戏时长统计与游戏计时：按运行进程记录每款游戏的游玩时长，出今日 / 本周 / 本月 / 累计的游戏统计和时长统计图，数据只留在本机。
+  en: "Per-game playtime tracker for Windows: a game timer that follows each game's running process, charting daily, weekly, monthly and all-time game stats and playtime stats. Data stays on this machine."
+  zh: "在 DSH 侧边栏里做游戏时长统计与游戏计时：按运行进程记录每款游戏的游玩时长，出今日 / 本周 / 本月 / 累计的游戏统计和时长统计图，数据只留在本机。"
 # 可选：GitHub 托管的方形位图（png/jpg/webp，约 180px）。SVG 与第三方图床会被拒；不写则回退到你的 GitHub 头像。
 icon: https://raw.githubusercontent.com/super0plant/dsh-plugin-game-time/main/assets/icon-180.png
