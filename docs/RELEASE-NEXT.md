@@ -12,6 +12,7 @@
 Docs and packaging only — no behaviour changes. Restart is **not** needed.
 
 - The npm description no longer mentions a standalone web app (removed back in 0.14.0).
+- Search metadata: the npm description and keywords now carry "game stats" / "playtime stats" and the Chinese terms 游戏时长 / 游玩时长 / 游戏统计 / 时长统计 / 游戏计时, so the plugin can be found by those words.
 - The README drops two settings that are not in the UI any more (foreground-only timing, autostart) and documents the two that are there (language, row hints).
 - The English README now has npm and zip install steps plus a settings table.
 
@@ -22,6 +23,7 @@ Docs and packaging only — no behaviour changes. Restart is **not** needed.
 只改文档和打包，没有功能改动，**不用重启 DSH**。
 
 - npm 包描述不再写「独立网页版」（0.14.0 已删除）。
+- 搜索关键词：npm 描述与关键词补上 game stats / playtime stats 和「游戏时长、游玩时长、游戏统计、时长统计、游戏计时」，市场里能按这些词搜到。
 - README 去掉两个界面上已经不在的设置项（仅前台计时、开机自启），补上语言和列表提示。
 - 英文 README 补了安装步骤和设置表。
 

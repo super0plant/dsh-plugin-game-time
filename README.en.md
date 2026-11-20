@@ -1,6 +1,6 @@
 # Game Time
 
-A DSH sidebar panel that tracks how long you actually play: it watches game processes locally and records every session, so you get today, last 7 days, last 30 days and all-time numbers without any cloud account.
+A DSH sidebar panel that tracks how long you actually play: it watches game processes locally and records every session, so you get today, last 7 days, last 30 days and all-time playtime stats and game stats charts without any cloud account.
 
 > 中文说明见 [README.md](README.md)。
 

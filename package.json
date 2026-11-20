@@ -2,7 +2,7 @@
   "name": "dsh-plugin-game-time",
   "version": "0.16.1",
   "type": "module",
-  "description": "Local per-game play-time tracking for Windows, as a DeepSeek Harness (DSH) plugin.",
+  "description": "Per-game playtime tracker and game timer for DeepSeek Harness (DSH) on Windows: game stats and playtime stats by day, week, month and all time, stored locally.",
   "author": "super0plant <super0plant@users.noreply.github.com>",
   "license": "MIT",
   "repository": {
@@ -21,9 +21,17 @@
     "game-time",
     "playtime",
     "playtime-tracker",
+    "playtime-stats",
+    "game-stats",
+    "game-timer",
     "game-tracker",
     "local-first",
-    "windows"
+    "windows",
+    "游戏时长",
+    "游玩时长",
+    "游戏统计",
+    "时长统计",
+    "游戏计时"
   ],
   "engines": {
     "node": ">=20"
