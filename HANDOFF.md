@@ -8,7 +8,7 @@
 
 ## 0. 现状速览（先读这 12 行）
 
-- **版本**：0.16.3（2026-11-22，**HTTP 面加 DSH 访问检查**，未发布）。**npm 已发布 0.16.2**（2026-11-20 14:33 北京，gitHead `9569fa7`，含 6 张新截图；**没有**访问检查）。**npm 0.16.1** 也发过（2026-11-20 13:50，`gitHead` = `22e586b`）。发 0.16.1 时踩到 `EOTP`：账号开了 2FA，`npm publish` 每次都要现取的 6 位验证码，与登录无关（`npm whoami` 一直有效）。**GitHub tag 有 v0.16.1，没有 v0.16.2；最新 Release 仍是 v0.16.0**（zip 链接还指向 0.16.0）。**awesome 投稿 PR #17155 已合并**（2026-11-21 01:22 北京）：维护者 fkysly 在条目描述里追加了一句「HTTP 路由没有 DSH 访问检查，浏览器里打开的网页可以调用」；0.16.3 补上 `ctx.connection.requestRejection` 并发布之后，要再提 PR 把那句删掉。0.16.1 补过搜索词：npm `description`/`keywords`、两份 README、投稿条目中文描述都覆盖「游戏时长 / 游玩时长 / 游戏统计 / 时长统计 / 游戏计时」与 `game stats` / `playtime stats` / `game timer`。
+- **版本**：0.16.3（2026-11-22，**HTTP 面加 DSH 访问检查**）**已发布**：npm `0.16.3`（`gitHead c5f3d5a`，`git tag v0.16.3`，11-22 01:01 北京）、GitHub Release `v0.16.3`（资产名不带版本号：`dsh-plugin-game-time.zip`，`releases/latest/download` 已指向它）。之前：npm 0.16.2（11-20 14:33，gitHead `9569fa7`，6 张新截图，**没有**访问检查）、npm 0.16.1（11-20 13:50，`gitHead` = `22e586b`）。发 0.16.1 时踩到 `EOTP`：账号开了 2FA，`npm publish` 每次都要现取的 6 位验证码，与登录无关（`npm whoami` 一直有效）。**awesome 投稿 PR #17155 已合并**（2026-11-21 01:22 北京）：维护者 fkysly 在条目描述里追加了一句「HTTP 路由没有 DSH 访问检查，浏览器里打开的网页可以调用」；删这句的 PR **#17626 已开**（只改 `data/plugins/super0plant__dsh-plugin-game-time.yml`，等合并）。0.16.1 补过搜索词：npm `description`/`keywords`、两份 README、投稿条目中文描述都覆盖「游戏时长 / 游玩时长 / 游戏统计 / 时长统计 / 游戏计时」与 `game stats` / `playtime stats` / `game timer`。
 - **形态**：只有 DSH 插件。独立网页版/桌面外壳已在 0.14.0 移除（`standalone/`、`tests/standalone-check.mjs`、`docs/WEB-FROZEN.md` 都删了）。
 - **测试**：**四套**（render / host / exit / restore），`npm test` 一条命令；**一定看退出码**。
 - **今日页**：三张对比卡（本日 / 本周·本月 / 总计，带圆轮）→ 今天玩过（行中间有三段灰字提示）→ 「趋势图」模块（左 24 小时、右 7/30 天，滚轮切换，悬停看数值、点击看明细）。
@@ -35,7 +35,7 @@
 - 多个小游戏可归到同一个统计组（`group`）；卸载的游戏可归档折叠（`archived`）
 - 数据全部落在本地 `%USERPROFILE%\.dsh\storages\game-time\`
 
-**当前状态**：源码 0.16.3（HTTP 面访问检查，未发布）；今日页趋势模块、滚动窗口、双轨圆轮、行内提示均已上线；**网页版/桌面外壳已删除**。npm 已发布 0.16.2（截图版），GitHub Release 仍是 v0.16.0。**未完成**：0.16.3 发布（push 0.16.2、0.16.3 两段提交 + `npm publish`）、补 tag v0.16.2 / v0.16.3 与 Release、awesome 条目删警告句的 PR、自动发现（§11）、按游戏的后台暂停（替代 §10 #5）、CI。
+**当前状态**：源码 0.16.3（HTTP 面访问检查）**已发布**：npm 0.16.3 + tag + Release v0.16.3；今日页趋势模块、滚动窗口、双轨圆轮、行内提示均已上线；**网页版/桌面外壳已删除**。**未完成**：等 awesome 目录 PR [#17626](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/17626) 合并（合并后市场描述里的警告句才消失）、自动发现（§11）、按游戏的后台暂停（替代 §10 #5）、CI。
 **分享版 0.2.0**：两个包——DSH 插件包与独立网页包（`dist/`，`node scripts/build.mjs` 生成）；不预置任何游戏与启动器路径，设置页底部有作者署名（茄子超人），安装说明见 `README.md`。
 
 ### 版本管理（2026-11-10 起）
@@ -46,7 +46,7 @@
 
 ### 最近改动（按时间倒序，新条目加在最上面）
 
-- **2026-11-22 · HTTP 面加 DSH 访问检查（0.16.3，未发布）**：`src/host/main.js` 的 `inject` 加上 `connection`；`handler` 第一步调新加的 `rejected(req, res)`——`ctx.connection.requestRejection(req)` 返回 401/403 就直接写状态码并结束（403 回 `forbidden`、401 回 `unauthorized`），后面的路径解析、方法校验、body 读取一律不执行；`ctx.connection` 缺失（测试壳或非 DSH 组合）按 401 处理，fail closed。`host-check` 加三段断言：403 拒 `/state`、401 拒 `config` POST、401 排在 405 之前。四套测试全绿。起因见 §0 版本行（awesome 条目被维护者追加了一句警告）。
+- **2026-11-22 · HTTP 面加 DSH 访问检查（0.16.3，已发布）**：`src/host/main.js` 的 `inject` 加上 `connection`；`handler` 第一步调新加的 `rejected(req, res)`——`ctx.connection.requestRejection(req)` 返回 401/403 就直接写状态码并结束（403 回 `forbidden`、401 回 `unauthorized`），后面的路径解析、方法校验、body 读取一律不执行；`ctx.connection` 缺失（测试壳或非 DSH 组合）按 401 处理，fail closed。`host-check` 加三段断言：403 拒 `/state`、401 拒 `config` POST、401 排在 405 之前。四套测试全绿；实机重启后无凭据请求 `/api/game-time/state` 从 200（407 KB）变成 **401 unauthorized**。0.16.3 已发 npm + tag + Release，目录删句 PR #17626 已开。起因见 §0 版本行（awesome 条目被维护者追加了一句警告）。
 - **2026-11-19 · 0.16.1 文案与打包清理（无逻辑改动）**：`package.json` 的 `description` 去掉「or a standalone web app」（0.14.0 已删独立版，但 npm 元数据和市场卡片一直挂着这句）；README 设置表删掉两条已下线的行（「仅前台计时」0.4.0 删、「开机自启」界面整块注释），补上「语言」「列表提示」，自启小节缩成一句话；README.en.md 安装段补 npm / zip 两条正规路径，并新增 Settings 表；`scripts/build.mjs` 删掉 0.14.0 遗留的 `writeWebManifest`（死代码，`bundles` 里早就没有网页包）。版本号两处 → 0.16.1。验证：四套测试全绿 + `node scripts/build.mjs` 出包。
 - **2026-11-19 · 截图进包 + `screenshots.json`**：`package.json` 的 `files` 加 `docs/screenshots` / `screenshots.json` / `README.en.md`（README 里的图原来在 npm 包内不存在，npm 页面和市场详情页都是裂图）；仓库根新增 `screenshots.json` 指向 4 张截图——awesome-dsh-plugin 的[贡献指南](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/contributing.md)要求「截图声明放在自己仓库的 package.json 旁边」，市场详情页才会按 App Store 式展示。`build.mjs` 的 `SHARED` 同步。
 
