@@ -24,8 +24,11 @@ import { baseName, dirName, fileExists, readJson, saveAsset, writeJson } from '.
 
 export const name = 'dsh-plugin-game-time'
 
-/** The JSON face needs the Host web server. */
-export const inject = ['webServer']
+/**
+ * The JSON face needs the Host web server and the Connection service, whose
+ * `requestRejection` is the trust fence in front of every route.
+ */
+export const inject = ['webServer', 'connection']
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -463,7 +466,27 @@ export function apply(ctx) {
     res.end(JSON.stringify({ ok: true, games: next.games.length }))
   }
 
+  /**
+   * The trust fence, run before a route reads its path or its body. DSH's
+   * Connection service answers the Host/Origin check (403 for a foreign
+   * authority or a cross-site call) and its browser authentication (401
+   * without the page's login cookie or API credential), so a web page open in
+   * the user's browser cannot drive the collector, the config, or the files.
+   * A context without the service is not a DSH composition: fail closed.
+   */
+  function rejected(req, res) {
+    const connection = ctx.connection
+    const rejection = connection && typeof connection.requestRejection === 'function'
+      ? connection.requestRejection(req)
+      : 401
+    if (rejection === undefined) return false
+    res.writeHead(rejection, { 'content-type': 'text/plain; charset=utf-8' })
+    res.end(rejection === 403 ? 'forbidden' : 'unauthorized')
+    return true
+  }
+
   async function handler(req, res) {
+    if (rejected(req, res)) return
     const url = new URL(req.url || '/', 'http://localhost')
     const path = url.pathname
 

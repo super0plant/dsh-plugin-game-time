@@ -79,6 +79,8 @@ You do not need to scan your library. Dragging a shortcut or pasting a path is e
 
 Local files only: `config.json`, `sessions.json`, `active.json` and `presets.json`. Nothing is uploaded. Back up the folder to keep your history; `backup.cmd` / `restore.cmd` do it in one double-click.
 
+Every HTTP route behind the panel first passes DSH's connection check (the Host/Origin fence plus browser authentication), so a web page open in the same browser cannot call them without that login credential.
+
 ## Limitations
 
 - Windows only.

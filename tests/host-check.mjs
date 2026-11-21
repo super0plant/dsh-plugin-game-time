@@ -12,12 +12,13 @@ globalThis.__GT_HOST_TEST__ = testApi
 const { apply, inject, name } = await import('../index.js')
 
 assert.equal(name, 'dsh-plugin-game-time')
-assert.deepEqual(inject, ['webServer'])
+assert.deepEqual(inject, ['webServer', 'connection'])
 
 // --- mount with a stub context ------------------------------------------
 
 const routes = []
 const effects = []
+let rejectionStatus
 
 const ctx = {
   logger: { info() {}, warn() {} },
@@ -30,6 +31,11 @@ const ctx = {
     register(route) {
       routes.push(route)
       return () => {}
+    },
+  },
+  connection: {
+    requestRejection() {
+      return rejectionStatus
     },
   },
 }
@@ -93,6 +99,22 @@ assert.equal(payload.platforms.mihoyo.path, '', 'no personal launcher path ships
 
 assert.equal((await callHandler('/api/game-time/nope')).status, 404)
 assert.equal((await callHandler('/api/game-time/state', 'POST')).status, 405)
+
+// --- the Connection trust fence, before every route ----------------------
+
+rejectionStatus = 403
+const forbidden = await callHandler('/api/game-time/state')
+assert.equal(forbidden.status, 403, 'a foreign authority or cross-site call is refused')
+assert.equal(forbidden.body, 'forbidden')
+
+rejectionStatus = 401
+const unauthenticated = await callHandler('/api/game-time/config', 'POST', { version: 3 })
+assert.equal(unauthenticated.status, 401, 'no browser credential means no route')
+assert.equal(unauthenticated.body, 'unauthorized')
+assert.equal((await callHandler('/api/game-time/state', 'POST')).status, 401, 'the fence runs before the method check')
+
+rejectionStatus = undefined
+assert.equal((await callHandler('/api/game-time/state')).status, 200, 'an admitted request passes')
 
 const autostartFace = await callHandler('/api/game-time/autostart')
 assert.equal(autostartFace.status, 200)
