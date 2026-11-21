@@ -39,7 +39,7 @@ The icon points at a GitHub-hosted ~180px PNG in the repo (`assets/icon-180.png`
 
 ---
 
-## 后续：删掉条目里的警告句（等 0.16.2 发布后再提）
+## 后续：删掉条目里的警告句（等 0.16.3 发布后再提）
 
 维护者 fkysly 合并 #17155 后，直接在 main 上给条目描述追加了一句（英文在前、中文在后）：
 
@@ -47,7 +47,7 @@ The icon points at a GitHub-hosted ~180px PNG in the repo (`assets/icon-180.png`
 >
 > 它的 HTTP 路由没有 DSH 的访问检查，浏览器里打开的网页可以调用它们。
 
-他留的原话是「Add that check and open a PR to remove the sentence」。0.16.2 补上 `ctx.connection.requestRejection` 并发布之后，提一个**只改这一个文件的 PR**：
+他留的原话是「Add that check and open a PR to remove the sentence」。0.16.3 补上 `ctx.connection.requestRejection` 并发布之后，提一个**只改这一个文件的 PR**：
 
 - 分支：在自己 fork 的 `main` 上直接编辑 `data/plugins/super0plant__dsh-plugin-game-time.yml`（GitHub 网页编辑即可，不用本地 clone）。
 - 改动：把 `description.en` 和 `description.zh` 末尾那两句删掉，恢复成 `data-plugins-super0plant__dsh-plugin-game-time.yml` 里的原文（YAML 里单引号里的 `''` 是一个 `'`，别顺手改掉）。
@@ -55,6 +55,6 @@ The icon points at a GitHub-hosted ~180px PNG in the repo (`assets/icon-180.png`
 - 正文：
 
 ```markdown
-The access check now exists. Since 0.16.2 every `/api/game-time/*` route calls `ctx.connection.requestRejection(req)` before it reads a path or a body and answers 401/403 on a failed Host/Origin or browser-authentication check; it is published on npm as `dsh-plugin-game-time@0.16.2` (commit `<填 0.16.2 的提交短哈希>`). The added sentence no longer describes the code, so this PR removes it from `description.en` and `description.zh` only.
+The access check now exists. Since 0.16.3 every `/api/game-time/*` route calls `ctx.connection.requestRejection(req)` before it reads a path or a body and answers 401/403 on a failed Host/Origin or browser-authentication check; it is published on npm as `dsh-plugin-game-time@0.16.3` (commit `<填 0.16.3 的提交短哈希>`). The added sentence no longer describes the code, so this PR removes it from `description.en` and `description.zh` only.
 ```
 

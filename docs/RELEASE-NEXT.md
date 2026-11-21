@@ -5,6 +5,30 @@
 
 ---
 
+## Game Time 0.16.3
+
+### English
+
+Security hardening: every HTTP route now runs DSH's connection check first. Requires a **DSH restart** once.
+
+- Each `/api/game-time/*` route calls `ctx.connection.requestRejection(req)` before it reads a path or a body: a foreign Host/Origin or a cross-site call is answered 403, a request without the browser login credential 401. Before this version the JSON face answered any local request, so a web page open in the same browser could read playtime data or rewrite the config.
+- The plugin now injects the Host `connection` service; a composition without it is refused (fail closed).
+- Also carries the six new 1462×1027 screenshots shipped in 0.16.2 (today, game detail, all games, breakdown, settings, one English UI).
+
+**Known limits**: Windows only; no game auto-discovery; no "foreground only" timing; data stays local in `%USERPROFILE%\.dsh\storages\game-time\`.
+
+### 中文（简版）
+
+安全加固：所有 HTTP 接口先过 DSH 的连接检查，**要重启一次 DSH**。
+
+- `/api/game-time/*` 的每条路由在读路径或读 body 之前先调 `ctx.connection.requestRejection(req)`：非受信 Host / Origin 或跨站调用回 403，没带浏览器登录凭据回 401。之前这一面会响应任何本机请求，浏览器里打开的网页能读到游玩数据、也能改配置。
+- 插件现在注入宿主的 `connection` 服务；没有这个服务的组合一律拒绝（fail closed）。
+- 同时带上 0.16.2 已发的 6 张 1462×1027 新截图（今日 / 游戏详情 / 全部游戏 / 全部分析 / 设置 / 英文界面）。
+
+**已知限制**：仅 Windows；没有自动发现游戏；没有"仅前台计时"；数据只在本机。
+
+---
+
 ## Game Time 0.16.2
 
 ### English
